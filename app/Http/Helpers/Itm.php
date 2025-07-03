@@ -327,6 +327,7 @@ if (!function_exists('to_date')) {
       if ($tp == 'date_hour_minute') {
         $result .= ' ' . $hour . ':' . $minute;
       }
+      
     } else {
       $result = null;
     }
