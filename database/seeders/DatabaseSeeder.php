@@ -18,6 +18,8 @@ class DatabaseSeeder extends Seeder
 
             IpsrsLokasiSeeder::class,
             IpsrsKategoriAssetSeeder::class,
+            AppNavSeeder::class,
+            IpsrsKategoriAssetSeeder::class
         ]);
     }
 }
