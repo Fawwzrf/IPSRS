@@ -46,9 +46,6 @@ class Asset extends MyController
     {
         $d = _post();
 
-        $d['asset_nm'] = strtoupper($d['asset_nm']);
-        if (isset($d['merk'])) $d['merk'] = strtoupper($d['merk']);
-
         if (isset($d['perolehan_tgl']) && $d['perolehan_tgl'] != '') {
             $d['perolehan_tgl'] = to_date($d['perolehan_tgl'], '-', 'date');
         } else {
