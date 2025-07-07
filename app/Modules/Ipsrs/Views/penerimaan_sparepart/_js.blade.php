@@ -147,8 +147,8 @@
             }
         }); 
 
-        // Inisialisasi Autonumeric untuk input harga
-        modalContent.find('.autonumeric').autoNumeric({
+        var hargaSatuanInput = modalContent.find('#harga_satuan');
+        hargaSatuanInput.autoNumeric({
             aSep: ".",
             aDec: ",",
             vMax: "999999999999999",
@@ -192,28 +192,16 @@
             }
         });
 
-        // --- FITUR BARU: Default placeholder harga dari sparepart yang dipilih ---
         var sparepartSelect = modalContent.find('#sparepart_id');
-        var hargaSatuanInput = modalContent.find('#harga');
-
+       
         sparepartSelect.on('change', function() {
             var selectedOption = sparepartSelect.find(':selected');
-            var price = selectedOption.data('price'); // Ambil harga dari data-price attribute
-
+            var price = selectedOption.data('price');
             if (typeof price !== 'undefined') {
-                // Gunakan autoNumeric('set') untuk mengisi input yang sudah diinisialisasi autonumeric
-                hargaSatuanInput.autoNumeric('set', price);
+                hargaSatuanInput.autoNumeric('set', price); // Menggunakan referensi yang benar
             } else {
-                hargaSatuanInput.autoNumeric('set', 0); // Jika tidak ada harga, set ke 0
+                hargaSatuanInput.autoNumeric('set', 0);
             }
         }).trigger('change'); // Trigger 'change' saat modal dibuka untuk mengisi harga awal jika sudah terpilih
-
-        // Pastikan autonumeric terinisialisasi sebelum mencoba autoNumeric('set')
-        hargaSatuanInput.autoNumeric({
-            aSep: ".",
-            aDec: ",",
-            vMax: "999999999999999",
-            vMin: "0"
-        });
     });
 </script>

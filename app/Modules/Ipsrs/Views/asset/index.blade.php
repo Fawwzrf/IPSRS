@@ -106,13 +106,11 @@
                                                 <th width="7%">Aksi</th>
                                                 <th width="10%">ID Aset</th>
                                                 <th width="15%">Nama Aset</th>
-                                                <th width="10%">Jenis</th>
+                                                <th width="7%">Jenis</th>
                                                 <th width="10%">No. Seri/Barcode</th>
                                                 <th>Merk</th>
-                                                <th>Model</th>
-                                                <th>Lokasi</th>
                                                 <th>Kategori</th>
-                                                <th width="5%">Tgl. Perolehan</th>
+                                                <th>Lokasi</th>
                                                 <th width="5%">PM Berikutnya</th>
                                                 <th width="5%">Status</th>
                                                 <th width="5%">Aktif?</th>

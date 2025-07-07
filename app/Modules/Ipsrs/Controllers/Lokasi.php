@@ -72,9 +72,17 @@ class Lokasi extends MyController
             return response()->json(_response('11', $this->uri, ['message' => 'ID Lokasi Induk tidak ditemukan!']));
         }
         
-        $denah_url = upload_base64('denah_url');
-        if ($denah_url != null) $d['denah_url'] = $denah_url;
-
+        $upload_result = upload_file('denah', 'denah_url'); // Folder 'denah' di public/assets/
+        if ($upload_result['status']) {
+            $d['denah_url'] = 'assets/denah/' . $upload_result['data']; // Simpan path relatif
+        } else if (isset($d['denah_url_old'])) { // Jika ada denah lama dan tidak ada upload baru
+            $d['denah_url'] = $d['denah_url_old'];
+        } else { // Jika tidak ada denah lama dan tidak ada upload baru
+            $d['denah_url'] = null;
+        }
+        // Hapus denah_url_old jika ada di _post()
+        unset($d['denah_url_old']);
+        // --- AKHIR PERUBAHAN ---
         try {
             if ($id == null) {
                 if (empty($d['lokasi_id'])) {
@@ -115,7 +123,13 @@ class Lokasi extends MyController
         if ($hasAssets) {
             return response()->json(_response('13', $this->uri, ['message' => 'Lokasi ini masih terhubung dengan aset dan tidak dapat dihapus.']));
         }
-
+        $lokasi_data = DbModel::getData('mst_lokasi', ['lokasi_id' => $id]);
+        if ($lokasi_data && $lokasi_data['denah_url']) {
+            $file_path = public_path($lokasi_data['denah_url']);
+            if (file_exists($file_path)) {
+                unlink($file_path); // Hapus file fisik
+            }
+        }
         $result = DbModel::deleteData('mst_lokasi', ['lokasi_id' => $id]);
         if ($result) {
             return response()->json(_response('03', $this->uri));

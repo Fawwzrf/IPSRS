@@ -20,7 +20,7 @@
                 <select class="form-select chosen-select" name="sparepart_id" id="sparepart_id" required>
                     <option value="">- Pilih Sparepart -</option>
                     <?php foreach($all_sparepart as $sp) : ?>
-                        {{-- MENAMBAHKAN data-price ATTRIBUTE DI SINI --}}
+
                         <option value="<?= $sp['sparepart_id'] ?>" data-price="<?= $sp['harga'] ?>" <?= (@$main['sparepart_id'] == $sp['sparepart_id']) ? 'selected' : '' ?>>
                             <?= $sp['sparepart_id'] ?> - <?= $sp['sparepart_nm'] ?> (Stok: <?= $sp['stok'] ?>)
                         </option>

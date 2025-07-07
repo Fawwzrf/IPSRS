@@ -32,8 +32,7 @@
         <div class="mb-1 row">
             <label class="col-lg-3 col-md-6 col-form-label required">ID Lokasi</label>
             <div class="col-lg-4">
-                {{-- ID Lokasi sekarang selalu diisi manual/dari sistem --}}
-                <input type="text" name="lokasi_id" id="lokasi_id" class="form-control" value="<?= @$main['lokasi_id'] ?>" <?= (@$main['lokasi_id'])?> required>
+                <input type="text" name="lokasi_id" id="lokasi_id" class="form-control" value="<?= @$main['lokasi_id'] ?>" <?= (@$main['lokasi_id']) ? 'readonly' : '' ?> required>
                 <small class="form-hint">ID lokasi harus diisi secara unik. Contoh: 01, 01.01, 01.01.01</small>
             </div>
         </div>
@@ -49,18 +48,18 @@
                 <textarea name="deskripsi" class="form-control"><?= @$main['deskripsi'] ?></textarea>
             </div>
         </div>
-        {{-- Input FILE denah_url --}}
         <div class="mb-1 row">
             <label class="col-lg-3 col-md-6 col-form-label">Denah Lokasi</label>
             <div class="col-lg-4 col-md-6">
                 <input type="file" name="denah_url" class="form-control" accept="image/*">
+                <input type="hidden" name="denah_url_old" value="<?= @$main['denah_url'] ?>">
             </div>
         </div>
         <?php if (!empty(@$main['denah_url'])) : ?>
         <div class="mb-1 row">
             <label class="col-lg-3 col-md-6 col-form-label"></label>
             <div class="col-lg-6 col-md-6">
-                <img src="<?= @$main['denah_url'] ?>" alt="Denah Lokasi" class="img-thumbnail" width="150">
+                <img src="<?= asset(@$main['denah_url']) ?>" alt="Denah Lokasi" class="img-thumbnail" width="150"> {{-- PERBAIKAN DI SINI --}}
             </div>
         </div>
         <?php endif; ?>

@@ -87,27 +87,15 @@
                 { "data": "jenis", "className": "text-left", "render": function(data){ return ifNull(data); } },
                 { "data": "no_seri", "className": "text-left", "render": function(data){ return ifNull(data); } },
                 { "data": "merk", "className": "text-left", "render": function(data){ return ifNull(data); } },
-                { "data": "model", "className": "text-left", "render": function(data){ return ifNull(data); } },
-                {
-                    "data": "lokasi_nm",
-                    "className": "text-left",
-                    "render": function(data) { return ifNull(data); }
-                },
                 {
                     "data": "kategori_asset_nm",
                     "className": "text-left",
                     "render": function(data) { return ifNull(data); }
                 },
                 {
-                    "data": "perolehan_tgl",
+                    "data": "lokasi_nm",
                     "className": "text-left",
-                    "render": function(data, type, row, meta) {
-                        var result = '';
-                        if (data != '' && data != null) {
-                            result = toDate(data);
-                        }
-                        return result;
-                    }
+                    "render": function(data) { return ifNull(data); }
                 },
                 {
                     "data": "pm_berikutnya",
