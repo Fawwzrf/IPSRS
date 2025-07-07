@@ -49,20 +49,27 @@
             </div>
         </div>
         <div class="mb-1 row">
-            <label class="col-lg-3 col-md-6 col-form-label">Denah Lokasi</label>
-            <div class="col-lg-4 col-md-6">
-                <input type="file" name="denah_url" class="form-control" accept="image/*">
+            <label for="denah_url" class="col-lg-3 col-md-6 col-form-label">Denah Lokasi</label>
+            <div class="col-lg-8 col-md-6">
+                <input type="file" name="denah_url" id="denah_url" class="form-control" accept="image/jpeg, image/png, image/gif">
+                
+                {{-- Input hidden sekarang berisi data Base64 yang panjang --}}
                 <input type="hidden" name="denah_url_old" value="<?= @$main['denah_url'] ?>">
             </div>
         </div>
-        <?php if (!empty(@$main['denah_url'])) : ?>
+
         <div class="mb-1 row">
-            <label class="col-lg-3 col-md-6 col-form-label"></label>
+            <label class="col-lg-3 col-md-6 col-form-label">Preview</label>
             <div class="col-lg-6 col-md-6">
-                <img src="<?= asset(@$main['denah_url']) ?>" alt="Denah Lokasi" class="img-thumbnail" width="150"> {{-- PERBAIKAN DI SINI --}}
+                @php
+                    // Logika preview: jika ada data denah, gunakan itu. Jika tidak, pakai placeholder.
+                    // Tidak perlu asset() atau file_exists() lagi.
+                    $previewSrc = @$main['denah_url'] ?: 'https://via.placeholder.com/200x150.png?text=Preview+Denah';
+                @endphp
+                
+                <img id="denah-preview" src="{{ $previewSrc }}" alt="Preview Denah" class="img-thumbnail" style="max-width: 200px; max-height: 150px; object-fit: cover;">
             </div>
         </div>
-        <?php endif; ?>
         <div class="mb-1 row">
             <label class="col-lg-3 col-md-6 col-form-label required">Aktif?</label>
             <div class="col-lg-8 col-md-6">
@@ -85,3 +92,4 @@
         </div>
     </div>
 </form>
+

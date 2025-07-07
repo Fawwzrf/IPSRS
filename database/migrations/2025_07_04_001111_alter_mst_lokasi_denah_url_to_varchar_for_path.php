@@ -17,7 +17,7 @@ class AlterMstLokasiDenahUrlToVarcharForPath extends Migration
             // Mengubah tipe kolom denah_url dari MEDIUMTEXT menjadi VARCHAR(255)
             // Ini cocok untuk menyimpan path/URL relatif ke file gambar di public/assets/denah
             // Jika path bisa lebih panjang dari 255 karakter, pertimbangkan TEXT.
-            $table->string('denah_url', 255)->nullable()->change();
+            $table->mediumText('denah_url')->nullable()->change();
         });
     }
 

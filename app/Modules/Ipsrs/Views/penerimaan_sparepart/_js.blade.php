@@ -1,23 +1,22 @@
 <script type="text/javascript">
-    // --- Placeholder _loading function (UNTUK MENGATASI ReferenceError) ---
+    // --- Placeholder _loading function (untuk mengatasi error jika tidak ada) ---
     if (typeof _loading === 'undefined') {
         window._loading = function(show, message) {
-            console.warn("'_loading' function is not defined globally. Using a minimal fallback. No visual spinner will appear.");
-            console.log("Loading state: " + show + ", Message: " + message);
+            console.log("Loading state: " + show);
         };
     }
-    // --- AKHIR Placeholder _loading ---
-
 
     var tabel = null;
     $(document).ready(function() {
+        console.log("✅ Document Ready. DataTable and other initializations are being set up.");
+        
         // --- INISIALISASI UNTUK HALAMAN INDEX (DATATABLES FILTER) ---
         $('.accordion-body .chosen-select').select2({
             theme: "bootstrap-5",
             dropdownParent: $('.accordion-body')
         });
 
-        $('.accordion-body .datepicker-notauto').daterangepicker({ 
+        $('.accordion-body .datepicker-notauto').daterangepicker({
             singleDatePicker: true,
             showDropdowns: true,
             minYear: 1900,
@@ -50,7 +49,10 @@
                 }
             },
             "deferRender": true,
-            "aLengthMenu": _datatableLengthMenu,
+            "aLengthMenu": [
+                [10, 25, 50, 100, -1],
+                [10, 25, 50, 100, "All"]
+            ],
             "pageLength": 10,
             "createdRow": function(row, data, dataIndex) {
                 if (data.active_st == 0) {
@@ -71,21 +73,21 @@
                     "render": function(data, type, row, meta) {
                         var uri_edit = '<?= $uri . '/form_modal/' ?>' + data;
                         var uri_delete = '<?= $uri . '/delete/' ?>' + data;
-                        
+
                         return '' +
                             '<div class="btn-list btn-sm flex-nowrap">' +
                             '   <div class="dropdown"> ' +
-                            '      <button class="btn btn-outline-primary btn-sm dropdown-toggle align-text-top" data-bs-toggle="dropdown">' +
-                            '          Aksi' +
-                            '      </button>' +
-                            '      <div class="dropdown-menu">' +
-                            '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick="_modal(event, {uri: \'' + uri_edit + '\', size: \'modal-lg\', position: \'normal\'})">' +
-                            '             <i class="fas fa-pencil-alt text-warning me-2"></i> Ubah Data' +
-                            '         </a>' +
-                            '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick=_delete("' + uri_delete + '")>' +
-                            '             <i class="fas fa-trash text-danger me-2"></i> Hapus Data' +
-                            '         </a>' +
-                            '      </div>' +
+                            '       <button class="btn btn-outline-primary btn-sm dropdown-toggle align-text-top" data-bs-toggle="dropdown">' +
+                            '           Aksi' +
+                            '       </button>' +
+                            '       <div class="dropdown-menu">' +
+                            '           <a class="dropdown-item p-1" href="javascript:void(0)" onclick="_modal(event, {uri: \'' + uri_edit + '\', size: \'modal-lg\', position: \'normal\'})">' +
+                            '               <i class="fas fa-pencil-alt text-warning me-2"></i> Ubah Data' +
+                            '           </a>' +
+                            '           <a class="dropdown-item p-1" href="javascript:void(0)" onclick=_delete("' + uri_delete + '")>' +
+                            '               <i class="fas fa-trash text-danger me-2"></i> Hapus Data' +
+                            '           </a>' +
+                            '       </div>' +
                             '   </div>' +
                             '</div>';
                     }
@@ -111,13 +113,11 @@
                 },
             ],
         });
-        
-        // Memaksa DataTables untuk reload setelah filter disubmit
+
         $('#search').on('submit', function(e) {
             e.preventDefault();
             tabel.ajax.reload();
         });
-
 
         window._searchReset = function() {
             $('#search')[0].reset();
@@ -126,82 +126,4 @@
         };
     });
 
-    $(document).on('shown.bs.modal', '#my-modal-1', function (e) { 
-        var formModalId = $(this).attr('id'); 
-        var modalContent = $('#' + formModalId + ' .modal-body');
-
-        // Inisialisasi Select2 untuk dropdown di dalam modal
-        modalContent.find('.chosen-select').select2({
-            theme: "bootstrap-5",
-            dropdownParent: $('#' + formModalId)
-        });
-
-        // Inisialisasi Datepicker
-        modalContent.find('.datepicker-notauto').daterangepicker({
-            singleDatePicker: true,
-            showDropdowns: true,
-            minYear: 1900,
-            maxYear: parseInt(moment().format('YYYY'), 10) + 5,
-            locale: {
-                format: 'DD-MM-YYYY' 
-            }
-        }); 
-
-        var hargaSatuanInput = modalContent.find('#harga_satuan');
-        hargaSatuanInput.autoNumeric({
-            aSep: ".",
-            aDec: ",",
-            vMax: "999999999999999",
-            vMin: "0"
-        });
-
-        modalContent.find("#form").validate({
-            rules: {
-                penerimaan_id: { required: true },
-                tgl: { required: true },
-                sparepart_id: { required: true },
-                jumlah: { required: true, min: 1 },
-                active_st: { required: true },
-            },
-            messages: {
-                penerimaan_id: { required: "ID Penerimaan wajib diisi." },
-                tgl: { required: "Tanggal Penerimaan wajib diisi." },
-                sparepart_id: { required: "Sparepart wajib dipilih." },
-                jumlah: { required: "Jumlah wajib diisi.", min: "Jumlah minimal 1." },
-                active_st: { required: "Status Aktif wajib dipilih." },
-            },
-            errorElement: "em",
-            errorPlacement: function(error, element) {
-                error.addClass("invalid-feedback");
-                if (element.prop("type") === "radio") {
-                    error.insertAfter(element.closest('.row').find('label.col-form-label').last());
-                } else if ($(element).hasClass('select2')) {
-                    error.insertAfter(element.next(".select2-container"));
-                } else {
-                    error.insertAfter(element);
-                }
-            },
-            highlight: function(element, errorClass, validClass) {
-                $(element).addClass("is-invalid").removeClass("is-valid");
-            },
-            unhighlight: function(element, errorClass, validClass) {
-                $(element).addClass("is-valid").removeClass("is-invalid");
-            },
-            submitHandler: function(form) {
-                _save(event, form);
-            }
-        });
-
-        var sparepartSelect = modalContent.find('#sparepart_id');
-       
-        sparepartSelect.on('change', function() {
-            var selectedOption = sparepartSelect.find(':selected');
-            var price = selectedOption.data('price');
-            if (typeof price !== 'undefined') {
-                hargaSatuanInput.autoNumeric('set', price); // Menggunakan referensi yang benar
-            } else {
-                hargaSatuanInput.autoNumeric('set', 0);
-            }
-        }).trigger('change'); // Trigger 'change' saat modal dibuka untuk mengisi harga awal jika sudah terpilih
-    });
 </script>

@@ -200,7 +200,7 @@
         if (modalContent.find('input[name="lokasi_id"]').val() != '') {
             modalContent.find('button[onclick="generateLokasiId()"]').hide();
         }
-
+        
         window.generateLokasiId = function() {
             var tipe_lokasi = modalContent.find('#tipe_lokasi').val();
             var parent_lokasi_id = modalContent.find('#parent_lokasi').val();
@@ -265,5 +265,27 @@
                 }
             });
         };
+        var denahInput = modalContent.find('#denah_url');
+        var denahPreview = modalContent.find('#denah-preview');
+
+        // Pastikan elemen ditemukan sebelum memasang event listener
+        if (denahInput.length > 0 && denahPreview.length > 0) {
+            denahInput.on('change', function(event) {
+                // Cek jika ada file yang dipilih
+                if (event.target.files && event.target.files[0]) {
+                    var file = event.target.files[0];
+                    var reader = new FileReader();
+
+                    // Saat FileReader selesai membaca file
+                    reader.onload = function(e) {
+                        // Setel atribut 'src' dari elemen <img> ke hasil Base64
+                        denahPreview.attr('src', e.target.result);
+                    };
+
+                    // Perintahkan FileReader untuk membaca file sebagai Data URL (Base64)
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
     });
 </script>

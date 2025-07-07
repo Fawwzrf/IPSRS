@@ -19,10 +19,10 @@ class Lokasi extends MyController
     function index()
     {
         $d = [];
-        
+
         $sql = "SELECT lokasi_id, lokasi_nm, tipe_lokasi FROM mst_lokasi WHERE deleted_st = 0 AND active_st = 1 AND tipe_lokasi IN ('Gedung', 'Lantai')";
         $d['all_parent_lokasi'] = DbModel::rawData('result_array', $sql);
-        
+
         $d['nav_sess'] = session(request('n'));
 
         return $this->renderView($this->template . 'index', $d);
@@ -36,7 +36,7 @@ class Lokasi extends MyController
             ['active_st', '=', '1'],
             ['lokasi_id', '!=', $id]
         ]);
-        
+
         if ($id === null) {
             $d['form_act'] = $this->uri . '/save';
         } else {
@@ -71,18 +71,28 @@ class Lokasi extends MyController
         if (!empty($d['parent_lokasi_id']) && !DbModel::validId('mst_lokasi', 'lokasi_id', $d['parent_lokasi_id'])) {
             return response()->json(_response('11', $this->uri, ['message' => 'ID Lokasi Induk tidak ditemukan!']));
         }
-        
-        $upload_result = upload_file('denah', 'denah_url'); // Folder 'denah' di public/assets/
-        if ($upload_result['status']) {
-            $d['denah_url'] = 'assets/denah/' . $upload_result['data']; // Simpan path relatif
-        } else if (isset($d['denah_url_old'])) { // Jika ada denah lama dan tidak ada upload baru
+
+        if (isset($_FILES['denah_url']) && $_FILES['denah_url']['error'] == 0) {
+
+            // 1. Ambil informasi file yang diupload
+            $fileTmpPath = $_FILES['denah_url']['tmp_name'];
+            $fileMimeType = mime_content_type($fileTmpPath); // Cara aman mendapatkan tipe MIME
+
+            // 2. Baca konten file mentah (binary)
+            $fileContent = file_get_contents($fileTmpPath);
+
+            // 3. Encode konten menjadi Base64
+            $base64Content = base64_encode($fileContent);
+
+            // 4. Buat string Data URL lengkap untuk disimpan di database
+            $d['denah_url'] = 'data:' . $fileMimeType . ';base64,' . $base64Content;
+        } else {
+            // Jika tidak ada file baru, pertahankan data lama dari hidden input
             $d['denah_url'] = $d['denah_url_old'];
-        } else { // Jika tidak ada denah lama dan tidak ada upload baru
-            $d['denah_url'] = null;
         }
-        // Hapus denah_url_old jika ada di _post()
+
+        // Hapus field helper dari array data
         unset($d['denah_url_old']);
-        // --- AKHIR PERUBAHAN ---
         try {
             if ($id == null) {
                 if (empty($d['lokasi_id'])) {
@@ -142,8 +152,4 @@ class Lokasi extends MyController
     {
         return LokasiModel::loadDatatables();
     }
-
-    
-
-    
 }
