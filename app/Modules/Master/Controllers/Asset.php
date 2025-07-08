@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Modules\Ipsrs\Controllers;
+namespace App\Modules\Master\Controllers;
 
 use App\Http\Controllers\MyController;
 use App\Modules\App\Models\DbModel;
-use App\Modules\Ipsrs\Models\AssetModel;
+use App\Modules\Master\Models\AssetModel;
 use Illuminate\Support\Facades\Log;
 
 
@@ -13,7 +13,7 @@ class Asset extends MyController
     function __construct()
     {
         parent::__construct();
-        $this->template = 'ipsrs::asset.';
+        $this->template = 'master::asset.';
     }
 
     function index()

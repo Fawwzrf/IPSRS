@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Ipsrs\Models; // Perbaiki namespace: namespace App\Modules\Ipsrs\Models;
+namespace App\Modules\Master\Models; // Perbaiki namespace: namespace App\Modules\Master\Models;
 
 use App\Modules\App\Models\DbModel; // Perbaiki namespace: use App\Modules\App\Models\DbModel;
 use Illuminate\Database\Eloquent\Model;

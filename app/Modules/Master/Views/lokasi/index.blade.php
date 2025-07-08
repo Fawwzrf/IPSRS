@@ -1,4 +1,4 @@
-@include('ipsrs::lokasi._js')
+@include('master::lokasi._js')
 <div class="page-wrapper">
     <div class="page-header d-print-none mt-2">
         <div class="container-xl">

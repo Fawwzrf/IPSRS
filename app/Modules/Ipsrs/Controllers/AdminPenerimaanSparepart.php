@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Modules\Ipsrs\Controllers;
+namespace App\Modules\Master\Controllers;
 
 use App\Http\Controllers\MyController;
 use App\Modules\App\Models\DbModel;
-use App\Modules\Ipsrs\Models\PenerimaanSparepartModel;
+use App\Modules\Master\Models\PenerimaanSparepartModel;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB; // Dipertahankan sesuai Asset.php
 
@@ -13,7 +13,7 @@ class PenerimaanSparepart extends MyController
     function __construct()
     {
         parent::__construct();
-        $this->template = 'ipsrs::penerimaan_sparepart.'; // Lokasi views untuk modul ini
+        $this->template = 'master::penerimaan_sparepart.'; // Lokasi views untuk modul ini
     }
 
     function index()

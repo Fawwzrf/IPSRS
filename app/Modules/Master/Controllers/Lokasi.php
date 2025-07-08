@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Modules\Ipsrs\Controllers; // Perbaiki namespace: namespace App\Modules\Ipsrs\Controllers;
+namespace App\Modules\Master\Controllers; // Perbaiki namespace: namespace App\Modules\Master\Controllers;
 
 use App\Http\Controllers\MyController;
 use App\Modules\App\Models\DbModel;
-use App\Modules\Ipsrs\Models\LokasiModel;
+use App\Modules\Master\Models\LokasiModel;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
@@ -13,7 +13,7 @@ class Lokasi extends MyController
     function __construct()
     {
         parent::__construct();
-        $this->template = 'ipsrs::lokasi.';
+        $this->template = 'master::lokasi.';
     }
 
     function index()
