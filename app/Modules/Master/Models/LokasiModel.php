@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 class LokasiModel extends Model
 {
     protected static $nav_sess;
+    
 
     public function __construct()
     {
@@ -27,53 +28,53 @@ class LokasiModel extends Model
     {
         self::initSession();
 
-        // Query utama dengan LEFT JOIN (TANPA KLAUSA WHERE DI SINI)
-        // Pastikan semua kolom diberi alias tabel untuk menghindari ambiguitas
+        // 1. Siapkan query utama TANPA klausa WHERE
         $query = "SELECT
                     a.lokasi_id, a.lokasi_nm, a.tipe_lokasi, a.parent_lokasi_id,
-                    a.deskripsi, a.denah_url, a.active_st, a.deleted_st,
+                    a.deskripsi, a.active_st,
                     b.lokasi_nm as parent_lokasi_nm
                   FROM mst_lokasi a
                   LEFT JOIN mst_lokasi b ON a.parent_lokasi_id = b.lokasi_id";
 
-        // Kolom yang dapat dicari oleh DataTables (gunakan alias tabel yang benar)
-        $search = [
-            'a.lokasi_id', 'a.lokasi_nm', 'a.tipe_lokasi', 'b.lokasi_nm', 'a.deskripsi' // 'b.lokasi_nm'
-        ];
+        // 2. Siapkan array untuk menampung kondisi WHERE
+        $where = [];
+        $where[] = "a.deleted_st = 0"; // Kondisi dasar (sebagai string)
 
-        // --- Kumpulkan kondisi WHERE untuk parameter $where (key-value pairs) ---
-        $conditionsForWhereParam = []; 
-        $conditionsForWhereParam[] = 'a.deleted_st = 0'; // Kondisi dasar (sebagai string)
-
-        // Filter dari sesi pencarian (akan ditambahkan ke $conditionsForWhereParam)
-        // Logika filter dinamis ini tetap ada meskipun form filter dihapus,
-        // Ini memastikan jika ada data filter di sesi dari akses sebelumnya atau secara programatis
-        if (@self::$nav_sess['search']['data']['tipe_lokasi'] != '') {
-            $conditionsForWhereParam['a.tipe_lokasi'] = @self::$nav_sess['search']['data']['tipe_lokasi'];
+        // Tambahkan filter lain dari session ke dalam array
+        if ($tipe = @self::$nav_sess['search']['data']['tipe_lokasi']) {
+            $where[] = "a.tipe_lokasi = '" . addslashes($tipe) . "'";
         }
-        if (@self::$nav_sess['search']['data']['parent_lokasi_id'] != '') {
-            if (@self::$nav_sess['search']['data']['parent_lokasi_id'] == 'NULL' || @self::$nav_sess['search']['data']['parent_lokasi_id'] == '') {
-                $conditionsForWhereParam[] = 'a.parent_lokasi_id IS NULL';
+        if ($parent_id = @self::$nav_sess['search']['data']['parent_lokasi_id']) {
+            if ($parent_id == 'NULL') {
+                $where[] = "a.parent_lokasi_id IS NULL";
             } else {
-                $conditionsForWhereParam['a.parent_lokasi_id'] = @self::$nav_sess['search']['data']['parent_lokasi_id'];
+                $where[] = "a.parent_lokasi_id = '" . addslashes($parent_id) . "'";
             }
         }
-        if (@self::$nav_sess['search']['data']['active_st'] != '') {
-            $conditionsForWhereParam['a.active_st'] = @self::$nav_sess['search']['data']['active_st'];
+        if (($active_st = @self::$nav_sess['search']['data']['active_st']) !== '' && $active_st !== null) {
+            $where[] = "a.active_st = " . (int)$active_st;
         }
-        
-        // Kondisi pencarian 'term' sebagai string SQL murni, akan masuk ke parameter $isWhere (string murni)
-        $isWhereString = ''; // Inisialisasi $isWhereString
-        if (@self::$nav_sess['search']['data']['term'] != '') {
-            $searchTerm = strtolower(@self::$nav_sess['search']['data']['term']);
-            $isWhereString .= (empty($isWhereString) ? "" : " AND ") . " ( LOWER(a.lokasi_nm) LIKE '%{$searchTerm}%'
-                         OR LOWER(a.deskripsi) LIKE '%{$searchTerm}%'
-                         OR LOWER(b.lokasi_nm) LIKE '%{$searchTerm}%'
-                       ) ";
+        if ($term = @self::$nav_sess['search']['data']['term']) {
+            $searchTerm = strtolower(addslashes($term));
+            $where[] = "(LOWER(a.lokasi_nm) LIKE '%{$searchTerm}%' OR LOWER(a.deskripsi) LIKE '%{$searchTerm}%')";
         }
-        // --- AKHIR PENYESUAIAN KONDISI WHERE ---
 
-        $result = DbModel::datatablesQuery($query, $search, $conditionsForWhereParam, $isWhereString);
+        // 3. Gabungkan semua kondisi menjadi satu string
+        $whereClause = implode(' AND ', $where);
+
+        // Kolom yang dapat dicari oleh Datatables
+        $search = [
+            'a.lokasi_id',
+            'a.lokasi_nm',
+            'a.tipe_lokasi',
+            'b.lokasi_nm',
+            'a.deskripsi'
+        ];
+
+        // 4. Kirim query dan string 'where' ke helper
+        // Parameter $isWhere sekarang diisi dengan string kondisi kita
+        $result = DbModel::datatablesQuery($query, $search, null, $whereClause);
+
         return $result;
     }
 

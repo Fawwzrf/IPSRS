@@ -1,30 +1,38 @@
 <script type="text/javascript">
-    // --- Placeholder _loading function (UNTUK MENGATASI ReferenceError) ---
-    // Idealnya, fungsi ini sudah didefinisikan di itm.js atau itm.jquery.js Anda.
-    // Jika error ini terus muncul, perlu investigasi mengapa itm.js/itm.jquery.js tidak termuat dengan benar.
     if (typeof _loading === 'undefined') {
-        window._loading = function(show, message) {
-            console.warn("'_loading' function is not defined globally. Using a minimal fallback. No visual spinner will appear.");
-            console.log("Loading state: " + show + ", Message: " + message);
-            // Anda bisa menambahkan logika visual loading spinner sederhana di sini jika diinginkan
-            // Misalnya: var loadingSpinner = $('#my-simple-spinner-element');
-            // if (show) loadingSpinner.show(); else loadingSpinner.hide();
+        window._loading = function(s, m) {
+            console.warn("'_loading' undefined");
         };
     }
-    // --- AKHIR Placeholder _loading ---
-
+    if (typeof _modal === 'undefined') {
+        window._modal = function() {
+            alert("_modal undefined.");
+        };
+    }
+    if (typeof _delete === 'undefined') {
+        window._delete = function() {
+            alert("_delete undefined.");
+        };
+    }
+    if (typeof _save === 'undefined') {
+        window._save = function() {
+            alert("_save undefined.");
+        };
+    }
+    if (typeof ifNull === 'undefined') {
+        window.ifNull = function(v, f = '') {
+            return (v === null || v === undefined) ? f : v;
+        };
+    }
 
     var tabel = null;
     $(document).ready(function() {
-        // --- INISIALISASI UNTUK HALAMAN INDEX (DATATABLES FILTER) ---
-        // Inisialisasi Select2 untuk dropdown filter
         $('.accordion-body .chosen-select').select2({
             theme: "bootstrap-5",
             dropdownParent: $('.accordion-body')
         });
 
-        // Inisialisasi Datepicker untuk filter tanggal
-        $('.accordion-body .datepicker-notauto').daterangepicker({ 
+        $('.accordion-body .datepicker-notauto').daterangepicker({
             singleDatePicker: true,
             showDropdowns: true,
             minYear: 1900,
@@ -36,7 +44,7 @@
 
         tabel = $('#datatable-main').DataTable({
             "language": {
-                url: _base_url + 'dist/libs/DataTables/id.json',
+                url: _base_url + 'dist/libs/DataTables/id.json'
             },
             "stateSave": true,
             "autoWidth": false,
@@ -51,8 +59,7 @@
                 "url": "<?= $uri . '/ajax_datatables?n=' . request('n') ?>",
                 "type": "POST",
                 "data": function(d) {
-                    var searchData = <?= json_encode(@$nav_sess['search']['data']) ?: '{}' ?>;
-                    d.search_data = searchData;
+                    d.search_data = <?= json_encode(@$nav_sess['search']['data']) ?: '{}' ?>;
                     d._token = _token;
                 }
             },
@@ -60,17 +67,13 @@
             "aLengthMenu": _datatableLengthMenu,
             "pageLength": 10,
             "createdRow": function(row, data, dataIndex) {
-                if (data.active_st == 0) {
-                    $(row).addClass('bg-pink');
-                }
+                if (data.active_st == 0) $(row).addClass('bg-pink');
             },
             "bFilter": false,
             "columns": [{
                     "data": "lokasi_id",
                     "sortable": false,
-                    "render": function(data, type, row, meta) {
-                        return meta.row + meta.settings._iDisplayStart + 1;
-                    }
+                    "render": (data, type, row, meta) => meta.row + meta.settings._iDisplayStart + 1
                 },
                 {
                     "data": "lokasi_id",
@@ -78,50 +81,44 @@
                     "render": function(data, type, row, meta) {
                         var uri_edit = '<?= $uri . '/form_modal/' ?>' + data;
                         var uri_delete = '<?= $uri . '/delete/' ?>' + data;
-                        
-                        return '' +
-                            '<div class="btn-list btn-sm flex-nowrap">' +
-                            '   <div class="dropdown"> ' +
-                            '      <button class="btn btn-outline-primary btn-sm dropdown-toggle align-text-top" data-bs-toggle="dropdown">' +
-                            '          Aksi' +
-                            '      </button>' +
-                            '      <div class="dropdown-menu">' +
-                            '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick="_modal(event, {uri: \'' + uri_edit + '\', size: \'modal-md\', position: \'normal\'})">' +
-                            '             <i class="fas fa-pencil-alt text-warning me-2"></i> Ubah Data' +
-                            '         </a>' +
-                            '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick=_delete("' + uri_delete + '")>' +
-                            '             <i class="fas fa-trash text-danger me-2"></i> Hapus Data' +
-                            '         </a>' +
-                            '      </div>' +
-                            '   </div>' +
-                            '</div>';
+                        return `<div class="btn-list btn-sm flex-nowrap"><div class="dropdown"><button class="btn btn-outline-primary btn-sm dropdown-toggle align-text-top" data-bs-toggle="dropdown">Aksi</button><div class="dropdown-menu"><a class="dropdown-item p-1" href="javascript:void(0)" onclick="_modal(event, {uri: '${uri_edit}', size: 'modal-md', position: 'normal'})"><i class="fas fa-pencil-alt text-warning me-2"></i> Ubah Data</a><a class="dropdown-item p-1" href="javascript:void(0)" onclick=_delete("${uri_delete}")><i class="fas fa-trash text-danger me-2"></i> Hapus Data</a></div></div></div>`;
                     }
                 },
-                { "data": "lokasi_id", "className": "text-left" },
-                { "data": "parent_lokasi_id", "className": "text-left" },
-                { "data": "lokasi_nm", "className": "text-left" },
-                { "data": "tipe_lokasi", "className": "text-left" },
-                { "data": "deskripsi", "className": "text-left", "render": function(data) { return ifNull(data); } },
+                {
+                    "data": "lokasi_id",
+                    "className": "text-left"
+                },
+                {
+                    "data": "parent_lokasi_id",
+                    "className": "text-left"
+                },
+                {
+                    "data": "lokasi_nm",
+                    "className": "text-left"
+                },
+                {
+                    "data": "tipe_lokasi",
+                    "className": "text-left"
+                },
+                {
+                    "data": "deskripsi",
+                    "className": "text-left",
+                    "render": data => ifNull(data)
+                },
                 {
                     "data": "active_st",
                     "className": "text-center",
-                    "render": function(data, type, row, meta) {
-                        if (row['active_st'] == 1) {
-                            return '<i class="fas fa-check-circle text-success "></i>';
-                        } else {
-                            return '<i class="fas fa-times-circle text-danger"></i>';
-                        }
-                    }
-                },
+                    "render": (data, type, row) => row['active_st'] == 1 ?
+                        '<i class="fas fa-check-circle text-success"></i>' :
+                        '<i class="fas fa-times-circle text-danger"></i>'
+                }
             ],
         });
-        
-        
+
         $('#search').on('submit', function(e) {
             e.preventDefault();
             tabel.ajax.reload();
         });
-
 
         window._searchReset = function() {
             $('#search')[0].reset();
@@ -130,162 +127,115 @@
         };
     });
 
-    $(document).on('shown.bs.modal', '#my-modal-1', function (e) { 
-        var formModalId = $(this).attr('id'); 
-        var modalContent = $('#' + formModalId + ' .modal-body');
+    var imageViewer = null;
+    var imagePreviewModal = null;
+
+    // Fungsi untuk menampilkan modal preview gambar
+    function showImagePreviewModal(imageUrl) {
+        const modalElement = document.getElementById('imagePreviewModal');
+        const imageElement = document.getElementById('imageForViewer');
+
+        // Buat instance modal jika belum ada
+        if (!imagePreviewModal) {
+            imagePreviewModal = new bootstrap.Modal(modalElement);
+        }
+
+        // Set sumber gambar dan pastikan elemennya terlihat
+        imageElement.src = imageUrl;
+        imageElement.style.display = 'block';
+
+        // Tampilkan modal kedua
+        imagePreviewModal.show();
+    }
+
+    // Inisialisasi Viewer.js SETELAH modal preview ditampilkan
+    document.getElementById('imagePreviewModal').addEventListener('shown.bs.modal', function() {
+        const imageElement = document.getElementById('imageForViewer');
+        if (imageViewer) {
+            imageViewer.destroy();
+        }
+        // Gunakan mode 'inline' agar gambar langsung bisa di-zoom di dalam modal
+        imageViewer = new Viewer(imageElement, {
+            inline: true,
+            button: false,
+            navbar: false,
+            title: false,
+            toolbar: {
+                zoomIn: 1,
+                zoomOut: 1,
+                oneToOne: 1,
+                reset: 1,
+                rotateLeft: 1,
+                rotateRight: 1,
+            },
+        });
+    });
+
+    // Hancurkan viewer saat modal kedua ditutup untuk membersihkan memori
+    document.getElementById('imagePreviewModal').addEventListener('hidden.bs.modal', function() {
+        if (imageViewer) {
+            imageViewer.destroy();
+            imageViewer = null;
+        }
+    });
+
+    $(document).on('shown.bs.modal', '#my-modal-1', function(e) {
+        var modalContent = $(this).find('.modal-body');
+
+        modalContent.find('#denah-preview').on('click', function() {
+            const imageUrl = this.src;
+            // Jangan buka modal preview jika gambar tidak ada
+            if (imageUrl && !imageUrl.includes('no-image.png')) {
+                showImagePreviewModal(imageUrl);
+            }
+        });
 
         modalContent.find('.chosen-select').select2({
             theme: "bootstrap-5",
-            dropdownParent: $('#' + formModalId)
+            dropdownParent: $('#my-modal-1')
         });
-
         modalContent.find('.datepicker-notauto').daterangepicker({
             singleDatePicker: true,
             showDropdowns: true,
-            minYear: 1900,
-            maxYear: parseInt(moment().format('YYYY'), 10) + 5,
             locale: {
-                format: 'DD-MM-YYYY' 
-            }
-        }); 
-
-        modalContent.find("#form").validate({
-            rules: {
-                lokasi_nm: { required: true },
-                tipe_lokasi: { required: true },
-                active_st: { required: true },
-            },
-            messages: {
-                lokasi_nm: { required: "Nama Lokasi wajib diisi." },
-                tipe_lokasi: { required: "Tipe Lokasi wajib dipilih." },
-                active_st: { required: "Status Aktif wajib dipilih." },
-            },
-            errorElement: "em",
-            errorPlacement: function(error, element) {
-                error.addClass("invalid-feedback");
-                if (element.prop("type") === "radio") {
-                    error.insertAfter(element.closest('.row').find('label.col-form-label').last());
-                } else if ($(element).hasClass('select2')) {
-                    error.insertAfter(element.next(".select2-container"));
-                } else {
-                    error.insertAfter(element);
-                }
-            },
-            highlight: function(element, errorClass, validClass) {
-                $(element).addClass("is-invalid").removeClass("is-valid");
-            },
-            unhighlight: function(element, errorClass, validClass) {
-                $(element).addClass("is-valid").removeClass("is-invalid");
-            },
-            submitHandler: function(form) {
-                _save(event, form);
+                format: 'DD-MM-YYYY'
             }
         });
 
-        var tipeLokasiSelectElement = modalContent.find('#tipe_lokasi');
-        var divParentLokasi = modalContent.find('#div_parent_lokasi');
-        var parentLokasiSelectElement = modalContent.find('#parent_lokasi');
-
-        tipeLokasiSelectElement.on('change', function() {
-            var tipe = $(this).val();
-            if (tipe === 'Gedung') {
-                divParentLokasi.hide();
-                parentLokasiSelectElement.val('').trigger('change');
-            } else {
-                divParentLokasi.show();
-            }
-            modalContent.find('input[name="lokasi_id"]').val('');
-        }).trigger('change');
-
-        if (modalContent.find('input[name="lokasi_id"]').val() != '') {
-            modalContent.find('button[onclick="generateLokasiId()"]').hide();
+        var tipeLokasiSelect = modalContent.find('#tipe_lokasi');
+        if (tipeLokasiSelect.length) {
+            var divParentLokasi = modalContent.find('#div_parent_lokasi');
+            var parentLokasiSelect = modalContent.find('#parent_lokasi_id');
+            var allOptions = parentLokasiSelect.find('option').clone();
+            const toggleParentDropdown = (selectedTipe) => {
+                if (selectedTipe === 'Lantai' || selectedTipe === 'Ruangan') {
+                    parentLokasiSelect.empty().append(allOptions.filter('[value=""]'));
+                    if (selectedTipe === 'Lantai') parentLokasiSelect.append(allOptions.filter((i, el) => $(
+                        el).text().includes('(Gedung)')));
+                    else if (selectedTipe === 'Ruangan') parentLokasiSelect.append(allOptions.filter((i,
+                        el) => $(el).text().includes('(Lantai)')));
+                    divParentLokasi.show();
+                    parentLokasiSelect.prop('required', true);
+                } else {
+                    divParentLokasi.hide();
+                    parentLokasiSelect.prop('required', false).val('').trigger('change');
+                }
+            };
+            tipeLokasiSelect.off('change.toggleParent').on('change.toggleParent', function() {
+                toggleParentDropdown($(this).val());
+            });
+            toggleParentDropdown(tipeLokasiSelect.val());
         }
-        
-        window.generateLokasiId = function() {
-            var tipe_lokasi = modalContent.find('#tipe_lokasi').val();
-            var parent_lokasi_id = modalContent.find('#parent_lokasi').val();
+    });
 
-            if (!tipe_lokasi) {
-                $.toast({
-                    heading: "Peringatan",
-                    text: "Pilih Tipe Lokasi terlebih dahulu.",
-                    icon: "warning",
-                    position: "top-right",
-                });
-                return;
-            }
-
-            if (tipe_lokasi !== 'Gedung' && !parent_lokasi_id) {
-                $.toast({
-                    heading: "Peringatan",
-                    text: "Untuk Lantai dan Ruangan, Lokasi Induk wajib dipilih.",
-                    icon: "warning",
-                    position: "top-right",
-                });
-                return;
-            }
-
-            _loading(true, 'Membuat ID Lokasi...');
-            $.ajax({
-                url: _base_url + 'ipsrs/lokasi/generate_id',
-                type: 'POST',
-                data: {
-                    _token: _token,
-                    tipe_lokasi: tipe_lokasi,
-                    parent_lokasi_id: parent_lokasi_id
-                },
-                success: function(res) {
-                    _loading(false);
-                    if (res.status) {
-                        modalContent.find('input[name="lokasi_id"]').val(res.data.new_id);
-                        $.toast({
-                            heading: "Berhasil",
-                            text: "ID Lokasi berhasil dibuat.",
-                            icon: "success",
-                            position: "top-right",
-                        });
-                    } else {
-                        $.toast({
-                            heading: "Kesalahan",
-                            text: res.message,
-                            icon: "error",
-                            position: "top-right",
-                        });
-                    }
-                },
-                error: function(xhr, status, error) {
-                    _loading(false);
-                    $.toast({
-                        heading: "Error",
-                        text: "Terjadi kesalahan saat generate ID.",
-                        icon: "error",
-                        position: "top-right",
-                    });
-                    console.error(xhr.responseText);
-                }
-            });
-        };
-        var denahInput = modalContent.find('#denah_url');
+    modalContent.find('#denah_url').on('change', function(event) {
         var denahPreview = modalContent.find('#denah-preview');
-
-        // Pastikan elemen ditemukan sebelum memasang event listener
-        if (denahInput.length > 0 && denahPreview.length > 0) {
-            denahInput.on('change', function(event) {
-                // Cek jika ada file yang dipilih
-                if (event.target.files && event.target.files[0]) {
-                    var file = event.target.files[0];
-                    var reader = new FileReader();
-
-                    // Saat FileReader selesai membaca file
-                    reader.onload = function(e) {
-                        // Setel atribut 'src' dari elemen <img> ke hasil Base64
-                        denahPreview.attr('src', e.target.result);
-                    };
-
-                    // Perintahkan FileReader untuk membaca file sebagai Data URL (Base64)
-                    reader.readAsDataURL(file);
-                }
-            });
+        if (event.target.files && event.target.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                denahPreview.attr('src', e.target.result);
+            };
+            reader.readAsDataURL(event.target.files[0]);
         }
     });
 </script>

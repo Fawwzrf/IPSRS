@@ -1,6 +1,7 @@
 /*
 01. LOAD PAGE
 */
+
 function _page(uri, type = null, modal_idx = 1) {
     if (type != "blank") {
         loadingShow();
@@ -585,15 +586,6 @@ function _modalTtdHide() {
 }
 
 function _modal(e, arg, idx = 1) {
-    /* DOCUMENTATION / CONFIGURATION : 
-  event: [event] -> wajib ada
-  uri: [url modal] -> wajib ada
-  size: modal-xl, modal-lg, modal-md, modal-sm, modal-full-width
-  position: normal, center
-  title: title modal
-
-  idx = modal ke
-  */
     let title = e.target.innerText;
     if (typeof arg.title === "undefined") {
         title = e.target.innerText;
@@ -612,7 +604,6 @@ function _modal(e, arg, idx = 1) {
         .removeClass("modal-dialog-centered");
     $("#modal-size-" + idx).removeAttr("style");
 
-    $("#my-modal-" + idx).modal("show");
     $("#modal-title-" + idx).html(title);
     $("#modal-size-" + idx).addClass(arg.size);
 
@@ -643,6 +634,8 @@ function _modal(e, arg, idx = 1) {
             };
             $.loadScript(_base_url + "dist/js/itm.load.js", function () {
                 $("#modal-body-" + idx).html(resp);
+                // Show modal after content is injected
+                $("#my-modal-" + idx).modal("show");
             });
         },
     });

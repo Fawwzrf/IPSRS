@@ -28,14 +28,23 @@ class Lokasi extends MyController
         return $this->renderView($this->template . 'index', $d);
     }
 
-    function form_modal($id = null)
+    public function form_modal($id = null)
     {
+        $d = [];
         $d['main'] = DbModel::getData('mst_lokasi', ['lokasi_id' => $id]);
+
+        // Mengambil semua lokasi yang bisa menjadi parent untuk ditampilkan di dropdown
         $d['all_parent_lokasi'] = DbModel::allData('mst_lokasi', [
-            ['deleted_st', '=', '0'],
-            ['active_st', '=', '1'],
-            ['lokasi_id', '!=', $id]
+            'deleted_st' => '0',
+            'active_st' => '1',
         ]);
+
+        // Jika mode edit, filter agar lokasi itu sendiri tidak muncul di pilihan parent
+        if ($id) {
+            $d['all_parent_lokasi'] = array_filter($d['all_parent_lokasi'], function ($lokasi) use ($id) {
+                return $lokasi['lokasi_id'] != $id;
+            });
+        }
 
         if ($id === null) {
             $d['form_act'] = $this->uri . '/save';
@@ -46,6 +55,36 @@ class Lokasi extends MyController
         return $this->renderView($this->template . 'form_modal', $d);
     }
 
+    private function _generateLokasiId($tipe, $parentId = null)
+    {
+        $prefix = $parentId ? $parentId . '.' : '';
+        // Query untuk mencari ID terakhir berdasarkan parent dan tipe
+        $query = "SELECT MAX(lokasi_id) as last_id FROM mst_lokasi WHERE tipe_lokasi = ? AND deleted_st = 0";
+        $params = [$tipe];
+
+        if ($parentId) {
+            $query .= " AND parent_lokasi_id = ?";
+            $params[] = $parentId;
+        } else {
+            // Jika tidak ada parent (untuk tipe Gedung)
+            $query .= " AND parent_lokasi_id IS NULL";
+        }
+
+        $lastData = DbModel::rawData('row_array', $query, $params);
+        $lastId = $lastData['last_id'] ?? '';
+
+        if (empty($lastId)) {
+            // Jika ini adalah data pertama untuk parent/tipe ini, mulai dari 01
+            return $prefix . '01';
+        } else {
+            // Ambil bagian numerik terakhir dari ID, tambahkan 1, format ulang
+            $parts = explode('.', $lastId);
+            $lastNumber = (int)end($parts);
+            $newNumber = $lastNumber + 1;
+            // str_pad untuk memastikan formatnya selalu 2 digit (01, 02, ... 10)
+            return $prefix . str_pad($newNumber, 2, '0', STR_PAD_LEFT);
+        }
+    }
     function save($id = null)
     {
         $d = _post();
@@ -95,12 +134,9 @@ class Lokasi extends MyController
         unset($d['denah_url_old']);
         try {
             if ($id == null) {
-                if (empty($d['lokasi_id'])) {
-                    return response()->json(_response('11', $this->uri, ['message' => 'ID Lokasi wajib diisi!']));
-                }
-                if (DbModel::validId('mst_lokasi', 'lokasi_id', $d['lokasi_id'])) {
-                    return response()->json(_response('20', $this->uri, ['message' => 'ID Lokasi sudah ada!']));
-                }
+
+                $d['lokasi_id'] = $this->_generateLokasiId($d['tipe_lokasi'], $d['parent_lokasi_id']);
+
 
                 $result = DbModel::insertData('mst_lokasi', $d);
                 if ($result) {
@@ -116,9 +152,32 @@ class Lokasi extends MyController
                     return response()->json(_response('12', $this->uri, $d));
                 }
             }
+
+            
         } catch (\Throwable $th) {
             Log::error('Error saving location: ' . $th->getMessage(), ['trace' => $th->getTraceAsString()]);
             return response()->json(_response('10', $this->uri, ['message' => 'Terjadi kesalahan saat menyimpan data: ' . $th->getMessage()]));
+        }
+
+        if ($id) {
+            // Mode Edit
+            $old_id = $id;
+            $new_id = $d['lokasi_id'];
+
+            // Jika ID diubah, pastikan ID baru belum ada
+            if ($old_id != $new_id) {
+                if (DbModel::validId('mst_lokasi', 'lokasi_id', $new_id)) {
+                    return response()->json(_response('20', $this->uri, ['message' => 'ID Lokasi baru sudah digunakan!']));
+                }
+            }
+
+            $result = DbModel::updateData('mst_lokasi', $d, ['lokasi_id' => $old_id]);
+            return response()->json(_response($result ? '02' : '12', $this->uri, $d));
+        } else {
+            // Mode Insert (ID dibuat otomatis)
+            $d['lokasi_id'] = $this->_generateLokasiId($d['tipe_lokasi'], $d['parent_lokasi_id']);
+            $result = DbModel::insertData('mst_lokasi', $d);
+            return response()->json(_response($result ? '01' : '11', $this->uri, $d));
         }
     }
 
@@ -147,6 +206,8 @@ class Lokasi extends MyController
             return response()->json(_response('13', $this->uri));
         }
     }
+
+
 
     public function ajax_datatables()
     {

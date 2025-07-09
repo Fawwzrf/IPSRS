@@ -1,3 +1,6 @@
+<!-- Tambahkan di layout utama atau sebelum _js.blade.php -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.js"></script>
 @include('master::lokasi._js')
 <div class="page-wrapper">
     <div class="page-header d-print-none mt-2">
@@ -111,3 +114,16 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Preview Denah</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center" id="imagePreviewBody">
+          <img src="" id="imageForViewer" style="max-width: 100%; display: none;">
+        </div>
+      </div>
+    </div>
+  </div>
