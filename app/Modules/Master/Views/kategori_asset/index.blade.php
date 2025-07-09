@@ -1,4 +1,4 @@
-@include('ipsrs::kategori_asset._js')
+@include('master::kategori_asset._js')
 <div class="page-wrapper">
     <div class="page-header d-print-none mt-2">
         <div class="container-xl">

@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\View;
+use App\Modules\Master\Composers\LokasiFormComposer;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,5 +23,9 @@ class AppServiceProvider extends ServiceProvider
     {
         //
         $this->app->register(\App\Providers\ModuleServiceProvider::class);
+        View::composer(
+            'master::lokasi.form_modal', // Nama view (sesuaikan jika berbeda)
+            LokasiFormComposer::class
+        );
     }
 }

@@ -19,6 +19,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="<?= asset('assets/manifest_asset/ios/180.png') ?>">
   <link rel="icon" type="image/png" sizes="512x512" href="<?= asset('assets/manifest_asset/android/android-launchericon-512-512.png') ?>">
   <link rel="icon" type="image/png" sizes="192x192" href="<?= asset('assets/manifest_asset/android/android-launchericon-192-192.png') ?>">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.css" />
   <!-- Toast -->
   <link href="<?= asset('dist/libs/jquery-toast/jquery-toast.min.css') ?>" rel="stylesheet" />
   <!-- Fontawesome -->
@@ -53,6 +54,7 @@
   <link href="<?= asset('dist/libs/fullcalendar/main.css') ?>" rel="stylesheet" />
   <!-- Calendar -->
   <link href="<?= asset('dist/libs/calendar/calendar.css') ?>" rel="stylesheet" />
+  
   <style>
     :root {
       --tblr-font-sans-serif: 'Inter Var', -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, Helvetica Neue, sans-serif;
@@ -195,6 +197,8 @@
   <script src="<?= asset('dist/js/hotkeys.min.js') ?>"></script>
   <!-- Fullcalendar -->
   <script src="<?= asset('dist/libs/fullcalendar/main.min.js') ?>"></script>
+
+  
 
   <!-- Custom -->
   <script type="text/javascript">

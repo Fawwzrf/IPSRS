@@ -56,4 +56,28 @@ abstract class MyController extends Controller
       return View('app::template.index', $data);
     }
   }
+  protected function save_session_search(&$d)
+  {
+    
+    $session_name = request('n');
+
+    
+    if (request('search_act') == 'save') {
+      
+      session([
+        $session_name => [
+          'search' => [
+            'data' => request('search'),
+          ],
+        ],
+      ]);
+    }
+    
+    else if (request('search_act') == 'reset') {
+      
+      session()->forget($session_name);
+    }
+
+    $d['nav_sess'] = session($session_name);
+  }
 }

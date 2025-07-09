@@ -3,7 +3,8 @@
     <div class="mb-1 row">
       <label class="col-lg-2 col-md-6 col-form-label required">Pegawai Id</label>
       <div class="col-lg-4">
-        <input type="text" name="pegawai_id" class="form-control" value="<?= @$main['pegawai_id'] ?>" <?= @$main ? 'required' : '' ?> readonly>
+        <input type="text" name="pegawai_id" class="form-control" value="<?= @$main['pegawai_id'] ?>" <?= @$main ? 'required' : '' ?>
+        >
       </div>
     </div>
     <div class="mb-1 row">
