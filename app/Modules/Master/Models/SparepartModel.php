@@ -41,7 +41,12 @@ class SparepartModel extends Model
         }
         if ($term = @self::$nav_sess['search']['data']['term']) {
             $searchTerm = strtolower(addslashes($term));
-            $where[] = "(LOWER(sparepart_nm) LIKE '%{$searchTerm}%' OR LOWER(no_seri) LIKE '%{$searchTerm}%' OR LOWER(merk) LIKE '%{$searchTerm}%')";
+            // Tambahkan pencarian pada ID, No. Seri, Merk, dan Lokasi Penyimpanan
+            $where[] = "(LOWER(sparepart_id) LIKE '%{$searchTerm}%' 
+                          OR LOWER(sparepart_nm) LIKE '%{$searchTerm}%' 
+                          OR LOWER(no_seri) LIKE '%{$searchTerm}%' 
+                          OR LOWER(merk) LIKE '%{$searchTerm}%' 
+                          OR LOWER(lokasi_penyimpanan) LIKE '%{$searchTerm}%')";
         }
 
         // 3. Gabungkan semua kondisi

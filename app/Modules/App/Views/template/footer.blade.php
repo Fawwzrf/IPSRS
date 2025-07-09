@@ -85,7 +85,6 @@
 
   changeTitle();
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.js"></script>
 </body>
 
 </html>

@@ -192,13 +192,6 @@ class Lokasi extends MyController
         if ($hasAssets) {
             return response()->json(_response('13', $this->uri, ['message' => 'Lokasi ini masih terhubung dengan aset dan tidak dapat dihapus.']));
         }
-        $lokasi_data = DbModel::getData('mst_lokasi', ['lokasi_id' => $id]);
-        if ($lokasi_data && $lokasi_data['denah_url']) {
-            $file_path = public_path($lokasi_data['denah_url']);
-            if (file_exists($file_path)) {
-                unlink($file_path); // Hapus file fisik
-            }
-        }
         $result = DbModel::deleteData('mst_lokasi', ['lokasi_id' => $id]);
         if ($result) {
             return response()->json(_response('03', $this->uri));

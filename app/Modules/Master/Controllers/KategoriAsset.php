@@ -35,7 +35,7 @@ class KategoriAsset extends MyController
     {
         $d = _post();
 
-
+        // --- AWAL PERBAIKAN: VALIDASI BACKEND ---
         if ($id == null) {
             if (empty($d['kategori_asset_id'])) {
                 return response()->json(_response('11', $this->uri, ['message' => 'ID Kategori Aset wajib diisi!']));
@@ -45,34 +45,30 @@ class KategoriAsset extends MyController
             }
         }
 
-        $queryCheckUniqueName = "SELECT * FROM mst_kategori_asset WHERE kategori_asset_nm = '" . addslashes($d['kategori_asset_nm']) . "' AND deleted_st = 0";
-        if ($id != null) {
-            $queryCheckUniqueName .= " AND kategori_asset_id != '" . addslashes($id) . "'";
+        // Menambahkan validasi untuk nama kategori yang wajib diisi
+        if (empty($d['kategori_asset_nm'])) {
+            return response()->json(_response('11', $this->uri, ['message' => 'Nama Kategori Aset wajib diisi!']));
         }
-        $checkUniqueName = DbModel::rawData('row_array', $queryCheckUniqueName);
-        if ($checkUniqueName != null) {
+        // --- AKHIR PERBAIKAN ---
+
+        // Pengecekan keunikan nama
+        $queryCheckUniqueName = "SELECT * FROM mst_kategori_asset WHERE kategori_asset_nm = ? AND deleted_st = 0";
+        $params = [$d['kategori_asset_nm']];
+        if ($id != null) {
+            $queryCheckUniqueName .= " AND kategori_asset_id != ?";
+            $params[] = $id;
+        }
+        if (DbModel::rawData('row_array', $queryCheckUniqueName, $params)) {
             return response()->json(_response('20', $this->uri, ['message' => 'Nama Kategori Aset sudah digunakan!']));
         }
 
-        try {
-            if ($id == null) {
-                $result = DbModel::insertData('mst_kategori_asset', $d);
-                if ($result) {
-                    return response()->json(_response('01', $this->uri, $d));
-                } else {
-                    return response()->json(_response('11', $this->uri, $d));
-                }
-            } else {
-                $result = DbModel::updateData('mst_kategori_asset', $d, ['kategori_asset_id' => $id]);
-                if ($result) {
-                    return response()->json(_response('02', $this->uri, $d));
-                } else {
-                    return response()->json(_response('12', $this->uri, $d));
-                }
-            }
-        } catch (\Throwable $th) {
-            Log::error('Error saving kategori asset: ' . $th->getMessage(), ['trace' => $th->getTraceAsString()]);
-            return response()->json(_response('10', $this->uri, ['message' => 'Terjadi kesalahan saat menyimpan data: ' . $th->getMessage()]));
+        // Proses simpan data (tidak berubah)
+        if ($id == null) {
+            $result = DbModel::insertData('mst_kategori_asset', $d);
+            return response()->json(_response($result ? '01' : '11', $this->uri, $d));
+        } else {
+            $result = DbModel::updateData('mst_kategori_asset', $d, ['kategori_asset_id' => $id]);
+            return response()->json(_response($result ? '02' : '12', $this->uri, $d));
         }
     }
 

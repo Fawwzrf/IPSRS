@@ -126,43 +126,33 @@
             tabel.ajax.reload();
         };
     });
+    $('body').on('change', '#denah_url', function(event) {
+        var modalBody = $(this).closest('.modal-body');
+        var denahPreview = modalBody.find('#denah-preview');
+        var denahLink = modalBody.find('#denah-link'); // Ambil elemen link
 
-    function stopTablerEvent(event) {
-        // Hentikan event ini sepenuhnya, jangan biarkan listener lain (termasuk Tabler) menjalankannya.
-        event.stopImmediatePropagation();
-    }
+        if (event.target.files && event.target.files[0]) {
+            var reader = new FileReader();
+
+            reader.onload = function(e) {
+                var imageSrc = e.target.result;
+
+                // Update sumber gambar untuk preview
+                denahPreview.attr('src', imageSrc);
+
+                // Update link agar saat diklik membuka gambar yang baru
+                denahLink.attr('href', imageSrc);
+            };
+
+            reader.readAsDataURL(event.target.files[0]);
+        }
+    });
 
     $(document).on('shown.bs.modal', '#my-modal-1', function(e) {
         var modalContent = $(this).find('.modal-body');
-        var gallery = modalContent.find('#denah-gallery')[0];
+        
 
-        const setupViewer = () => {
-            if (!gallery) return;
-
-            if (gallery.viewerInstance) {
-                gallery.viewerInstance.destroy();
-            }
-
-            gallery.viewerInstance = new Viewer(gallery, {
-                inline: false,
-                toolbar: {
-                    zoomIn: 1,
-                    zoomOut: 1,
-                    oneToOne: 1,
-                    reset: 1,
-                    rotateLeft: 1,
-                    rotateRight: 1,
-                    flipHorizontal: 1,
-                    flipVertical: 1
-                },
-            });
-            gallery.removeEventListener('mousedown', stopTablerEvent, true);
-            
-            // Tambahkan listener baru di fase capture (parameter ketiga 'true')
-            gallery.addEventListener('mousedown', stopTablerEvent, true);
-        };
-
-        setupViewer();
+        
 
         modalContent.find('.chosen-select').select2({
             theme: "bootstrap-5",
@@ -201,23 +191,8 @@
             toggleParentDropdown(tipeLokasiSelect.val());
         }
 
-        modalContent.find('#denah_url').off('change.viewer').on('change.viewer', function(event) {
-            if (event.target.files && event.target.files[0]) {
-                var reader = new FileReader();
-                reader.onload = function(e) {
-                    modalContent.find('#denah-preview').attr('src', e.target.result);
-                    setupViewer();
-                };
-                reader.readAsDataURL(event.target.files[0]);
-            }
-        });
+        
     });
 
-    $(document).on('hidden.bs.modal', '#my-modal-1', function(e) {
-        var gallery = $(this).find('#denah-gallery')[0];
-        if (gallery && gallery.viewerInstance) {
-            gallery.viewerInstance.destroy();
-            gallery.viewerInstance = null;
-        }
-    });
+
 </script>

@@ -66,12 +66,19 @@
                     <input type="hidden" name="denah_url_old" value="{{ @$main['denah_url'] }}">
                 </div>
             </div>
-            <div id="denah-gallery">
-                <img id="denah-preview" 
-                     src="{{ @$main['denah_url'] ? $main['denah_url'] : asset('assets/no-image.png') }}"
-                     alt="Preview Denah"
-                     class="img-thumbnail"
-                     style="max-width: 200px; max-height: 150px; object-fit: cover; cursor: pointer;">
+            <div class="mb-1 row">
+                <label class="col-lg-3 col-form-label">Preview</label>
+                <div class="col-lg-9">
+                    {{-- AWAL PERBAIKAN: Bungkus <img> dengan <a> --}}
+                    @php
+                        $previewSrc = @$main['denah_url'] ?: 'https://via.placeholder.com/200x150.png?text=Tidak+Ada+Gambar';
+                    @endphp
+                    
+                    <a id="denah-link" href="{{ $previewSrc }}" target="_blank" title="Klik untuk melihat ukuran penuh di tab baru">
+                        <img id="denah-preview" src="{{ $previewSrc }}" alt="Preview Denah" class="img-thumbnail" style="max-width: 200px; max-height: 150px; object-fit: cover; cursor: pointer;">
+                    </a>
+                    {{-- AKHIR PERBAIKAN --}}
+                </div>
             </div>
         </fieldset>
 

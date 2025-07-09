@@ -5,6 +5,8 @@ namespace App\Modules\Master\Controllers;
 use App\Http\Controllers\MyController;
 use App\Modules\App\Models\DbModel;
 use App\Modules\Master\Models\SparepartModel;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 
 class Sparepart extends MyController
 {
@@ -33,18 +35,17 @@ class Sparepart extends MyController
     {
         $d = _post();
 
-        // --- VALIDASI DI BACKEND ---
-        if (empty($d['sparepart_id']) && $id == null) {
+        // --- AWAL PERBAIKAN: VALIDASI BACKEND ---
+        if ($id == null && empty($d['sparepart_id'])) {
             return response()->json(_response('11', $this->uri, ['message' => 'ID Sparepart wajib diisi!']));
         }
         if (empty($d['sparepart_nm'])) {
             return response()->json(_response('11', $this->uri, ['message' => 'Nama Sparepart wajib diisi!']));
         }
-        // --- AKHIR VALIDASI ---
-
-        // Kapitalisasi data
-        $d['sparepart_nm'] = strtoupper($d['sparepart_nm']);
-        if (isset($d['merk'])) $d['merk'] = strtoupper($d['merk']);
+        if (empty($d['satuan'])) {
+            return response()->json(_response('11', $this->uri, ['message' => 'Satuan wajib diisi!']));
+        }
+        // --- AKHIR PERBAIKAN ---
 
         // Hapus field stok dari array agar tidak bisa diupdate manual
         unset($d['stok']);
@@ -63,7 +64,7 @@ class Sparepart extends MyController
             }
         }
 
-        // Alur Insert/Update
+        // Alur Insert/Update (tidak berubah)
         if ($id == null) {
             $result = DbModel::insertData('mst_sparepart', $d);
             return response()->json(_response($result ? '01' : '11', $this->uri, $d));
@@ -92,4 +93,3 @@ class Sparepart extends MyController
         return SparepartModel::loadDatatables();
     }
 }
-

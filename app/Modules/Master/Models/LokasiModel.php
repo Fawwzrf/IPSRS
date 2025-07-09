@@ -56,7 +56,10 @@ class LokasiModel extends Model
         }
         if ($term = @self::$nav_sess['search']['data']['term']) {
             $searchTerm = strtolower(addslashes($term));
-            $where[] = "(LOWER(a.lokasi_nm) LIKE '%{$searchTerm}%' OR LOWER(a.deskripsi) LIKE '%{$searchTerm}%')";
+            // Tambahkan pencarian pada ID Lokasi dan Deskripsi
+            $whereClause .= " AND (LOWER(a.lokasi_id) LIKE '%{$searchTerm}%' 
+                                  OR LOWER(a.lokasi_nm) LIKE '%{$searchTerm}%' 
+                                  OR LOWER(a.deskripsi) LIKE '%{$searchTerm}%')";
         }
 
         // 3. Gabungkan semua kondisi menjadi satu string
