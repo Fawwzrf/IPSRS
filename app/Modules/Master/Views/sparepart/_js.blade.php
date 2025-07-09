@@ -138,37 +138,6 @@
         
         // Datepicker tidak ada di sini karena tidak ada input tanggal di form sparepart
 
-        modalContent.find("#form").validate({
-            rules: {
-                sparepart_id: { required: true },
-                sparepart_nm: { required: true },
-                active_st: { required: true },
-            },
-            messages: {
-                sparepart_id: { required: "ID Sparepart wajib diisi." },
-                sparepart_nm: { required: "Nama Sparepart wajib diisi." },
-                active_st: { required: "Status Aktif wajib dipilih." },
-            },
-            errorElement: "em",
-            errorPlacement: function(error, element) {
-                error.addClass("invalid-feedback");
-                if (element.prop("type") === "radio") {
-                    error.insertAfter(element.closest('.row').find('label.col-form-label').last());
-                } else if ($(element).hasClass('select2')) {
-                    error.insertAfter(element.next(".select2-container"));
-                } else {
-                    error.insertAfter(element);
-                }
-            },
-            highlight: function(element, errorClass, validClass) {
-                $(element).addClass("is-invalid").removeClass("is-valid");
-            },
-            unhighlight: function(element, errorClass, validClass) {
-                $(element).addClass("is-valid").removeClass("is-invalid");
-            },
-            submitHandler: function(form) {
-                _save(event, form);
-            }
-        });
+        
     });
 </script>

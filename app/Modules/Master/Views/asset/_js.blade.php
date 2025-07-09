@@ -167,38 +167,5 @@
             }
         }); // <-- Tanda kurung kurawal } di sini yang hilang
 
-        modalContent.find("#form").validate({
-            rules: {
-                asset_nm: { required: true },
-                status: { required: true },
-                active_st: { required: true },
-                
-            },
-            messages: {
-                asset_nm: { required: "Nama Aset wajib diisi." },
-                status: { required: "Status Aset wajib dipilih." },
-                active_st: { required: "Status Aktif wajib dipilih." },
-            },
-            errorElement: "em",
-            errorPlacement: function(error, element) {
-                error.addClass("invalid-feedback");
-                if (element.prop("type") === "radio") {
-                    error.insertAfter(element.closest('.row').find('label.col-form-label').last());
-                } else if ($(element).hasClass('select2')) {
-                    error.insertAfter(element.next(".select2-container"));
-                } else {
-                    error.insertAfter(element);
-                }
-            },
-            highlight: function(element, errorClass, validClass) {
-                $(element).addClass("is-invalid").removeClass("is-valid");
-            },
-            unhighlight: function(element, errorClass, validClass) {
-                $(element).addClass("is-valid").removeClass("is-invalid");
-            },
-            submitHandler: function(form) {
-                _save(event, form);
-            }
-        });
     });
 </script>
