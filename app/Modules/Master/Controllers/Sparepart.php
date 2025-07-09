@@ -92,3 +92,4 @@ class Sparepart extends MyController
         return SparepartModel::loadDatatables();
     }
 }
+

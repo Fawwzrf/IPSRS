@@ -1,87 +1,73 @@
-<form id="form" action="{{ $form_act }}" method="post" autocomplete="off">
+<form id="form" action="<?= $form_act ?>" method="post" autocomplete="off">
     @csrf
     <div class="card-body">
-
-        <fieldset class="border p-2 rounded mb-3">
-            <legend class="float-none w-auto px-2 fs-6 fw-bold">Informasi Sparepart</legend>
-            
-            <div class="mb-3 row">
-                <label class="col-lg-3 col-form-label required">ID Sparepart</label>
-                <div class="col-lg-5">
-                    <input type="text" name="sparepart_id" id="sparepart_id" class="form-control" value="{{ @$main['sparepart_id'] }}" @if(@$main) readonly @endif required>
-                    <small class="form-hint">ID unik untuk sparepart. Contoh: SPRT001</small>
-                </div>
+        <div class="mb-1 row">
+            <label class="col-lg-3 col-md-6 col-form-label required">ID Sparepart</label>
+            <div class="col-lg-4">
+                <input type="text" name="sparepart_id" id="sparepart_id" class="form-control" value="<?= @$main['sparepart_id'] ?>" <?= (@$main['sparepart_id']) ? 'readonly' : '' ?> required>
+                <small class="form-hint">ID sparepart harus unik. Contoh: SPRT001</small>
             </div>
-            <div class="mb-3 row">
-                <label class="col-lg-3 col-form-label required">Nama Sparepart</label>
-                <div class="col-lg-9">
-                    <input type="text" name="sparepart_nm" id="sparepart_nm" class="form-control" value="{{ @$main['sparepart_nm'] }}" required>
-                </div>
+        </div>
+        <div class="mb-1 row">
+            <label class="col-lg-3 col-md-6 col-form-label required">Nama Sparepart</label>
+            <div class="col-lg-8 col-md-6">
+                <input type="text" name="sparepart_nm" id="sparepart_nm" class="form-control" value="<?= @$main['sparepart_nm'] ?>" required>
             </div>
-            <div class="mb-3 row">
-                <label class="col-lg-3 col-form-label">No. Seri</label>
-                <div class="col-lg-9">
-                    <input type="text" name="no_seri" id="no_seri" class="form-control" value="{{ @$main['no_seri'] }}">
-                </div>
+        </div>
+        <div class="mb-1 row">
+            <label class="col-lg-3 col-md-6 col-form-label">No. Seri</label>
+            <div class="col-lg-8 col-md-6">
+                <input type="text" name="no_seri" id="no_seri" class="form-control" value="<?= @$main['no_seri'] ?>">
             </div>
-            <div class="mb-1 row">
-                <label class="col-lg-3 col-form-label">Merk</label>
-                <div class="col-lg-9">
-                    <input type="text" name="merk" id="merk" class="form-control" value="{{ @$main['merk'] }}">
-                </div>
+        </div>
+        <div class="mb-1 row">
+            <label class="col-lg-3 col-md-6 col-form-label">Merk</label>
+            <div class="col-lg-8 col-md-6">
+                <input type="text" name="merk" id="merk" class="form-control" value="<?= @$main['merk'] ?>">
             </div>
-        </fieldset>
-
-        <fieldset class="border p-2 rounded mb-3">
-            <legend class="float-none w-auto px-2 fs-6 fw-bold">Detail & Penyimpanan</legend>
-            <div class="mb-3 row">
-                <label class="col-lg-3 col-form-label">Satuan</label>
-                <div class="col-lg-4">
-                    <input type="text" name="satuan" id="satuan" class="form-control" value="{{ @$main['satuan'] }}">
-                </div>
+        </div>
+        <div class="mb-1 row">
+            <label class="col-lg-3 col-md-6 col-form-label">Satuan</label>
+            <div class="col-lg-8 col-md-6">
+                <input type="text" name="satuan" id="satuan" class="form-control" value="<?= @$main['satuan'] ?>">
             </div>
-            <div class="mb-3 row">
-                <label class="col-lg-3 col-form-label">Harga (Rp)</label>
-                <div class="col-lg-4">
-                    <input type="text" name="harga" id="harga" class="form-control autonumeric" value="{{ @$main['harga'] }}">
-                </div>
+        </div>
+        <div class="mb-1 row">
+            <label class="col-lg-3 col-md-6 col-form-label">Harga (Rp)</label>
+            <div class="col-lg-4 col-md-6">
+                <input type="text" name="harga" id="harga" class="form-control autonumeric" value="<?= @$main['harga'] ?>">
             </div>
-            <div class="mb-3 row">
-                <label class="col-lg-3 col-form-label">Stok</label>
-                <div class="col-lg-3">
-                    <input type="number" name="stok" id="stok" class="form-control" value="{{ @$main['stok'] ?? 0 }}" readonly>
-                    <small class="form-hint">Stok dikelola otomatis oleh sistem.</small>
-                </div>
+        </div>
+        <div class="mb-1 row">
+            <label class="col-lg-3 col-md-6 col-form-label">Stok</label>
+            <div class="col-lg-2 col-md-6">
+                <input type="number" name="stok" id="stok" class="form-control" value="<?= @$main['stok'] ?>" min="0">
             </div>
-            <div class="mb-1 row">
-                <label class="col-lg-3 col-form-label">Lokasi Penyimpanan</label>
-                <div class="col-lg-9">
-                    <input type="text" name="lokasi_penyimpanan" id="lokasi_penyimpanan" class="form-control" value="{{ @$main['lokasi_penyimpanan'] }}">
-                </div>
+        </div>
+        <div class="mb-1 row">
+            <label class="col-lg-3 col-md-6 col-form-label">Lokasi Penyimpanan</label>
+            <div class="col-lg-8 col-md-6">
+                <input type="text" name="lokasi_penyimpanan" id="lokasi_penyimpanan" class="form-control" value="<?= @$main['lokasi_penyimpanan'] ?>">
             </div>
-        </fieldset>
-
-        <fieldset class="border p-2 rounded mb-3">
-            <legend class="float-none w-auto px-2 fs-6 fw-bold">Status</legend>
-            <div class="mb-1 row">
-                <label class="col-lg-3 col-form-label required">Aktif?</label>
-                <div class="col-lg-9 pt-2">
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="active_st" value="1" @if(@$main == '' || @$main['active_st'] == 1) checked @endif>
-                        <span class="form-check-label">Aktif</span>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="active_st" value="0" @if(@$main != '' && @$main['active_st'] == 0) checked @endif>
-                        <span class="form-check-label">Tidak Aktif</span>
-                    </div>
-                </div>
+        </div>
+        <div class="mb-1 row">
+            <label class="col-lg-3 col-md-6 col-form-label required">Aktif?</label>
+            <div class="col-lg-8 col-md-6">
+                <label class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="active_st" value="1" <?= (@$main == '') ? 'checked' : ((@$main['active_st'] == 1) ? 'checked' : '') ?>>
+                    <span class="form-check-label">Aktif</span>
+                </label>
+                <label class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="active_st" value="0" <?= (@$main != '') ? ((@$main['active_st'] == 0) ? 'checked' : '') : '' ?>>
+                    <span class="form-check-label">Tidak Aktif</span>
+                </label>
             </div>
-        </fieldset>
-
-        <div class="row mt-3">
-            <div class="col-lg-9 offset-lg-3">
+        </div>
+        <div class="border-dotted"></div>
+        <div class="row mt-2">
+            <div class="col-9 offset-3">
                 <button type="submit" class="btn btn-primary" onclick="_save(event)"><i class="fas fa-save me-2"></i> Simpan</button>
-                <button type="button" class="btn btn-link" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-default" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i> Batal</button>
             </div>
         </div>
     </div>

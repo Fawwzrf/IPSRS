@@ -1,6 +1,7 @@
 /*
 01. LOAD PAGE
 */
+
 function _page(uri, type = null, modal_idx = 1) {
     if (type != "blank") {
         loadingShow();
@@ -585,15 +586,6 @@ function _modalTtdHide() {
 }
 
 function _modal(e, arg, idx = 1) {
-    /* DOCUMENTATION / CONFIGURATION : 
-     event: [event] -> wajib ada
-     uri: [url modal] -> wajib ada
-     size: modal-xl, modal-lg, modal-md, modal-sm, modal-full-width
-     position: normal, center
-     title: title modal
-
-     idx = modal ke
-     */
     let title = e.target.innerText;
     if (typeof arg.title !== "undefined" && arg.title !== "") {
         title = arg.title;
@@ -608,7 +600,6 @@ function _modal(e, arg, idx = 1) {
         .removeClass("modal-xl modal-lg modal-md modal-sm modal-full-width modal-dialog-centered")
         .removeAttr("style");
 
-    // 2. Atur judul, ukuran, dan posisi
     $("#modal-title-" + idx).html(title);
     $modalSize.addClass(arg.size);
 
@@ -629,25 +620,20 @@ function _modal(e, arg, idx = 1) {
             _token: _token,
         },
         success: function (resp) {
-            // 4. Inject konten ke dalam modal body
-            $("#modal-body-" + idx).html(resp);
-
-            // Opsional: Load script tambahan jika ada
-            // (Struktur ini bisa disederhanakan)
-            $.getScript(_base_url + "dist/js/itm.load.js", function () {
-                // Script tambahan telah di-load jika perlu tindakan lebih lanjut
-                console.log('itm.load.js loaded successfully.');
+            jQuery.loadScript = function (url, callback) {
+                jQuery.ajax({
+                    url: _base_url + "dist/js/itm.load.js",
+                    dataType: "script",
+                    success: callback,
+                    async: false,
+                });
+            };
+            $.loadScript(_base_url + "dist/js/itm.load.js", function () {
+                $("#modal-body-" + idx).html(resp);
+                // Show modal after content is injected
+                $("#my-modal-" + idx).modal("show");
             });
-
-            // 5. Tampilkan modal SETELAH konten berhasil di-inject
-            $("#my-modal-" + idx).modal("show");
         },
-        error: function (jqXHR, textStatus, errorThrown) {
-            // Tambahkan penanganan error agar pengguna tahu jika gagal memuat
-            $("#modal-body-" + idx).html('<div class="alert alert-danger">Gagal memuat konten. Silakan coba lagi.</div>');
-            $("#my-modal-" + idx).modal("show");
-            console.error("AJAX Error:", textStatus, errorThrown);
-        }
     });
 }
 
