@@ -41,7 +41,8 @@
                                             <div class="row">
                                                 <div class="col-lg-3">
                                                     <label class="form-label">Lokasi</label>
-                                                    <select class="form-select chosen-select" name="search[lokasi_id]">
+                                                    {{-- PERBAIKAN: name="search[lokasi_id]" menjadi name="lokasi_id" --}}
+                                                    <select class="form-select chosen-select" name="lokasi_id">
                                                         <option value="">-- Semua Lokasi --</option>
                                                         @foreach($all_lokasi as $r)
                                                             <option value="{{ $r['lokasi_id'] }}" @if(@$nav_sess['search']['data']['lokasi_id'] == $r['lokasi_id']) selected @endif>
@@ -52,7 +53,8 @@
                                                 </div>
                                                 <div class="col-lg-3">
                                                     <label class="form-label">Kategori</label>
-                                                    <select class="form-select chosen-select" name="search[kategori_asset_id]">
+                                                    {{-- PERBAIKAN: name="search[kategori_asset_id]" menjadi name="kategori_asset_id" --}}
+                                                    <select class="form-select chosen-select" name="kategori_asset_id">
                                                         <option value="">-- Semua Kategori --</option>
                                                         @foreach($all_kategori_asset as $r)
                                                             <option value="{{ $r['kategori_asset_id'] }}" @if(@$nav_sess['search']['data']['kategori_asset_id'] == $r['kategori_asset_id']) selected @endif>
@@ -63,7 +65,8 @@
                                                 </div>
                                                 <div class="col-lg-2">
                                                     <label class="form-label">Status Aset</label>
-                                                    <select class="form-select chosen-select" name="search[status]">
+                                                    {{-- PERBAIKAN: name="search[status]" menjadi name="status" --}}
+                                                    <select class="form-select chosen-select" name="status">
                                                         <option value="">-- Semua Status --</option>
                                                         <option value="aktif" @if('aktif' == @$nav_sess['search']['data']['status']) selected @endif>Aktif</option>
                                                         <option value="perbaikan" @if('perbaikan' == @$nav_sess['search']['data']['status']) selected @endif>Perbaikan</option>
@@ -73,12 +76,13 @@
                                                 </div>
                                                 <div class="col-lg-2">
                                                     <label class="form-label">Pencarian</label>
-                                                    <input class="form-control" type="text" name="search[term]" value="{{ @$nav_sess['search']['data']['term'] }}">
+                                                    {{-- PERBAIKAN: name="search[term]" menjadi name="term" --}}
+                                                    <input class="form-control" type="text" name="term" value="{{ @$nav_sess['search']['data']['term'] }}">
                                                 </div>
                                                 <div class="col-lg-2">
                                                     <div class="input-group mt-4">
                                                         <button class="btn" type="submit" onclick="_search(event)"><i class="fas fa-search"></i>&nbsp;Cari</button>
-                                                        <button class="btn" type="button" onclick="_searchReset()"><i class="fas fa-times"></i>&nbsp;Reset</button>
+                                                        <button class="btn" type="button" onclick="_searchReset()"><i class="fas fa-times"></i>&nbsp;&nbsp;Batal</button>
                                                     </div>
                                                 </div>
                                             </div>

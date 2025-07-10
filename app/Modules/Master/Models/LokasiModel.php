@@ -2,14 +2,13 @@
 
 namespace App\Modules\Master\Models;
 
-use App\Modules\App\Models\DbModel; // Perbaiki namespace: use App\Modules\App\Models\DbModel;
+use App\Modules\App\Models\DbModel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
 class LokasiModel extends Model
 {
     protected static $nav_sess;
-    
 
     public function __construct()
     {
@@ -24,11 +23,15 @@ class LokasiModel extends Model
         }
     }
 
+    /**
+     * PERBAIKAN TOTAL PADA FUNGSI INI
+     * Mengadopsi pola modern dan aman untuk membangun query.
+     */
     static function loadDatatables()
     {
         self::initSession();
 
-        // 1. Siapkan query utama TANPA klausa WHERE
+        // 1. Query dasar tanpa klausa WHERE
         $query = "SELECT
                     a.lokasi_id, a.lokasi_nm, a.tipe_lokasi, a.parent_lokasi_id,
                     a.deskripsi, a.active_st,
@@ -36,37 +39,8 @@ class LokasiModel extends Model
                   FROM mst_lokasi a
                   LEFT JOIN mst_lokasi b ON a.parent_lokasi_id = b.lokasi_id";
 
-        // 2. Siapkan array untuk menampung kondisi WHERE
-        $where = [];
-        $where[] = "a.deleted_st = 0"; // Kondisi dasar (sebagai string)
-
-        // Tambahkan filter lain dari session ke dalam array
-        if ($tipe = @self::$nav_sess['search']['data']['tipe_lokasi']) {
-            $where[] = "a.tipe_lokasi = '" . addslashes($tipe) . "'";
-        }
-        if ($parent_id = @self::$nav_sess['search']['data']['parent_lokasi_id']) {
-            if ($parent_id == 'NULL') {
-                $where[] = "a.parent_lokasi_id IS NULL";
-            } else {
-                $where[] = "a.parent_lokasi_id = '" . addslashes($parent_id) . "'";
-            }
-        }
-        if (($active_st = @self::$nav_sess['search']['data']['active_st']) !== '' && $active_st !== null) {
-            $where[] = "a.active_st = " . (int)$active_st;
-        }
-        if ($term = @self::$nav_sess['search']['data']['term']) {
-            $searchTerm = strtolower(addslashes($term));
-            // Tambahkan pencarian pada ID Lokasi dan Deskripsi
-            $whereClause .= " AND (LOWER(a.lokasi_id) LIKE '%{$searchTerm}%' 
-                                  OR LOWER(a.lokasi_nm) LIKE '%{$searchTerm}%' 
-                                  OR LOWER(a.deskripsi) LIKE '%{$searchTerm}%')";
-        }
-
-        // 3. Gabungkan semua kondisi menjadi satu string
-        $whereClause = implode(' AND ', $where);
-
-        // Kolom yang dapat dicari oleh Datatables
-        $search = [
+        // 2. Kolom yang dapat dicari oleh DataTables
+        $searchableColumns = [
             'a.lokasi_id',
             'a.lokasi_nm',
             'a.tipe_lokasi',
@@ -74,15 +48,39 @@ class LokasiModel extends Model
             'a.deskripsi'
         ];
 
-        // 4. Kirim query dan string 'where' ke helper
-        // Parameter $isWhere sekarang diisi dengan string kondisi kita
-        $result = DbModel::datatablesQuery($query, $search, null, $whereClause);
+        // 3. Kumpulkan kondisi WHERE dalam bentuk array (key-value untuk keamanan)
+        $whereConditions = [];
+        $whereConditions['a.deleted_st'] = 0; // Kondisi wajib
+
+        // Filter dari sesi pencarian
+        if (!empty(self::$nav_sess['search']['data']['tipe_lokasi'])) {
+            $whereConditions['a.tipe_lokasi'] = self::$nav_sess['search']['data']['tipe_lokasi'];
+        }
+        if (!empty(self::$nav_sess['search']['data']['parent_lokasi_id'])) {
+            $whereConditions['a.parent_lokasi_id'] = self::$nav_sess['search']['data']['parent_lokasi_id'];
+        }
+        if (isset(self::$nav_sess['search']['data']['active_st']) && self::$nav_sess['search']['data']['active_st'] !== '') {
+            $whereConditions['a.active_st'] = self::$nav_sess['search']['data']['active_st'];
+        }
+
+        // 4. Buat string WHERE terpisah untuk pencarian teks (LIKE)
+        $whereString = '';
+        if (!empty(self::$nav_sess['search']['data']['term'])) {
+            $searchTerm = strtolower(self::$nav_sess['search']['data']['term']);
+            // Pencarian diperluas ke beberapa kolom yang relevan
+            $whereString = "
+                (LOWER(a.lokasi_id) LIKE '%{$searchTerm}%' 
+                OR LOWER(a.lokasi_nm) LIKE '%{$searchTerm}%' 
+                OR LOWER(a.deskripsi) LIKE '%{$searchTerm}%'
+                OR LOWER(b.lokasi_nm) LIKE '%{$searchTerm}%')
+            ";
+        }
+
+        // 5. Panggil fungsi datatables dengan parameter yang sudah terstruktur
+        $result = DbModel::datatablesQuery($query, $searchableColumns, $whereConditions, $whereString);
 
         return $result;
     }
-
-    // --- HAPUS: Metode generateLokasiId() ---
-    // public static function generateLokasiId($parent_id = null, $tipe_lokasi) { ... } // DIHAPUS
 
     static function getLokasiPath($lokasiId)
     {

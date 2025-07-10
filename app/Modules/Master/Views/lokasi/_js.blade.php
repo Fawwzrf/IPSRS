@@ -120,6 +120,7 @@
             tabel.ajax.reload();
         });
 
+
         window._searchReset = function() {
             $('#search')[0].reset();
             $('.chosen-select').val('').trigger('change');

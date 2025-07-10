@@ -1,10 +1,9 @@
 <?php
 
-namespace App\Modules\Ipsrs\Models; // Perbaiki namespace
+namespace App\Modules\Ipsrs\Models;
 
 use App\Modules\App\Models\DbModel;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 
 class JadwalPmModel extends Model
 {
@@ -27,56 +26,43 @@ class JadwalPmModel extends Model
     {
         self::initSession();
 
-        // Query utama TANPA KLAUSA WHERE di sini
+        // 1. Siapkan query utama TANPA klausa WHERE
         $query = "SELECT
-                    a.jadwal_pm_id, a.frekuensi, a.jenis, a.tgl_terakhir, a.tgl_berikutnya, a.status, a.estimasi_menit, a.active_st, a.deleted_st,
-                    ast.asset_nm, ast.no_seri as asset_no_seri
-                  FROM jadwal_pm a
-                  LEFT JOIN asset ast ON a.asset_id = ast.asset_id";
+                    pm.jadwal_pm_id,
+                    a.asset_nm,
+                    pm.frekuensi,
+                    pm.jenis,
+                    pm.tgl_terakhir,
+                    pm.tgl_berikutnya,
+                    pm.status,
+                    pm.active_st
+                  FROM jadwal_pm pm
+                  LEFT JOIN asset a ON pm.asset_id = a.asset_id";
 
-        // Kolom yang dapat dicari oleh DataTables
-        $search = [
-            'a.jadwal_pm_id',
-            'a.frekuensi',
-            'a.jenis',
-            'a.status',
-            'ast.asset_nm',
-            'ast.no_seri'
-        ];
+        // 2. Kolom yang bisa dicari oleh Datatables
+        $searchableColumns = ['a.asset_nm', 'pm.frekuensi', 'pm.jenis', 'pm.status'];
 
-        // Kumpulkan semua kondisi WHERE untuk parameter $where (key-value pairs)
-        $conditionsForWhereParam = [];
-        $conditionsForWhereParam[] = 'a.deleted_st = 0'; // Kondisi dasar
+        // 3. Kumpulkan kondisi WHERE dalam bentuk array key-value
+        $whereConditions = [];
+        $whereConditions['pm.deleted_st'] = 0; // Kondisi dasar
 
-        // Filter dari sesi pencarian
-        if (@self::$nav_sess['search']['data']['asset_id'] != '') {
-            $conditionsForWhereParam['a.asset_id'] = @self::$nav_sess['search']['data']['asset_id'];
+        if (!empty(self::$nav_sess['search']['data']['asset_id'])) {
+            $whereConditions['pm.asset_id'] = self::$nav_sess['search']['data']['asset_id'];
         }
-        if (@self::$nav_sess['search']['data']['frekuensi'] != '') {
-            $conditionsForWhereParam['a.frekuensi'] = @self::$nav_sess['search']['data']['frekuensi'];
-        }
-        if (@self::$nav_sess['search']['data']['jenis'] != '') {
-            $conditionsForWhereParam['a.jenis'] = @self::$nav_sess['search']['data']['jenis'];
-        }
-        if (@self::$nav_sess['search']['data']['status'] != '') {
-            $conditionsForWhereParam['a.status'] = @self::$nav_sess['search']['data']['status'];
-        }
-        if (@self::$nav_sess['search']['data']['active_st'] != '') {
-            $conditionsForWhereParam['a.active_st'] = @self::$nav_sess['search']['data']['active_st'];
+        if (!empty(self::$nav_sess['search']['data']['status'])) {
+            $whereConditions['pm.status'] = self::$nav_sess['search']['data']['status'];
         }
 
-        // Kondisi pencarian 'term' sebagai string SQL murni
-        $isWhereString = '';
-        if (@self::$nav_sess['search']['data']['term'] != '') {
-            $searchTerm = strtolower(@self::$nav_sess['search']['data']['term']);
-            $isWhereString .= (empty($isWhereString) ? "" : " AND ") . " ( LOWER(ast.asset_nm) LIKE '%{$searchTerm}%'
-                         OR LOWER(ast.no_seri) LIKE '%{$searchTerm}%'
-                         OR LOWER(a.deskripsi) LIKE '%{$searchTerm}%'
-                       ) ";
+        // 4. Kondisi pencarian 'term' sebagai string SQL murni (jika ada)
+        $whereString = '';
+        if (!empty(self::$nav_sess['search']['data']['term'])) {
+            $searchTerm = strtolower(addslashes(self::$nav_sess['search']['data']['term']));
+            $whereString = " (LOWER(a.asset_nm) LIKE '%{$searchTerm}%' OR LOWER(pm.jenis) LIKE '%{$searchTerm}%') ";
         }
-
-        // Panggil DbModel::datatablesQuery dengan parameter yang benar
-        $result = DbModel::datatablesQuery($query, $search, $conditionsForWhereParam, $isWhereString);
-        return $result;
+        
+        // 5. Panggil datatablesQuery dengan parameter yang benar
+        $result = DbModel::datatablesQuery($query, $searchableColumns, $whereConditions, $whereString);
+        
+        return response()->json($result);
     }
 }

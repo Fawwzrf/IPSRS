@@ -26,56 +26,63 @@ class AssetModel extends Model
     {
         self::initSession(); // Inisialisasi sesi
 
-
-        $whereClause = "1 = 1 ";
-
-        if (@self::$nav_sess['search']['data']['lokasi_id'] != '') {
-            $whereClause .= " AND a.lokasi_id = '" . @self::$nav_sess['search']['data']['lokasi_id'] . "' ";
-        }
-        if (@self::$nav_sess['search']['data']['kategori_asset_id'] != '') {
-            $whereClause .= " AND a.kategori_asset_id = '" . @self::$nav_sess['search']['data']['kategori_asset_id'] . "' ";
-        }
-        if (@self::$nav_sess['search']['data']['status'] != '') {
-            $whereClause .= " AND a.status = '" . @self::$nav_sess['search']['data']['status'] . "' ";
-        }
-        if (@self::$nav_sess['search']['data']['active_st'] != '') {
-            $whereClause .= " AND a.active_st = '" . @self::$nav_sess['search']['data']['active_st'] . "' ";
-        }
-        if (@self::$nav_sess['search']['data']['term'] != '') {
-            $whereClause .= " AND LOWER(a.asset_nm) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%' ";
-        }
-
-
+        // 1. Query dasar tanpa klausa WHERE
         $query = "SELECT
-                    *
-                  FROM (
-                    SELECT
-                        a.asset_id, a.asset_nm, a.jenis, a.no_seri, a.merk, a.model, a.status, a.active_st,
-                        l.lokasi_nm,
-                        k.kategori_asset_nm,
-                        a.perolehan_tgl, 
-                        a.pm_berikutnya 
-                    FROM asset a
-                    LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
-                    LEFT JOIN mst_kategori_asset k ON a.kategori_asset_id = k.kategori_asset_id
-                    WHERE a.deleted_st = 0 AND " . $whereClause . "
-                  ) x";
+                a.asset_id, a.asset_nm, a.jenis, a.no_seri, a.merk, a.model, a.status, a.active_st,
+                l.lokasi_nm,
+                k.kategori_asset_nm,
+                a.perolehan_tgl,
+                a.pm_berikutnya
+            FROM asset a
+            LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
+            LEFT JOIN mst_kategori_asset k ON a.kategori_asset_id = k.kategori_asset_id";
 
-        $search = [
-            'asset_id',
-            'asset_nm',
-            'no_seri',
-            'merk',
-            'model',
-            'lokasi_nm',
-            'kategori_asset_nm',
-            'perolehan_tgl',
-            'pm_berikutnya'
+        // 2. Kolom yang dapat dicari oleh DataTables (search box bawaan)
+        $searchableColumns = [
+            'a.asset_nm',
+            'a.no_seri',
+            'a.merk',
+            'a.model',
+            'l.lokasi_nm',
+            'k.kategori_asset_nm'
         ];
-        $where = null;
-        $isWhere = null;
 
-        $result = DbModel::datatablesQuery($query, $search, $where, $isWhere);
+        // 3. Kumpulkan kondisi WHERE dalam bentuk array (lebih aman dari SQL Injection)
+        $whereConditions = [];
+        $whereConditions['a.deleted_st'] = 0; // Kondisi wajib
+
+        // Tambahkan filter dari sesi pencarian
+        if (!empty(self::$nav_sess['search']['data']['lokasi_id'])) {
+            $whereConditions['a.lokasi_id'] = self::$nav_sess['search']['data']['lokasi_id'];
+        }
+        if (!empty(self::$nav_sess['search']['data']['kategori_asset_id'])) {
+            $whereConditions['a.kategori_asset_id'] = self::$nav_sess['search']['data']['kategori_asset_id'];
+        }
+        if (!empty(self::$nav_sess['search']['data']['status'])) {
+            $whereConditions['a.status'] = self::$nav_sess['search']['data']['status'];
+        }
+        if (isset(self::$nav_sess['search']['data']['active_st']) && self::$nav_sess['search']['data']['active_st'] !== '') {
+            $whereConditions['a.active_st'] = self::$nav_sess['search']['data']['active_st'];
+        }
+
+        // 4. Buat string WHERE terpisah untuk pencarian teks (LIKE)
+        $whereString = '';
+        if (!empty(self::$nav_sess['search']['data']['term'])) {
+            $searchTerm = strtolower(self::$nav_sess['search']['data']['term']);
+            // PERBAIKAN: Pencarian diperluas ke beberapa kolom relevan
+            $whereString = "
+                (LOWER(a.asset_nm) LIKE '%{$searchTerm}%'
+                OR LOWER(a.no_seri) LIKE '%{$searchTerm}%'
+                OR LOWER(a.merk) LIKE '%{$searchTerm}%'
+                OR LOWER(a.model) LIKE '%{$searchTerm}%'
+                OR LOWER(l.lokasi_nm) LIKE '%{$searchTerm}%'
+                OR LOWER(k.kategori_asset_nm) LIKE '%{$searchTerm}%')
+            ";
+        }
+
+        // 5. Panggil fungsi datatables dengan parameter yang sudah terstruktur
+        $result = DbModel::datatablesQuery($query, $searchableColumns, $whereConditions, $whereString);
+
         return $result;
     }
 
