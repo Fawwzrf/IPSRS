@@ -353,6 +353,26 @@ if (!function_exists('str_replace_between')) {
   }
 }
 
+
+if (!function_exists('numId')) {
+  /**
+   * Mengubah angka menjadi format Rupiah Indonesia.
+   *
+   * @param float $number Angka yang akan diformat.
+   * @param bool $with_rp Tambahkan prefix "Rp." atau tidak.
+   * @return string
+   */
+  function numId($number, $with_rp = false)
+  {
+    if ($number === null || !is_numeric($number)) {
+      return ($with_rp) ? 'Rp. 0' : '0';
+    }
+
+    $formatted_number = number_format($number, 0, ',', '.');
+
+    return ($with_rp) ? 'Rp. ' . $formatted_number : $formatted_number;
+  }
+}
 /**
  * FORM
  */
