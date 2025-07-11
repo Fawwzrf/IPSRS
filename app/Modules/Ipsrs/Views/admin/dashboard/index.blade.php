@@ -15,7 +15,7 @@
         <div class="container-xl">
             {{-- Bagian Widget Ringkasan --}}
             <div class="row g-4">
-                <div class="col-sm-6 col-lg-3">
+                <div class="col-md-3">
                     <div class="card card-sm">
                         <div class="card-body">
                             <div class="row align-items-center">
@@ -29,14 +29,36 @@
                                         {{ $count_komplain_baru }} Komplain Baru
                                     </div>
                                     <div class="text-muted">
-                                        Menunggu untuk dibuatkan OK
+                                        Menunggu untuk dibuatkan Order Kerja
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-sm-6 col-lg-3">
+
+                <div class="col-md-3">
+                    <div class="card card-sm">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-auto">
+                                    <span class="bg-info text-white avatar">
+                                        <i class="fas fa-calendar-alt fa-fw"></i>
+                                    </span>
+                                </div>
+                                <div class="col">
+                                    <div class="font-weight-medium">
+                                        {{ $count_jadwal_belum_ok }} Jadwal PM
+                                    </div>
+                                    <div class="text-muted">
+                                        Menunggu dibuatkan Order Kerja
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
                     <div class="card card-sm">
                         <div class="card-body">
                             <div class="row align-items-center">
@@ -57,7 +79,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-sm-6 col-lg-3">
+                <div class="col-md-3">
                     <div class="card card-sm">
                         <div class="card-body">
                             <div class="row align-items-center">
@@ -78,7 +100,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-sm-6 col-lg-3">
+                <div class="col-md-3">
                     <div class="card card-sm">
                         <div class="card-body">
                             <div class="row align-items-center">

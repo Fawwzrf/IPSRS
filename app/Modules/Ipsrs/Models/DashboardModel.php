@@ -35,6 +35,16 @@ class DashboardModel extends Model
         return $result['total'] ?? 0;
     }
 
+    public function getCountJadwalBelumDibuatOK()
+    {
+        $sql = "SELECT COUNT(*) as total 
+                FROM jadwal_pm 
+                WHERE deleted_st = 0 
+                AND jadwal_pm_id NOT IN (SELECT jadwal_pm_id FROM order_kerja WHERE jadwal_pm_id IS NOT NULL AND deleted_st = 0)";
+        $result = DbModel::rawData('row_array', $sql);
+        return $result['total'] ?? 0;
+    }
+
     public function getChartKomplainHarian()
     {
         // Mengambil data jumlah komplain per hari untuk 7 hari terakhir

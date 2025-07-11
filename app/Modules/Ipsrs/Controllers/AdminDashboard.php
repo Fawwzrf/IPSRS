@@ -30,6 +30,8 @@ class AdminDashboard extends MyController
         // Mengambil data untuk grafik
         $d['chart_komplain_harian'] = $this->model->getChartKomplainHarian();
 
+        $d['count_jadwal_belum_ok'] = $this->model->getCountJadwalBelumDibuatOK();
+
         // Mengambil data untuk tabel pekerjaan darurat
         $d['urgent_jobs'] = $this->model->getUrgentJobs();
 
