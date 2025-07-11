@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Master\Models;
+namespace App\Modules\Ipsrs\Models;
 
 use App\Modules\App\Models\DbModel;
 use Illuminate\Database\Eloquent\Model;
@@ -9,67 +9,87 @@ use Illuminate\Support\Facades\DB;
 class PenerimaanSparepartModel extends Model
 {
     protected static $nav_sess;
-
     public function __construct()
     {
         parent::__construct();
         self::initSession();
     }
-
     protected static function initSession()
     {
-        if (is_null(self::$nav_sess)) {
-            self::$nav_sess = session(request('n'));
-        }
+        if (is_null(self::$nav_sess)) self::$nav_sess = session(request('n'));
     }
 
     static function loadDatatables()
     {
         self::initSession();
+        $query = "SELECT p.*, s.sparepart_nm 
+                  FROM trx_penerimaan_sparepart p
+                  JOIN mst_sparepart s ON p.sparepart_id = s.sparepart_id";
+        $searchableColumns = ['p.penerimaan_id', 's.sparepart_nm', 'p.vendor', 'p.no_faktur'];
+        $whereConditions = ['p.deleted_st' => 0];
+        // ... (Tambahkan logika filter jika diperlukan) ...
 
-        // Query utama TANPA KLAUSA WHERE di sini
-        // PERBAIKAN: Kolom a.penerimaan_jumlah, a.penerimaan_vendor, a.penerimaan_no_faktur diubah ke nama kolom asli
-        $query = "SELECT
-                    a.penerimaan_id, a.tgl, a.jumlah, a.harga_satuan,
-                    a.vendor, a.no_faktur, a.active_st, a.deleted_st,
-                    s.sparepart_nm, s.no_seri
-                  FROM trx_penerimaan_sparepart a
-                  LEFT JOIN mst_sparepart s ON a.sparepart_id = s.sparepart_id";
+        $result = DbModel::datatablesQuery($query, $searchableColumns, $whereConditions, '');
+        return response()->json($result);
+    }
 
-        // Kolom yang dapat dicari oleh DataTables
-        // PERBAIKAN: Kolom a.penerimaan_tgl, a.penerimaan_vendor, a.penerimaan_no_faktur diubah ke alias yang benar
-        $search = [
-            'a.penerimaan_id', 'a.tgl', 'a.vendor', 's.sparepart_nm', 's.no_seri', 'a.no_faktur'
+    public function getById($id)
+    {
+        return DbModel::getData('trx_penerimaan_sparepart', ['penerimaan_id' => $id]);
+    }
+
+    public function saveData($id, $data)
+    {
+        $saveData = [
+            'sparepart_id' => $data['sparepart_id'],
+            'tgl' => to_date($data['tgl'], '-', 'date'),
+            'jumlah' => $data['jumlah'],
+            'harga_satuan' => $data['harga_satuan'] ?? 0.00,
+            'vendor' => $data['vendor'] ?? null,
+            'no_faktur' => $data['no_faktur'] ?? null,
+            'catatan' => $data['catatan'] ?? null,
         ];
 
-        // --- Kumpulkan kondisi untuk parameter $where (hanya key-value pairs) ---
-        $conditionsForWhereParam = []; 
-        // Filter dari sesi pencarian
-        if (@self::$nav_sess['search']['data']['sparepart_id'] != '') {
-            $conditionsForWhereParam['a.sparepart_id'] = @self::$nav_sess['search']['data']['sparepart_id'];
-        }
-        if (@self::$nav_sess['search']['data']['active_st'] != '') {
-            $conditionsForWhereParam['a.active_st'] = @self::$nav_sess['search']['data']['active_st'];
-        }
-        
-        // --- Kondisi string SQL murni, akan masuk ke parameter $isWhere ---
-        $isWhereString = 'a.deleted_st = 0'; // Kondisi dasar (diawali tanpa AND)
+        try {
+            DB::beginTransaction();
+            $stokToAdjust = 0;
 
-        // Filter pencarian 'term'
-        if (@self::$nav_sess['search']['data']['term'] != '') {
-            $searchTerm = strtolower(@self::$nav_sess['search']['data']['term']);
-            // Tambahkan 'AND' di awal karena $isWhereString sudah diawali 'a.deleted_st = 0'
-            $isWhereString .= " AND ( LOWER(a.vendor) LIKE '%{$searchTerm}%'
-                         OR LOWER(a.no_faktur) LIKE '%{$searchTerm}%'
-                         OR LOWER(s.sparepart_nm) LIKE '%{$searchTerm}%'
-                         OR LOWER(s.no_seri) LIKE '%{$searchTerm}%'
-                       ) ";
-        }
-        // --- AKHIR PENYESUAIAN KONDISI WHERE ---
+            if ($id == null) {
+                $saveData['penerimaan_id'] = DbModel::getId('trx_penerimaan_sparepart', 2, 12);
+                DbModel::insertData('trx_penerimaan_sparepart', $saveData);
+                $stokToAdjust = $saveData['jumlah'];
+                $mode = 'insert';
+            } else {
+                $oldData = $this->getById($id);
+                $stokToAdjust = $saveData['jumlah'] - $oldData['jumlah'];
+                DbModel::updateData('trx_penerimaan_sparepart', $saveData, ['penerimaan_id' => $id]);
+                $mode = 'update';
+            }
 
-        // Panggil DbModel::datatablesQuery dengan parameter yang benar
-        // Kondisi key-value ke parameter $where, kondisi string murni ke parameter $isWhere.
-        $result = DbModel::datatablesQuery($query, $search, $conditionsForWhereParam, $isWhereString);
-        return $result;
+            DB::table('mst_sparepart')->where('sparepart_id', $data['sparepart_id'])->increment('stok', $stokToAdjust);
+            DB::commit();
+            return ['status' => true, 'mode' => $mode];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return ['status' => false, 'message' => 'Transaksi gagal: ' . $e->getMessage()];
+        }
+    }
+
+    public function deleteData($id)
+    {
+        try {
+            DB::beginTransaction();
+            $data = $this->getById($id);
+            if (!$data) return ['status' => false, 'message' => 'Data tidak ditemukan.'];
+
+            DB::table('mst_sparepart')->where('sparepart_id', $data['sparepart_id'])->decrement('stok', $data['jumlah']);
+            DbModel::updateData('trx_penerimaan_sparepart', ['deleted_st' => 1], ['penerimaan_id' => $id]);
+
+            DB::commit();
+            return ['status' => true];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return ['status' => false, 'message' => 'Transaksi gagal: ' . $e->getMessage()];
+        }
     }
 }

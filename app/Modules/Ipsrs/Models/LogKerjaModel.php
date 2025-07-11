@@ -27,7 +27,7 @@ class LogKerjaModel extends Model
         ];
 
         try {
-            DB::beginTransaction();
+            \DB::beginTransaction();
 
             $existingLog = DbModel::getData('log_kerja', ['order_kerja_id' => $order_kerja_id]);
             if ($existingLog) {
@@ -56,14 +56,38 @@ class LogKerjaModel extends Model
                 }
             }
 
+            if (!empty($data['sparepart'])) {
+                foreach ($data['sparepart'] as $item) {
+                    if (!empty($item['id']) && !empty($item['jumlah']) && $item['jumlah'] > 0) {
+                        $sparepartMaster = DbModel::getData('mst_sparepart', ['sparepart_id' => $item['id']]);
+
+                        // Cek stok cukup
+                        if ($sparepartMaster['stok'] < $item['jumlah']) {
+                            throw new \Exception('Stok untuk ' . $sparepartMaster['sparepart_nm'] . ' tidak mencukupi.');
+                        }
+
+                        $penggunaanData = [
+                            'penggunaan_id' => DbModel::getId('penggunaan_sparepart', 2, 12),
+                            'log_kerja_id' => $log_kerja_id, // ID dari log kerja yang baru dibuat
+                            'sparepart_id' => $item['id'],
+                            'jumlah' => $item['jumlah'],
+                            'harga_satuan' => $sparepartMaster['harga'] ?? 0
+                        ];
+                        DbModel::insertData('penggunaan_sparepart', $penggunaanData);
+
+                        \DB::table('mst_sparepart')->where('sparepart_id', $item['id'])->decrement('stok', $item['jumlah']);
+                    }
+                }
+            }
+
             // Update status Order Kerja
             $status_baru = ($data['hasil'] == 'berhasil') ? 'selesai' : 'menunggu_sparepart'; // Contoh logika
             DbModel::updateData('order_kerja', ['status' => $status_baru], ['order_kerja_id' => $order_kerja_id]);
 
-            DB::commit();
+            \DB::commit();
             return ['status' => true];
         } catch (\Exception $e) {
-            DB::rollBack();
+            \DB::rollBack();
             return ['status' => false, 'message' => 'Transaksi database gagal: ' . $e->getMessage()];
         }
     }
