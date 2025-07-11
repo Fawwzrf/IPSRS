@@ -1,10 +1,9 @@
 <?php
 
-namespace App\Modules\Ipsrs\Models; // Perbaiki namespace: namespace App\Modules\Ipsrs\Models;
+namespace App\Modules\Ipsrs\Models;
 
-use App\Modules\App\Models\DbModel; // Perbaiki namespace: use App\Modules\App\Models\DbModel;
+use App\Modules\App\Models\DbModel;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 
 class OrderKerjaModel extends Model
 {
@@ -15,78 +14,171 @@ class OrderKerjaModel extends Model
         parent::__construct();
         self::initSession();
     }
-
     protected static function initSession()
     {
-        if (is_null(self::$nav_sess)) {
-            self::$nav_sess = session(request('n'));
-        }
+        if (is_null(self::$nav_sess)) self::$nav_sess = session(request('n'));
     }
 
     static function loadDatatables()
     {
         self::initSession();
 
-        // Query utama TANPA KLAUSA WHERE di sini
-        $query = "SELECT
-                    ok.order_kerja_id, ok.jenis, ok.tgl_dibuat, ok.tgl_target_selesai,
-                    ok.status, ok.prioritas, ok.estimasi_biaya, ok.active_st, ok.deleted_st,
-                    jp.frekuensi as jadwal_frekuensi, jp.jenis as jadwal_jenis,
-                    pk.deskripsi as komplain_deskripsi,
-                    ast.asset_id, ast.asset_nm, ast.no_seri as asset_no_seri, ast.lokasi_id,
-                    loc.lokasi_nm as asset_lokasi_nm
+        // 1. Query utama disederhanakan, TANPA subquery GROUP_CONCAT
+        $query = "SELECT 
+                    ok.order_kerja_id, ok.tgl_dibuat, ok.status, ok.jenis, ok.prioritas,
+                    COALESCE(a1.asset_nm, a2.asset_nm) as asset_nm,
+                    COALESCE(pk.deskripsi, jp.jenis) as deskripsi_sumber
                   FROM order_kerja ok
-                  LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                   LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-                  LEFT JOIN asset ast ON (jp.asset_id = ast.asset_id OR pk.asset_id = ast.asset_id) -- Link asset melalui JP atau PK
-                  LEFT JOIN mst_lokasi loc ON ast.lokasi_id = loc.lokasi_id";
+                  LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+                  LEFT JOIN asset a1 ON pk.asset_id = a1.asset_id
+                  LEFT JOIN asset a2 ON jp.asset_id = a2.asset_id";
 
-        // Kolom yang dapat dicari oleh DataTables
-        $search = [
-            'ok.order_kerja_id', 'ok.jenis', 'ok.status', 'ok.prioritas',
-            'ast.asset_nm', 'ast.no_seri', 'loc.lokasi_nm',
-            'jp.frekuensi', 'jp.jenis', 'pk.deskripsi'
-        ];
+        $searchableColumns = ['ok.order_kerja_id', 'a1.asset_nm', 'a2.asset_nm', 'pk.deskripsi', 'jp.jenis'];
+        $whereConditions = ['ok.deleted_st' => 0];
+        $search_data = self::$nav_sess['search']['data'] ?? [];
 
-        // Kumpulkan semua kondisi WHERE untuk parameter $where (key-value pairs)
-        $conditionsForDbModel = []; 
-        $conditionsForDbModel[] = 'ok.deleted_st = 0'; // Kondisi dasar
+        if (!empty($search_data['status'])) $whereConditions['ok.status'] = $search_data['status'];
+        if (!empty($search_data['jenis'])) $whereConditions['ok.jenis'] = $search_data['jenis'];
 
-        // Filter berdasarkan jenis (pemeliharaan/perbaikan) jika ada di sesi
-        if (@self::$nav_sess['search']['data']['jenis_filter'] != '') {
-            $conditionsForDbModel['ok.jenis'] = @self::$nav_sess['search']['data']['jenis_filter'];
+        $whereString = '';
+        if (!empty($search_data['term'])) {
+            $searchTerm = strtolower(addslashes($search_data['term']));
+            $whereString = " (LOWER(COALESCE(a1.asset_nm, a2.asset_nm)) LIKE '%{$searchTerm}%' OR LOWER(COALESCE(pk.deskripsi, jp.jenis)) LIKE '%{$searchTerm}%' OR ok.order_kerja_id LIKE '%{$searchTerm}%') ";
         }
-        
-        // Filter dari sesi pencarian (sisanya)
-        if (@self::$nav_sess['search']['data']['asset_id'] != '') {
-            $conditionsForDbModel['ast.asset_id'] = @self::$nav_sess['search']['data']['asset_id'];
+
+        // 2. Panggil helper datatables dengan query yang sederhana
+        $result = DbModel::datatablesQuery($query, $searchableColumns, $whereConditions, $whereString);
+
+        // 3. Tambahkan data Tim Teknisi secara manual setelah mendapatkan data utama
+        if (!empty($result['data'])) {
+            foreach ($result['data'] as $key => $row) {
+                $order_kerja_id = $row['order_kerja_id'];
+
+                // Query terpisah untuk mengambil nama teknisi
+                $teknisiQuery = "SELECT GROUP_CONCAT(p.pegawai_nm SEPARATOR ', ') as tim_teknisi 
+                                 FROM penugasan_teknisi pt 
+                                 JOIN mst_pegawai p ON pt.pegawai_id = p.pegawai_id 
+                                 WHERE pt.order_kerja_id = ? AND pt.deleted_st = 0";
+
+                $teknisiData = DbModel::rawData('row_array', $teknisiQuery, [$order_kerja_id]);
+
+                // Tambahkan data tim teknisi ke dalam array hasil
+                $result['data'][$key]['tim_teknisi'] = $teknisiData['tim_teknisi'] ?? 'Belum ditugaskan';
+            }
         }
-        if (@self::$nav_sess['search']['data']['status'] != '') {
-            $conditionsForDbModel['ok.status'] = @self::$nav_sess['search']['data']['status'];
+
+        return response()->json($result);
+    }
+
+    public function getById($id)
+    {
+        if (!$id) return null;
+        return DbModel::getData('order_kerja', ['order_kerja_id' => $id]);
+    }
+
+    // File: Modules/Ipsrs/Models/OrderKerjaModel.php
+
+    public static function saveData($id, $post_data) // Menambahkan parameter $id untuk konsistensi
+    {
+        // 1. Validasi Input Utama
+        if (empty($post_data['jadwal_pm_id']) && empty($post_data['permintaan_id'])) {
+            // PERBAIKAN: Mengembalikan 'status'
+            return ['status' => false, 'message' => 'Pilih salah satu sumber pekerjaan (Jadwal PM atau Komplain).', 'mode' => 'validation'];
         }
-        if (@self::$nav_sess['search']['data']['prioritas'] != '') {
-            $conditionsForDbModel['ok.prioritas'] = @self::$nav_sess['search']['data']['prioritas'];
+        // Menggunakan nama yang benar dari form: 'pegawai_ids'
+        if (empty($post_data['pegawai_ids'])) {
+            // PERBAIKAN: Mengembalikan 'status'
+            return ['status' => false, 'message' => 'Pilih minimal satu teknisi untuk ditugaskan.', 'mode' => 'validation'];
         }
-        if (@self::$nav_sess['search']['data']['active_st'] != '') {
-            $conditionsForDbModel['ok.active_st'] = @self::$nav_sess['search']['data']['active_st'];
+
+        // 2. Memulai Transaksi Database untuk keamanan data
+        \DB::beginTransaction();
+
+        try {
+            // Mengambil ID order kerja atau membuat yang baru
+            $is_insert = ($id == null);
+            $order_kerja_id = $id ?? DbModel::getId('order_kerja', 2, 12);
+
+            // 3. Menyiapkan data untuk tabel 'order_kerja'
+            $data_ok = [
+                'order_kerja_id' => $order_kerja_id,
+                'permintaan_id'  => $post_data['permintaan_id'] ?? null,
+                'jadwal_pm_id'   => $post_data['jadwal_pm_id'] ?? null,
+                'tgl_dibuat'     => to_date($post_data['tgl_dibuat'], '-', 'date'),
+                'tgl_target_selesai' => !empty($post_data['tgl_target_selesai']) ? to_date($post_data['tgl_target_selesai'], '-', 'date') : null,
+                'prioritas'      => $post_data['prioritas'],
+                'status'         => $post_data['status'],
+                'estimasi_biaya' => $post_data['estimasi_biaya'] ?? 0,
+                'catatan'        => $post_data['catatan'] ?? null,
+                'jenis'          => !empty($post_data['jadwal_pm_id']) ? 'pemeliharaan' : 'perbaikan',
+            ];
+
+            // Menggunakan helper DbModel untuk insert atau update
+            if ($is_insert) {
+                DbModel::insertData('order_kerja', $data_ok);
+            } else {
+                DbModel::updateData('order_kerja', $data_ok, ['order_kerja_id' => $id]);
+            }
+
+
+            // 4. Proses penugasan teknisi
+            // Hapus penugasan lama terlebih dahulu untuk menghindari duplikat saat edit
+            \DB::table('penugasan_teknisi')->where('order_kerja_id', $order_kerja_id)->delete();
+
+            // Loop menggunakan nama yang benar dari form: 'pegawai_ids'
+            foreach ($post_data['pegawai_ids'] as $pegawai_id) {
+                $penugasan_data = [
+                    'penugasan_id'    => DbModel::getId('penugasan_teknisi', 2, 12),
+                    'order_kerja_id'  => $order_kerja_id,
+                    'pegawai_id'      => $pegawai_id,
+                    'status'          => 'ditugaskan', // Status default untuk penugasan baru
+                ];
+                \DB::table('penugasan_teknisi')->insert($penugasan_data);
+            }
+
+            // 5. Update status sumber pekerjaan
+            if (!empty($post_data['jadwal_pm_id'])) {
+                \DB::table('jadwal_pm')
+                    ->where('jadwal_pm_id', $post_data['jadwal_pm_id'])
+                    ->update(['status' => 'diproses']);
+            }
+            if (!empty($post_data['permintaan_id'])) {
+                \DB::table('permintaan_komplain')
+                    ->where('permintaan_id', $post_data['permintaan_id'])
+                    ->update(['status' => 'diproses']);
+            }
+
+            // Jika semua proses berhasil, simpan perubahan secara permanen
+            \DB::commit();
+            // PERBAIKAN: Mengembalikan 'status' dan 'mode'
+            return [
+                'status' => true,
+                'message' => 'Order Kerja berhasil disimpan.',
+                'mode' => $is_insert ? 'insert' : 'update'
+            ];
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            // Return saat GAGAL (exception)
+            return [
+                'status' => false,
+                'message' => 'Gagal menyimpan data: ' . $e->getMessage(),
+                'mode' => $id ? 'update' : 'insert'
+            ];
         }
-        
-        // Kondisi pencarian 'term' sebagai string SQL murni
-        $isWhereString = ''; 
-        if (@self::$nav_sess['search']['data']['term'] != '') {
-            $searchTerm = strtolower(@self::$nav_sess['search']['data']['term']);
-            $isWhereString .= (empty($isWhereString) ? "" : " AND ") . " ( LOWER(ok.order_kerja_id) LIKE '%{$searchTerm}%'
-                         OR LOWER(ast.asset_nm) LIKE '%{$searchTerm}%'
-                         OR LOWER(ast.no_seri) LIKE '%{$searchTerm}%'
-                         OR LOWER(loc.lokasi_nm) LIKE '%{$searchTerm}%'
-                         OR LOWER(jp.frekuensi) LIKE '%{$searchTerm}%'
-                         OR LOWER(jp.jenis) LIKE '%{$searchTerm}%'
-                         OR LOWER(pk.deskripsi) LIKE '%{$searchTerm}%'
-                       ) ";
+    }
+
+    public function deleteData($id)
+    {
+        try {
+            \DB::beginTransaction();
+            DbModel::updateData('order_kerja', ['deleted_st' => 1], ['order_kerja_id' => $id]);
+            DbModel::updateData('penugasan_teknisi', ['deleted_st' => 1], ['order_kerja_id' => $id]);
+            \DB::commit();
+            return true;
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return false;
         }
-        
-        // Panggil DbModel::datatablesQuery dengan parameter yang benar
-        $result = DbModel::datatablesQuery($query, $search, $conditionsForDbModel, $isWhereString);
-        return $result;
     }
 }

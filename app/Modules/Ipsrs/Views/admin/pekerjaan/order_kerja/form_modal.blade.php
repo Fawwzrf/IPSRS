@@ -1,99 +1,114 @@
-<form id="form" action="<?= $form_act ?>" method="post" autocomplete="off">
+<form id="form" action="{{ $form_act }}" method="post" autocomplete="off">
     @csrf
     <div class="card-body">
-        <div class="mb-1 row">
-            <label class="col-lg-3 col-md-6 col-form-label required">ID Order Kerja</label>
-            <div class="col-lg-4">
-                <input type="text" name="order_kerja_id" id="order_kerja_id" class="form-control" value="<?= @$main['order_kerja_id'] ?>" <?= (@$main['order_kerja_id']) ? 'readonly' : '' ?> required>
-                <small class="form-hint">ID order kerja harus unik. Contoh: OKM001 atau OKR001</small>
+        <fieldset class="border p-2 rounded mb-3">
+            <legend class="float-none w-auto px-2 fs-6 fw-bold">Sumber & Penugasan</legend>
+            
+            <div class="mb-3 row">
+                <label class="col-lg-3 col-form-label">Sumber dari Jadwal PM</label>
+                <div class="col-lg-9">
+                    <select class="form-select chosen-select" name="jadwal_pm_id" id="jadwal_pm_id">
+                        <option value="">- Pilih Jadwal PM (jika ada) -</option>
+                        @foreach($all_jadwal_pm as $jadwal)
+                            <option value="{{ $jadwal['jadwal_pm_id'] }}" @if(@$main['jadwal_pm_id'] == $jadwal['jadwal_pm_id']) selected @endif>
+                                {{ $jadwal['jadwal_pm_id'] }} - {{ $jadwal['asset_nm'] }} ({{ $jadwal['jenis'] }} - {{ $jadwal['frekuensi'] }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
-        </div>
-        <div class="mb-1 row">
-            <label class="col-lg-3 col-md-6 col-form-label required">Sumber Order</label>
-            <div class="col-lg-8 col-md-6">
-                <select class="form-select chosen-select" name="jadwal_pm_id" id="jadwal_pm_id">
-                    <option value="">- Pilih Jadwal PM -</option>
-                    <?php foreach($all_jadwal_pm as $jp) : ?>
-                        <option value="<?= $jp['jadwal_pm_id'] ?>" <?= (@$main['jadwal_pm_id'] == $jp['jadwal_pm_id']) ? 'selected' : '' ?>>
-                            <?= $jp['jadwal_pm_id'] ?> - Aset: <?= @$jp['asset_nm'] ?> (Jenis: <?= @$jp['jenis'] ?>, Freq: <?= @$jp['frekuensi'] ?>)
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                {{-- Anda bisa menambahkan dropdown untuk permintaan_id di sini juga, dan atur validasi JavaScript --}}
-                {{-- <select class="form-select chosen-select" name="permintaan_id" id="permintaan_id"> --}}
-                    {{-- ... --}}
-                {{-- </select> --}}
+
+            <div class="text-center my-2"><strong>ATAU</strong></div>
+
+            <div class="mb-3 row">
+                <label class="col-lg-3 col-form-label">Sumber dari Komplain</label>
+                <div class="col-lg-9">
+                    <select class="form-select chosen-select" name="permintaan_id" id="permintaan_id">
+                        <option value="">- Pilih dari Komplain (jika ada) -</option>
+                        @foreach($all_komplain as $komplain)
+                            <option value="{{ $komplain['permintaan_id'] }}" @if(@$main['permintaan_id'] == $komplain['permintaan_id']) selected @endif>
+                                {{ $komplain['permintaan_id'] }} - {{ $komplain['asset_nm'] }} ({{ \Illuminate\Support\Str::limit($komplain['deskripsi'], 40) }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
-        </div>
-        <div class="mb-1 row">
-            <label class="col-lg-3 col-md-6 col-form-label">Tanggal Dibuat</label>
-            <div class="col-lg-4">
-                <input type="text" name="tgl_dibuat" id="tgl_dibuat" class="form-control datepicker-notauto" value="<?= @to_date(@$main['tgl_dibuat'], '-', 'date') ?>">
+
+            <hr>
+
+            <div class="mb-3 row">
+                <label class="col-lg-3 col-form-label required">Tugaskan Teknisi</label>
+                <div class="col-lg-9">
+                    <select class="form-select chosen-select" name="pegawai_ids[]" multiple required>
+                        @foreach($all_teknisi as $teknisi)
+                            {{-- Logika 'in_array' akan memilih kembali teknisi yang sudah ditugaskan --}}
+                            <option value="{{ $teknisi['pegawai_id'] }}" @if(in_array($teknisi['pegawai_id'], $assigned_teknisi)) selected @endif>
+                                {{ $teknisi['pegawai_nm'] }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
-        </div>
-        <div class="mb-1 row">
-            <label class="col-lg-3 col-md-6 col-form-label">Target Selesai</label>
-            <div class="col-lg-4">
-                <input type="text" name="tgl_target_selesai" id="tgl_target_selesai" class="form-control datepicker-notauto" value="<?= @to_date(@$main['tgl_target_selesai'], '-', 'date') ?>">
+        </fieldset>
+        
+        <fieldset class="border p-2 rounded mb-3">
+            <legend class="float-none w-auto px-2 fs-6 fw-bold">Detail Pekerjaan</legend>
+            <div class="mb-3 row">
+                <label class="col-lg-3 col-form-label required">Tanggal Order</label>
+                <div class="col-lg-9">
+                    <input type="text" name="tgl_dibuat" class="form-control datepicker-notauto" value="{{ @to_date(@$main['tgl_dibuat'], '-', 'date') ?: date('d-m-Y') }}" required>
+                </div>
             </div>
-        </div>
-        <div class="mb-1 row">
-            <label class="col-lg-3 col-md-6 col-form-label">Estimasi Biaya (Rp)</label>
-            <div class="col-lg-4">
-                <input type="text" name="estimasi_biaya" id="estimasi_biaya" class="form-control autonumeric" value="<?= @$main['estimasi_biaya'] ?>">
+
+            <div class="mb-3 row">
+                <label class="col-lg-3 col-form-label">Target Selesai</label>
+                <div class="col-lg-9">
+                    <input type="text" name="tgl_target_selesai" class="form-control datepicker-notauto" value="{{ @to_date(@$main['tgl_target_selesai'], '-', 'date') }}">
+                </div>
             </div>
-        </div>
-        <div class="mb-1 row">
-            <label class="col-lg-3 col-md-6 col-form-label required">Prioritas</label>
-            <div class="col-lg-8">
-                <select class="form-select chosen-select" name="prioritas" id="prioritas" required>
-                    <option value="">- Pilih Prioritas -</option>
-                    <option value="darurat" <?= (@$main['prioritas'] == 'darurat') ? 'selected' : '' ?>>Darurat</option>
-                    <option value="mendesak" <?= (@$main['prioritas'] == 'mendesak') ? 'selected' : '' ?>>Mendesak</option>
-                    <option value="normal" <?= (@$main['prioritas'] == 'normal') ? 'selected' : '' ?>>Normal</option>
-                    <option value="rendah" <?= (@$main['prioritas'] == 'rendah') ? 'selected' : '' ?>>Rendah</option>
-                </select>
+
+            <div class="mb-3 row">
+                <label class="col-lg-3 col-form-label required">Prioritas</label>
+                <div class="col-lg-9">
+                   <select class="form-select chosen-select" name="prioritas" required>
+                        <option value="normal" @if(@$main['prioritas'] == 'normal') selected @endif>Normal</option>
+                        <option value="mendesak" @if(@$main['prioritas'] == 'mendesak') selected @endif>Mendesak</option>
+                        <option value="darurat" @if(@$main['prioritas'] == 'darurat') selected @endif>Darurat</option>
+                   </select>
+                </div>
             </div>
-        </div>
-        <div class="mb-1 row">
-            <label class="col-lg-3 col-md-6 col-form-label required">Status Order</label>
-            <div class="col-lg-8">
-                <select class="form-select chosen-select" name="status" id="status" required>
-                    <option value="">- Pilih Status -</option>
-                    <option value="baru" <?= (@$main['status'] == 'baru') ? 'selected' : '' ?>>Baru</option>
-                    <option value="ditugaskan" <?= (@$main['status'] == 'ditugaskan') ? 'selected' : '' ?>>Ditugaskan</option>
-                    <option value="diproses" <?= (@$main['status'] == 'diproses') ? 'selected' : '' ?>>Diproses</option>
-                    <option value="menunggu_sparepart" <?= (@$main['status'] == 'menunggu_sparepart') ? 'selected' : '' ?>>Menunggu Sparepart</option>
-                    <option value="selesai" <?= (@$main['status'] == 'selesai') ? 'selected' : '' ?>>Selesai</option>
-                    <option value="ditolak" <?= (@$main['status'] == 'ditolak') ? 'selected' : '' ?>>Ditolak</option>
-                    <option value="dibatalkan" <?= (@$main['status'] == 'dibatalkan') ? 'selected' : '' ?>>Dibatalkan</option>
-                </select>
+            
+            <div class="mb-3 row">
+                <label class="col-lg-3 col-form-label">Estimasi Biaya</label>
+                <div class="col-lg-9">
+                    <input type="number" step="0.01" name="estimasi_biaya" class="form-control" value="{{ @$main['estimasi_biaya'] ?? 0 }}">
+                </div>
             </div>
-        </div>
-        <div class="mb-1 row">
-            <label class="col-lg-3 col-md-6 col-form-label">Catatan</label>
-            <div class="col-lg-8">
-                <textarea name="catatan" id="catatan" class="form-control"><?= @$main['catatan'] ?></textarea>
+
+            <div class="mb-3 row">
+                <label class="col-lg-3 col-form-label">Catatan</label>
+                <div class="col-lg-9">
+                    <textarea name="catatan" class="form-control" rows="3">{{ @$main['catatan'] }}</textarea>
+                </div>
             </div>
-        </div>
-        <div class="mb-1 row">
-            <label class="col-lg-3 col-md-6 col-form-label required">Aktif?</label>
-            <div class="col-lg-8">
-                <label class="form-check form-check-inline">
-                    <input class="form-check-input" type="radio" name="active_st" value="1" <?= (@$main == '') ? 'checked' : ((@$main['active_st'] == 1) ? 'checked' : '') ?>>
-                    <span class="form-check-label">Aktif</span>
-                </label>
-                <label class="form-check form-check-inline">
-                    <input class="form-check-input" type="radio" name="active_st" value="0" <?= (@$main != '') ? ((@$main['active_st'] == 0) ? 'checked' : '') : '' ?>>
-                    <span class="form-check-label">Tidak Aktif</span>
-                </label>
+
+            <div class="mb-1 row">
+                <label class="col-lg-3 col-form-label required">Status</label>
+                <div class="col-lg-9">
+                   <select class="form-select chosen-select" name="status" required>
+                        <option value="baru" @if(@$main == '' || @$main['status'] == 'baru') selected @endif>Baru</option>
+                        <option value="diproses" @if(@$main['status'] == 'diproses') selected @endif>Diproses</option>
+                        <option value="selesai" @if(@$main['status'] == 'selesai') selected @endif>Selesai</option>
+                        <option value="ditolak" @if(@$main['status'] == 'ditolak') selected @endif>Ditolak</option>
+                   </select>
+                </div>
             </div>
-        </div>
-        <div class="border-dotted"></div>
-        <div class="row mt-2">
-            <div class="col-9 offset-3">
+        </fieldset>
+        
+        <div class="row mt-3">
+            <div class="col-lg-9 offset-lg-3">
                 <button type="submit" class="btn btn-primary" onclick="_save(event)"><i class="fas fa-save me-2"></i> Simpan</button>
-                <button type="button" class="btn btn-default" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i> Batal</button>
+                <button type="button" class="btn btn-link" data-bs-dismiss="modal">Batal</button>
             </div>
         </div>
     </div>

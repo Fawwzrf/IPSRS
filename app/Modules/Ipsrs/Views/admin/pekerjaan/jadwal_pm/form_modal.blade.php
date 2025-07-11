@@ -53,15 +53,15 @@
         <fieldset class="border p-2 rounded mb-3">
             <legend class="float-none w-auto px-2 fs-6 fw-bold">Penanggalan & Status</legend>
             <div class="mb-3 row">
-                <label class="col-lg-3 col-form-label">Tanggal Terakhir PM</label>
+                <label class="col-lg-3 col-form-label required">Tanggal Terakhir PM</label>
                 <div class="col-lg-5">
-                    <input type="text" name="tgl_terakhir" class="form-control datepicker-notauto" value="{{ @to_date(@$main['tgl_terakhir'], '-', 'date') }}">
+                    <input type="text" name="tgl_terakhir" class="form-control datepicker-notauto" value="{{ @to_date(@$main['tgl_terakhir'], '-', 'date') }}" required>
                 </div>
             </div>
             <div class="mb-3 row">
-                <label class="col-lg-3 col-form-label required">Tanggal Berikutnya PM</label>
+                <label class="col-lg-3 col-form-label">Tanggal Berikutnya PM</label>
                 <div class="col-lg-5">
-                    <input type="text" name="tgl_berikutnya" class="form-control datepicker-notauto" value="{{ @to_date(@$main['tgl_berikutnya'], '-', 'date') }}" required>
+                    <input type="text" name="tgl_berikutnya" class="form-control" value="{{ @to_date(@$main['tgl_berikutnya'], '-', 'date') }}" readonly placeholder="Terisi otomatis setelah disimpan">
                 </div>
             </div>
              <div class="mb-1 row">

@@ -54,6 +54,13 @@ class AdminPermintaanKomplain extends MyController
         if (empty($d['pegawai_id'])) return response()->json(_response('11', $this->uri, ['message' => 'Pembuat komplain wajib dipilih!']));
         if (empty($d['deskripsi'])) return response()->json(_response('11', $this->uri, ['message' => 'Deskripsi wajib diisi!']));
 
+        $asset = DbModel::getData('asset', ['asset_id' => $d['asset_id'], 'deleted_st' => 0]);
+        if (!$asset || $asset['lokasi_id'] != $d['lokasi_id']) {
+            return response()->json(_response('11', $this->uri, [
+                'message' => 'Data tidak konsisten! Aset yang dipilih tidak sesuai dengan lokasi yang ditentukan.'
+            ]));
+        }
+        
         $result = $this->model->saveData($id, $d);
 
         if ($result['status']) {
