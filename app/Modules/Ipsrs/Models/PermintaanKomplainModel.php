@@ -1,10 +1,9 @@
 <?php
 
-namespace App\Modules\Ipsrs\Models; // Perbaiki namespace: namespace App\Modules\Ipsrs\Models;
+namespace App\Modules\Ipsrs\Models;
 
-use App\Modules\App\Models\DbModel; // Perbaiki namespace: use App\Modules\App\Models\DbModel;
+use App\Modules\App\Models\DbModel;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 
 class PermintaanKomplainModel extends Model
 {
@@ -27,55 +26,63 @@ class PermintaanKomplainModel extends Model
     {
         self::initSession();
 
-        // Query utama TANPA KLAUSA WHERE di sini
-        $query = "SELECT
-                    pk.permintaan_id, pk.tgl, pk.deskripsi, pk.status, pk.active_st, pk.deleted_st,
-                    ast.asset_id, ast.asset_nm, ast.no_seri as asset_no_seri, loc.lokasi_nm as asset_lokasi_nm,
-                    pgw.pegawai_nm as pembuat_komplain_nm
-                  FROM permintaan_komplain pk
-                  LEFT JOIN asset ast ON pk.asset_id = ast.asset_id
-                  LEFT JOIN mst_lokasi loc ON ast.lokasi_id = loc.lokasi_id
-                  LEFT JOIN mst_pegawai pgw ON pk.pegawai_id = pgw.pegawai_id";
+        $query = "SELECT 
+                    k.permintaan_id, k.tgl, k.deskripsi, k.status, k.active_st,
+                    k.anotasi_url,
+                    a.asset_nm,
+                    p.pegawai_nm
+                  FROM permintaan_komplain k
+                  LEFT JOIN asset a ON k.asset_id = a.asset_id
+                  LEFT JOIN mst_pegawai p ON k.pegawai_id = p.pegawai_id";
 
-        // Kolom yang dapat dicari oleh DataTables
-        $search = [
-            'pk.permintaan_id', 'pk.tgl', 'pk.deskripsi', 'pk.status',
-            'ast.asset_nm', 'ast.no_seri', 'loc.lokasi_nm', 'pgw.pegawai_nm'
+        $searchableColumns = ['a.asset_nm', 'p.pegawai_nm', 'k.deskripsi', 'k.status'];
+
+        $whereConditions = ['k.deleted_st' => 0];
+        $search_data = self::$nav_sess['search']['data'] ?? [];
+
+        if (!empty($search_data['status'])) $whereConditions['k.status'] = $search_data['status'];
+        if (!empty($search_data['asset_id'])) $whereConditions['k.asset_id'] = $search_data['asset_id'];
+        if (!empty($search_data['pegawai_id'])) $whereConditions['k.pegawai_id'] = $search_data['pegawai_id'];
+
+        $whereString = '';
+        if (!empty($search_data['term'])) {
+            $searchTerm = strtolower(addslashes($search_data['term']));
+            $whereString = " (LOWER(a.asset_nm) LIKE '%{$searchTerm}%' OR LOWER(p.pegawai_nm) LIKE '%{$searchTerm}%' OR LOWER(k.deskripsi) LIKE '%{$searchTerm}%') ";
+        }
+
+        $result = DbModel::datatablesQuery($query, $searchableColumns, $whereConditions, $whereString);
+        return response()->json($result);
+    }
+
+    public function getById($id)
+    {
+        if (!$id) return null;
+        return DbModel::getData('permintaan_komplain', ['permintaan_id' => $id]);
+    }
+
+    public function saveData($id, $data)
+    {
+        $saveData = [
+            'tgl' => to_date($data['tgl'], '-', 'date'),
+            'asset_id' => $data['asset_id'],
+            'pegawai_id' => $data['pegawai_id'],
+            'deskripsi' => $data['deskripsi'],
+            'status' => $data['status'],
+            'anotasi_url' => $data['anotasi_url'] ?? null,
         ];
 
-        // Kumpulkan semua kondisi WHERE untuk parameter $where (key-value pairs)
-        $conditionsForDbModel = []; 
-        $conditionsForDbModel[] = 'pk.deleted_st = 0'; // Kondisi dasar
+        if ($id == null) {
+            $saveData['permintaan_id'] = DbModel::getId('permintaan_komplain', 2, 12);
+            $result = DbModel::insertData('permintaan_komplain', $saveData);
+            return ['status' => $result, 'mode' => 'insert'];
+        } else {
+            $result = DbModel::updateData('permintaan_komplain', $saveData, ['permintaan_id' => $id]);
+            return ['status' => $result, 'mode' => 'update'];
+        }
+    }
 
-        // Filter dari sesi pencarian
-        if (@self::$nav_sess['search']['data']['asset_id'] != '') {
-            $conditionsForDbModel['pk.asset_id'] = @self::$nav_sess['search']['data']['asset_id'];
-        }
-        if (@self::$nav_sess['search']['data']['pegawai_id'] != '') {
-            $conditionsForDbModel['pk.pegawai_id'] = @self::$nav_sess['search']['data']['pegawai_id'];
-        }
-        if (@self::$nav_sess['search']['data']['status'] != '') {
-            $conditionsForDbModel['pk.status'] = @self::$nav_sess['search']['data']['status'];
-        }
-        if (@self::$nav_sess['search']['data']['active_st'] != '') {
-            $conditionsForDbModel['pk.active_st'] = @self::$nav_sess['search']['data']['active_st'];
-        }
-        
-        // Kondisi pencarian 'term' sebagai string SQL murni
-        $isWhereString = ''; 
-        if (@self::$nav_sess['search']['data']['term'] != '') {
-            $searchTerm = strtolower(@self::$nav_sess['search']['data']['term']);
-            $isWhereString .= (empty($isWhereString) ? "" : " AND ") . " ( LOWER(pk.permintaan_id) LIKE '%{$searchTerm}%'
-                         OR LOWER(pk.deskripsi) LIKE '%{$searchTerm}%'
-                         OR LOWER(ast.asset_nm) LIKE '%{$searchTerm}%'
-                         OR LOWER(ast.no_seri) LIKE '%{$searchTerm}%'
-                         OR LOWER(loc.lokasi_nm) LIKE '%{$searchTerm}%'
-                         OR LOWER(pgw.pegawai_nm) LIKE '%{$searchTerm}%'
-                       ) ";
-        }
-        
-        // Panggil DbModel::datatablesQuery dengan parameter yang benar
-        $result = DbModel::datatablesQuery($query, $search, $conditionsForDbModel, $isWhereString);
-        return $result;
+    public function deleteData($id)
+    {
+        return DbModel::updateData('permintaan_komplain', ['deleted_st' => 1], ['permintaan_id' => $id]);
     }
 }

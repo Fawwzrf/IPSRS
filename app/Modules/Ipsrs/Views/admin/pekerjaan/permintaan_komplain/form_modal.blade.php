@@ -1,83 +1,110 @@
-<form id="form" action="<?= $form_act ?>" method="post" autocomplete="off">
+<form id="form" action="{{ $form_act }}" method="post" autocomplete="off">
     @csrf
     <div class="card-body">
-        <div class="mb-1 row">
-            <label class="col-lg-3 col-md-6 col-form-label required">ID Permintaan</label>
-            <div class="col-lg-4">
-                <input type="text" name="permintaan_id" id="permintaan_id" class="form-control" value="<?= @$main['permintaan_id'] ?>" <?= (@$main['permintaan_id']) ? 'readonly' : '' ?> required>
-                <small class="form-hint">ID permintaan harus unik. Contoh: KOM001</small>
+        <fieldset class="border p-2 rounded mb-3">
+            <legend class="float-none w-auto px-2 fs-6 fw-bold">Detail Permintaan Komplain</legend>
+            
+            <div class="mb-3 row">
+                <label class="col-lg-3 col-form-label required">Tanggal</label>
+                <div class="col-lg-9">
+                    <input type="text" name="tgl" class="form-control datepicker-notauto" value="{{ @to_date(@$main['tgl'], '-', 'date') ?: date('d-m-Y') }}" required>
+                </div>
             </div>
-        </div>
-        <div class="mb-1 row">
-            <label class="col-lg-3 col-md-6 col-form-label required">Tanggal Komplain</label>
-            <div class="col-lg-4">
-                <input type="text" name="tgl" id="tgl" class="form-control datepicker-notauto" value="<?= @to_date(@$main['tgl'], '-', 'date') ?>" required>
+
+            {{-- LANGKAH 1: PILIH LOKASI --}}
+            <div class="mb-3 row">
+                <label class="col-lg-3 col-form-label required">Lokasi Komplain</label>
+                <div class="col-lg-9">
+                    <select class="form-select chosen-select" name="lokasi_id" id="lokasi-select" required>
+                        <option value="">- Pilih Lokasi Terlebih Dahulu -</option>
+                        @php
+                            // Blok ini untuk menentukan lokasi yang terpilih saat mode edit
+                            $selected_lokasi_id = '';
+                            if(@$main['asset_id']) {
+                                // Ambil data asset untuk mendapatkan lokasi_id-nya
+                                $asset = \App\Modules\App\Models\DbModel::getData('asset', ['asset_id' => $main['asset_id']]);
+                                $selected_lokasi_id = @$asset['lokasi_id'];
+                            }
+                        @endphp
+                        @foreach($all_lokasi as $lokasi)
+                            {{-- Simpan URL denah di data-attribute untuk diakses oleh JavaScript --}}
+                            <option value="{{ $lokasi['lokasi_id'] }}" data-denah-url="{{ $lokasi['denah_url'] ?? '' }}" @if($selected_lokasi_id == $lokasi['lokasi_id']) selected @endif>
+                                {{ $lokasi['lokasi_nm'] }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
-        </div>
-        <div class="mb-1 row">
-            <label class="col-lg-3 col-md-6 col-form-label required">Aset</label>
-            <div class="col-lg-8">
-                <select class="form-select chosen-select" name="asset_id" id="asset_id" required>
-                    <option value="">- Pilih Aset -</option>
-                    <?php foreach($all_asset as $asset) : ?>
-                        <option value="<?= $asset['asset_id'] ?>" <?= (@$main['asset_id'] == $asset['asset_id']) ? 'selected' : '' ?>>
-                            <?= $asset['asset_id'] ?> - <?= $asset['asset_nm'] ?> (SN: <?= @$asset['no_seri'] ?>, Lokasi: <?= @$asset['lokasi_nm'] ?>)
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+
+            {{-- LANGKAH 2: PILIH ASET (Kontennya akan diisi oleh JavaScript) --}}
+            <div class="mb-3 row">
+                <label class="col-lg-3 col-form-label required">Aset yang Dikomplain</label>
+                <div class="col-lg-9">
+                    <select class="form-select chosen-select" name="asset_id" id="asset-select" required disabled>
+                        <option value="">- Pilih Lokasi Terlebih Dahulu -</option>
+                    </select>
+                </div>
             </div>
-        </div>
-        <div class="mb-1 row">
-            <label class="col-lg-3 col-md-6 col-form-label required">Pembuat Komplain</label>
-            <div class="col-lg-8">
-                <select class="form-select chosen-select" name="pegawai_id" id="pegawai_id" required>
-                    <option value="">- Pilih Pembuat Komplain -</option>
-                    <?php foreach($all_pegawai as $pegawai) : ?>
-                        <option value="<?= $pegawai['pegawai_id'] ?>" <?= (@$main['pegawai_id'] == $pegawai['pegawai_id']) ? 'selected' : '' ?>>
-                            <?= $pegawai['pegawai_nm'] ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+            
+            <div class="mb-3 row">
+                <label class="col-lg-3 col-form-label required">Dibuat oleh</label>
+                <div class="col-lg-9">
+                    <select class="form-select chosen-select" name="pegawai_id" required>
+                        <option value="">- Pilih Pegawai -</option>
+                        @foreach($all_pegawai as $pegawai)
+                            <option value="{{ $pegawai['pegawai_id'] }}" @if(@$main['pegawai_id'] == $pegawai['pegawai_id']) selected @endif>
+                                {{ $pegawai['pegawai_nm'] }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
-        </div>
-        <div class="mb-1 row">
-            <label class="col-lg-3 col-md-6 col-form-label required">Deskripsi Komplain</label>
-            <div class="col-lg-8">
-                <textarea name="deskripsi" id="deskripsi" class="form-control" rows="3" required><?= @$main['deskripsi'] ?></textarea>
+
+            <div class="mb-3 row">
+                <label class="col-lg-3 col-form-label required">Deskripsi Komplain</label>
+                <div class="col-lg-9">
+                    <textarea name="deskripsi" class="form-control" rows="4" required>{{ @$main['deskripsi'] }}</textarea>
+                </div>
             </div>
-        </div>
-        <div class="mb-1 row">
-            <label class="col-lg-3 col-md-6 col-form-label required">Status Komplain</label>
-            <div class="col-lg-8">
-                <select class="form-select chosen-select" name="status" id="status" required>
-                    <option value="">- Pilih Status -</option>
-                    <option value="baru" <?= (@$main['status'] == 'baru' || @$main['status'] == '') ? 'selected' : '' ?>>Baru</option>
-                    <option value="diproses" <?= (@$main['status'] == 'diproses') ? 'selected' : '' ?>>Diproses</option>
-                    <option value="selesai" <?= (@$main['status'] == 'selesai') ? 'selected' : '' ?>>Selesai</option>
-                    <option value="ditolak" <?= (@$main['status'] == 'ditolak') ? 'selected' : '' ?>>Ditolak</option>
-                    <option value="dibatalkan" <?= (@$main['status'] == 'dibatalkan') ? 'selected' : '' ?>>Dibatalkan</option>
-                </select>
+
+            <div class="mb-1 row">
+                <label class="col-lg-3 col-form-label required">Status</label>
+                <div class="col-lg-9">
+                   <select class="form-select chosen-select" name="status">
+                        <option value="baru" @if(@$main == '' || @$main['status'] == 'baru') selected @endif>Baru</option>
+                        <option value="diproses" @if(@$main['status'] == 'diproses') selected @endif>Diproses</option>
+                        <option value="selesai" @if(@$main['status'] == 'selesai') selected @endif>Selesai</option>
+                    </select>
+                </div>
             </div>
-        </div>
-        <div class="mb-1 row">
-            <label class="col-lg-3 col-md-6 col-form-label required">Aktif?</label>
-            <div class="col-lg-8">
-                <label class="form-check form-check-inline">
-                    <input class="form-check-input" type="radio" name="active_st" value="1" <?= (@$main == '') ? 'checked' : ((@$main['active_st'] == 1) ? 'checked' : '') ?>>
-                    <span class="form-check-label">Aktif</span>
-                </label>
-                <label class="form-check form-check-inline">
-                    <input class="form-check-input" type="radio" name="active_st" value="0" <?= (@$main != '') ? ((@$main['active_st'] == 0) ? 'checked' : '') : '' ?>>
-                    <span class="form-check-label">Tidak Aktif</span>
-                </label>
+        </fieldset>
+
+        <fieldset class="border p-2 rounded mb-3">
+            <legend class="float-none w-auto px-2 fs-6 fw-bold">Denah Lokasi (Otomatis)</legend>
+            <div class="mb-2">
+                <button type="button" class="btn btn-sm btn-outline-danger" id="btn-hapus-anotasi" style="display: none;">
+                    <i class="fas fa-times me-2"></i> Hapus Tanda
+                </button>
+                <small class="form-hint ms-2">Klik pada denah untuk memberi tanda lokasi komplain.</small>
             </div>
-        </div>
-        <div class="border-dotted"></div>
-        <div class="row mt-2">
-            <div class="col-9 offset-3">
-                <button type="submit" class="btn btn-primary" onclick="_save(event)"><i class="fas fa-save me-2"></i> Simpan</button>
-                <button type="button" class="btn btn-default" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i> Batal</button>
+            <div class="d-flex justify-content-center align-items-center bg-light" style="min-height: 450px; border: 1px dashed #ccc;">
+                <canvas id="denah-canvas" style="display: none; max-width: 100%;"></canvas>
+                <span id="canvas-placeholder">Pilih lokasi untuk menampilkan denah</span>
+            </div>
+            <input type="hidden" name="anotasi_url" id="anotasi_url" value="{{ @$main['anotasi_url'] }}">
+        </fieldset>
+        
+        <div class="row mt-3">
+            <div class="col-lg-9 offset-lg-3">
+                <button type="submit" class="btn btn-primary" onclick="window.drawCanvasForSave(); _save(event);"><i class="fas fa-save me-2"></i> Simpan</button>
+                <button type="button" class="btn btn-link" data-bs-dismiss="modal">Batal</button>
             </div>
         </div>
     </div>
 </form>
+
+{{-- Simpan semua data aset ke dalam variabel JavaScript global untuk diakses oleh _js.blade.php --}}
+<script>
+    window.allAssets = @json($all_asset);
+    window.selectedAsset = '{{ @$main['asset_id'] }}'; 
+</script>

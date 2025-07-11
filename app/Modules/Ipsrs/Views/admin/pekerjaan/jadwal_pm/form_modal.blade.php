@@ -20,6 +20,7 @@
                 <label class="col-lg-3 col-form-label required">Frekuensi</label>
                 <div class="col-lg-9">
                     <select class="form-select chosen-select" name="frekuensi" required>
+                        <option value="">- Pilih Frekuensi -</option>
                         <option value="Harian" @if(@$main['frekuensi'] == 'Harian') selected @endif>Harian</option>
                         <option value="Mingguan" @if(@$main['frekuensi'] == 'Mingguan') selected @endif>Mingguan</option>
                         <option value="Bulanan" @if(@$main['frekuensi'] == 'Bulanan') selected @endif>Bulanan</option>
@@ -32,6 +33,7 @@
                 <label class="col-lg-3 col-form-label required">Jenis Pekerjaan</label>
                 <div class="col-lg-9">
                     <select class="form-select chosen-select" name="jenis" required>
+                        <option value="">- Pilih Jenis -</option>
                         <option value="Pembersihan" @if(@$main['jenis'] == 'Pembersihan') selected @endif>Pembersihan</option>
                         <option value="Inspeksi" @if(@$main['jenis'] == 'Inspeksi') selected @endif>Inspeksi</option>
                         <option value="Kalibrasi" @if(@$main['jenis'] == 'Kalibrasi') selected @endif>Kalibrasi</option>
@@ -47,16 +49,17 @@
                 </div>
             </div>
         </fieldset>
+
         <fieldset class="border p-2 rounded mb-3">
             <legend class="float-none w-auto px-2 fs-6 fw-bold">Penanggalan & Status</legend>
             <div class="mb-3 row">
-                <label class="col-lg-3 col-form-label">Tgl Terakhir PM</label>
+                <label class="col-lg-3 col-form-label">Tanggal Terakhir PM</label>
                 <div class="col-lg-5">
                     <input type="text" name="tgl_terakhir" class="form-control datepicker-notauto" value="{{ @to_date(@$main['tgl_terakhir'], '-', 'date') }}">
                 </div>
             </div>
             <div class="mb-3 row">
-                <label class="col-lg-3 col-form-label required">Tgl Berikutnya PM</label>
+                <label class="col-lg-3 col-form-label required">Tanggal Berikutnya PM</label>
                 <div class="col-lg-5">
                     <input type="text" name="tgl_berikutnya" class="form-control datepicker-notauto" value="{{ @to_date(@$main['tgl_berikutnya'], '-', 'date') }}" required>
                 </div>
@@ -75,6 +78,7 @@
                 </div>
             </div>
         </fieldset>
+        
         <div class="row mt-3">
             <div class="col-lg-9 offset-lg-3">
                 <button type="submit" class="btn btn-primary" onclick="_save(event)"><i class="fas fa-save me-2"></i> Simpan</button>
