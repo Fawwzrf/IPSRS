@@ -39,11 +39,13 @@ class AdminPenerimaanSparepart extends MyController
     {
         $d = _post();
         if (empty($d['sparepart_id'])) return response()->json(_response('11', $this->uri, ['message' => 'Sparepart wajib dipilih.']));
-        if (empty($d['jumlah']) || $d['jumlah'] <= 0) return response()->json(_response('11', $this->uri, ['message' => 'Jumlah harus lebih dari 0.']));
+        if (empty($d['jumlah']) || (int)$d['jumlah'] <= 0) return response()->json(_response('11', $this->uri, ['message' => 'Jumlah harus lebih dari 0.']));
+
+        // Membersihkan format harga SEBELUM dikirim ke model
         if (isset($d['harga_satuan'])) {
             $d['harga_satuan'] = str_replace(',', '.', str_replace('.', '', $d['harga_satuan']));
         }
-        
+
         $result = $this->model->saveData($id, $d);
         if ($result['status']) {
             $response_code = ($result['mode'] == 'insert') ? '01' : '02';

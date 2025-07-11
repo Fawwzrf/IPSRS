@@ -6,6 +6,7 @@ use App\Modules\App\Models\DbModel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
+
 class PenerimaanSparepartModel extends Model
 {
     protected static $nav_sess;
@@ -40,55 +41,81 @@ class PenerimaanSparepartModel extends Model
 
     public function saveData($id, $data)
     {
-        $saveData = [
-            'sparepart_id' => $data['sparepart_id'],
-            'tgl' => to_date($data['tgl'], '-', 'date'),
-            'jumlah' => $data['jumlah'],
-            'harga_satuan' => $data['harga_satuan'] ?? 0.00,
-            'vendor' => $data['vendor'] ?? null,
-            'no_faktur' => $data['no_faktur'] ?? null,
-            'catatan' => $data['catatan'] ?? null,
-        ];
-
+        $sparepart_id = $data['sparepart_id'];
+        $jumlah_diterima = (int)$data['jumlah'] / 2; //karena tombol form mengirimkan dua kali response
+        $harga_penerimaan = (float)($data['harga_satuan'] ?? 0);
         try {
-            DB::beginTransaction();
-            $stokToAdjust = 0;
+            \DB::beginTransaction();
 
-            if ($id == null) {
-                $saveData['penerimaan_id'] = DbModel::getId('trx_penerimaan_sparepart', 2, 12);
-                DbModel::insertData('trx_penerimaan_sparepart', $saveData);
-                $stokToAdjust = $saveData['jumlah'];
-                $mode = 'insert';
-            } else {
-                $oldData = $this->getById($id);
-                $stokToAdjust = $saveData['jumlah'] - $oldData['jumlah'];
-                DbModel::updateData('trx_penerimaan_sparepart', $saveData, ['penerimaan_id' => $id]);
-                $mode = 'update';
+            $sparepartMaster = \DB::table('mst_sparepart')->where('sparepart_id', $sparepart_id)->lockForUpdate()->first();
+            if (!$sparepartMaster) {
+                throw new \Exception("Sparepart tidak ditemukan.");
             }
 
-            DB::table('mst_sparepart')->where('sparepart_id', $data['sparepart_id'])->increment('stok', $stokToAdjust);
-            DB::commit();
-            return ['status' => true, 'mode' => $mode];
+            $stok_lama = (int)$sparepartMaster->stok;
+            $harga_lama = (float)$sparepartMaster->harga;
+            
+
+            // Perhitungan Stok & Harga Baru
+            $stok_baru = $stok_lama + $jumlah_diterima;
+            $nilai_total_lama = $stok_lama * $harga_lama;
+            $nilai_penerimaan_baru = $jumlah_diterima * $harga_penerimaan;
+            $harga_rata_rata_baru = ($stok_baru > 0) ? ($nilai_total_lama + $nilai_penerimaan_baru) / $stok_baru : $harga_penerimaan;
+
+            
+
+            // HANYA ADA SATU KALI UPDATE STOK DI SINI
+            \DB::table('mst_sparepart')
+                ->where('sparepart_id', $sparepart_id)
+                ->update([
+                    'stok' => $stok_baru,
+                    'harga' => $harga_rata_rata_baru
+                ]);
+            
+
+            // Simpan transaksi penerimaan
+            $saveData = [
+                'sparepart_id' => $sparepart_id,
+                'tgl' => to_date($data['tgl'], '-', 'date'),
+                'jumlah' => $jumlah_diterima,
+                'harga_satuan' => $harga_penerimaan,
+            ];
+
+            // Diasumsikan hanya insert baru, tidak ada edit
+            $saveData['penerimaan_id'] = DbModel::getId('trx_penerimaan_sparepart', 2, 12);
+            DbModel::insertData('trx_penerimaan_sparepart', $saveData);
+            
+
+            \DB::commit();
+            
+            return ['status' => true, 'mode' => 'insert'];
         } catch (\Exception $e) {
-            DB::rollBack();
+            \DB::rollBack();
+            
             return ['status' => false, 'message' => 'Transaksi gagal: ' . $e->getMessage()];
         }
     }
 
+    /**
+     * Logika delete juga disederhanakan
+     */
     public function deleteData($id)
     {
         try {
-            DB::beginTransaction();
+            \DB::beginTransaction();
             $data = $this->getById($id);
-            if (!$data) return ['status' => false, 'message' => 'Data tidak ditemukan.'];
+            if (!$data) return ['status' => false, 'message' => 'Data penerimaan tidak ditemukan.'];
 
-            DB::table('mst_sparepart')->where('sparepart_id', $data['sparepart_id'])->decrement('stok', $data['jumlah']);
+            // Kurangi stok sejumlah yang ada di transaksi ini
+            \DB::table('mst_sparepart')->where('sparepart_id', $data->sparepart_id)->decrement('stok', $data->jumlah);
+
+            // Soft delete transaksi
             DbModel::updateData('trx_penerimaan_sparepart', ['deleted_st' => 1], ['penerimaan_id' => $id]);
 
-            DB::commit();
+            \DB::commit();
             return ['status' => true];
         } catch (\Exception $e) {
-            DB::rollBack();
+            \DB::rollBack();
             return ['status' => false, 'message' => 'Transaksi gagal: ' . $e->getMessage()];
         }
     }
