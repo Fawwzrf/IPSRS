@@ -99,23 +99,47 @@ class Asset extends MyController
         }
     }
 
-    public function delete($id)
+    public function form_detail_modal($id = null)
     {
-        $hasKomplain = DbModel::getData('permintaan_komplain', ['asset_id' => $id, 'deleted_st' => 0]);
-        if ($hasKomplain) {
-            return response()->json(_response('13', $this->uri, ['message' => 'Aset ini memiliki Permintaan Komplain terkait dan tidak dapat dihapus.']));
-        }
-        $hasJadwalPm = DbModel::getData('jadwal_pm', ['asset_id' => $id, 'deleted_st' => 0]);
-        if ($hasJadwalPm) {
-            return response()->json(_response('13', $this->uri, ['message' => 'Aset ini memiliki Jadwal PM terkait dan tidak dapat dihapus.']));
+        if (!$id) {
+            return '<h5>Error: ID Aset tidak ditemukan.</h5>';
         }
 
-        $result = DbModel::deleteData('asset', ['asset_id' => $id]);
-        if ($result) {
-            return response()->json(_response('03', $this->uri));
-        } else {
-            return response()->json(_response('13', $this->uri));
+        $assetModel = new AssetModel();
+
+        $d['asset'] = $assetModel->getAssetDetailById($id);
+        if (!$d['asset']) {
+            return '<h5>Error: Aset tidak ditemukan.</h5>';
         }
+
+        $d['history'] = $assetModel->getAssetHistory($id);
+        $d['title'] = 'Detail Aset: ' . $d['asset']['asset_nm'];
+
+        // Nama file view tidak perlu diubah, tetap detail_modal.blade.php
+        return $this->renderView($this->template . 'detail_modal', $d);
+    }
+
+    public function detail($id = null)
+    {
+        if (!$id) {
+            return view('errors.404', ['message' => 'ID Aset tidak ditemukan.']);
+        }
+
+        $assetModel = new AssetModel();
+
+        // Ambil data detail aset
+        $d['asset'] = $assetModel->getAssetDetailById($id);
+        if (!$d['asset']) {
+            return view('errors.404', ['message' => 'Aset tidak ditemukan.']);
+        }
+
+        // Ambil data riwayat pekerjaan untuk aset ini
+        $d['history'] = $assetModel->getAssetHistory($id);
+
+        // Menyiapkan data untuk View
+        $d['title'] = 'Detail Aset: ' . $d['asset']['asset_nm'];
+
+        return $this->renderView($this->template . 'detail', $d);
     }
 
     public function ajax_datatables()

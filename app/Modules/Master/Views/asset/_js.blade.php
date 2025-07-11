@@ -63,6 +63,7 @@
                     "render": function(data, type, row, meta) {
                         var uri_edit = '<?= $uri . '/form_modal/' ?>' + data;
                         var uri_delete = '<?= $uri . '/delete/' ?>' + data;
+                        var uri_detail_modal = '<?= $uri . '/form_detail_modal/' ?>' + data;
                         
                         return '' +
                             '<div class="btn-list btn-sm flex-nowrap">' +
@@ -71,10 +72,15 @@
                             '          Aksi' +
                             '      </button>' +
                             '      <div class="dropdown-menu">' +
-                            '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick="_modal(event, {uri: \'' + uri_edit + '\', size: \'modal-lg\', position: \'normal\'})">' +
+
+                            '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick="_modal(event, {uri: \'' + uri_detail_modal + '\', size: \'modal-xl\'})">' +
+                            '             <i class="fas fa-eye text-info me-2"></i> Lihat Detail (Modal)' +
+                            '         </a>' +
+
+                            '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick="_modal(event, {uri: \'' + uri_edit + '\', size: \'modal-lg\'})">' +
                             '             <i class="fas fa-pencil-alt text-warning me-2"></i> Ubah Data' +
                             '         </a>' +
-                            '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick=_delete("' + uri_delete + '")>' +
+                            '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick="_delete(\'' + uri_delete + '\')">' +
                             '             <i class="fas fa-trash text-danger me-2"></i> Hapus Data' +
                             '         </a>' +
                             '      </div>' +

@@ -86,6 +86,41 @@ class AssetModel extends Model
         return $result;
     }
 
+    public function getAssetDetailById($id)
+    {
+        $query = "SELECT a.*, k.kategori_asset_nm, l.lokasi_nm
+                  FROM asset a
+                  LEFT JOIN mst_kategori_asset k ON a.kategori_asset_id = k.kategori_asset_id
+                  LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
+                  WHERE a.asset_id = ? AND a.deleted_st = 0";
+        return DbModel::rawData('row_array', $query, [$id]);
+    }
+
+    /**
+     * FUNGSI BARU: Mengambil riwayat Order Kerja untuk satu aset.
+     */
+    public function getAssetHistory($asset_id)
+    {
+        $query = "SELECT 
+                    ok.order_kerja_id,
+                    ok.tgl_dibuat,
+                    ok.jenis,
+                    ok.status,
+                    COALESCE(pk.deskripsi, 'Pemeliharaan Rutin Sesuai Jadwal') as deskripsi, -- Nama alias diubah menjadi 'deskripsi'
+                    (SELECT GROUP_CONCAT(p.pegawai_nm SEPARATOR ', ') 
+                     FROM penugasan_teknisi pt 
+                     JOIN mst_pegawai p ON pt.pegawai_id = p.pegawai_id 
+                     WHERE pt.order_kerja_id = ok.order_kerja_id AND pt.deleted_st = 0) as tim_teknisi,
+                    (SELECT MIN(tgl_mulai) FROM penugasan_teknisi WHERE order_kerja_id = ok.order_kerja_id) as tgl_mulai,
+                    (SELECT MAX(tgl_selesai) FROM penugasan_teknisi WHERE order_kerja_id = ok.order_kerja_id) as tgl_selesai
+                  FROM order_kerja ok
+                  LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+                  LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+                  WHERE (pk.asset_id = ? OR jp.asset_id = ?) AND ok.deleted_st = 0
+                  ORDER BY ok.tgl_dibuat DESC";
+        return DbModel::rawData('result_array', $query, [$asset_id, $asset_id]);
+    }
+
     static function getAssetByNoSeri($noSeri)
     {
         $sql = "SELECT

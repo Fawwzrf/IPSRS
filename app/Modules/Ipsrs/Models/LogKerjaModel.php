@@ -1,93 +1,86 @@
 <?php
 
-namespace App\Modules\Ipsrs\Models; // Perbaiki namespace: namespace App\Modules\Ipsrs\Models;
+namespace App\Modules\Ipsrs\Models;
 
 use App\Modules\App\Models\DbModel;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class LogKerjaModel extends Model
 {
-    protected static $nav_sess;
-
-    public function __construct()
+    public function saveData($order_kerja_id, $data)
     {
-        parent::__construct();
-        self::initSession();
-    }
+        $pegawai_id = Auth::id();
+        $order_kerja = DbModel::getData('order_kerja', ['order_kerja_id' => $order_kerja_id]);
+        if (!$order_kerja) return ['status' => false, 'message' => 'Order Kerja tidak ditemukan.'];
 
-    protected static function initSession()
-    {
-        if (is_null(self::$nav_sess)) {
-            self::$nav_sess = session(request('n'));
-        }
-    }
-
-    static function loadDatatables()
-    {
-        self::initSession();
-
-        // Query utama TANPA KLAUSA WHERE di sini
-        // PERBAIKAN: Gunakan nama kolom sesuai skema terbaru
-        $query = "SELECT
-                    lk.log_kerja_id, lk.tgl_mulai, lk.tgl_selesai, lk.diagnosa, lk.tindakan, lk.hasil,
-                    lk.durasi_menit, lk.total_biaya, lk.active_st, lk.deleted_st,
-                    ok.order_kerja_id, ok.jenis as order_jenis, ok.status as order_status,
-                    ast.asset_nm, ast.no_seri as asset_no_seri, loc.lokasi_nm as asset_lokasi_nm,
-                    pgw.pegawai_nm as teknisi_nm -- Nama alias untuk teknisi_pegawai_id
-                  FROM log_kerja lk
-                  LEFT JOIN order_kerja ok ON lk.order_kerja_id = ok.order_kerja_id
-                  LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
-                  LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-                  LEFT JOIN asset ast ON (jp.asset_id = ast.asset_id OR pk.asset_id = ast.asset_id)
-                  LEFT JOIN mst_lokasi loc ON ast.lokasi_id = loc.lokasi_id
-                  LEFT JOIN mst_pegawai pgw ON lk.teknisi_pegawai_id = pgw.pegawai_id"; // PERBAIKAN: Join ke teknisi_pegawai_id
-
-        // Kolom yang dapat dicari oleh DataTables
-        // PERBAIKAN: Gunakan nama kolom baru yang sesuai
-        $search = [
-            'lk.log_kerja_id', 'lk.tgl_mulai', 'lk.tgl_selesai', 'lk.diagnosa', 'lk.tindakan', 'lk.hasil',
-            'ok.order_kerja_id', 'ok.jenis', 'ok.status',
-            'ast.asset_nm', 'ast.no_seri', 'loc.lokasi_nm',
-            'pgw.pegawai_nm'
+        $logKerjaData = [
+            'order_kerja_id' => $order_kerja_id,
+            'teknisi_pegawai_id' => $pegawai_id,
+            'tgl_mulai' => now(), // Diasumsikan mulai saat laporan dibuat
+            'tgl_selesai' => now(),
+            'diagnosa' => $data['diagnosa'] ?? 'Sesuai deskripsi Order Kerja',
+            'tindakan' => $data['tindakan'],
+            'hasil' => $data['hasil'],
+            'durasi_menit' => $data['durasi_menit'] ?? 0,
         ];
 
-        // Kumpulkan semua kondisi WHERE untuk parameter $where (key-value pairs)
-        $conditionsForDbModel = []; 
-        $conditionsForDbModel[] = 'lk.deleted_st = 0'; // Kondisi dasar
+        try {
+            DB::beginTransaction();
 
-        // Filter dari sesi pencarian
-        if (@self::$nav_sess['search']['data']['jenis_filter'] != '') {
-            $conditionsForDbModel['ok.jenis'] = @self::$nav_sess['search']['data']['jenis_filter'];
+            $existingLog = DbModel::getData('log_kerja', ['order_kerja_id' => $order_kerja_id]);
+            if ($existingLog) {
+                DbModel::updateData('log_kerja', $logKerjaData, ['log_kerja_id' => $existingLog['log_kerja_id']]);
+                $log_kerja_id = $existingLog['log_kerja_id'];
+            } else {
+                $log_kerja_id = DbModel::getId('log_kerja', 2, 12);
+                $logKerjaData['log_kerja_id'] = $log_kerja_id;
+                DbModel::insertData('log_kerja', $logKerjaData);
+            }
+
+            // Proses Upload Foto
+            if (isset($_FILES['fotos']) && count($_FILES['fotos']['name']) > 0) {
+                foreach ($_FILES['fotos']['tmp_name'] as $key => $tmp_name) {
+                    if ($_FILES['fotos']['error'][$key] === UPLOAD_ERR_OK) {
+                        $fileContent = file_get_contents($tmp_name);
+                        $base64Content = base64_encode($fileContent);
+                        $mimeType = mime_content_type($tmp_name);
+                        $fotoData = [
+                            'log_foto_id' => DbModel::getId('log_kerja_foto', 2, 12),
+                            'log_kerja_id' => $log_kerja_id,
+                            'foto_url' => 'data:' . $mimeType . ';base64,' . $base64Content,
+                        ];
+                        DbModel::insertData('log_kerja_foto', $fotoData);
+                    }
+                }
+            }
+
+            // Update status Order Kerja
+            $status_baru = ($data['hasil'] == 'berhasil') ? 'selesai' : 'menunggu_sparepart'; // Contoh logika
+            DbModel::updateData('order_kerja', ['status' => $status_baru], ['order_kerja_id' => $order_kerja_id]);
+
+            DB::commit();
+            return ['status' => true];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return ['status' => false, 'message' => 'Transaksi database gagal: ' . $e->getMessage()];
         }
-        if (@self::$nav_sess['search']['data']['order_kerja_id'] != '') {
-            $conditionsForDbModel['lk.order_kerja_id'] = @self::$nav_sess['search']['data']['order_kerja_id'];
-        }
-        if (@self::$nav_sess['search']['data']['pegawai_id'] != '') {
-            $conditionsForDbModel['lk.teknisi_pegawai_id'] = @self::$nav_sess['search']['data']['pegawai_id']; // Gunakan teknisi_pegawai_id
-        }
-        if (@self::$nav_sess['search']['data']['active_st'] != '') {
-            $conditionsForDbModel['lk.active_st'] = @self::$nav_sess['search']['data']['active_st'];
-        }
-        
-        // Kondisi pencarian 'term' sebagai string SQL murni
-        $isWhereString = ''; 
-        if (@self::$nav_sess['search']['data']['term'] != '') {
-            $searchTerm = strtolower(@self::$nav_sess['search']['data']['term']);
-            $isWhereString .= (empty($isWhereString) ? "" : " AND ") . " ( LOWER(lk.log_kerja_id) LIKE '%{$searchTerm}%'
-                         OR LOWER(lk.diagnosa) LIKE '%{$searchTerm}%'
-                         OR LOWER(lk.tindakan) LIKE '%{$searchTerm}%'
-                         OR LOWER(ok.order_kerja_id) LIKE '%{$searchTerm}%'
-                         OR LOWER(ok.jenis) LIKE '%{$searchTerm}%'
-                         OR LOWER(ast.asset_nm) LIKE '%{$searchTerm}%'
-                         OR LOWER(ast.no_seri) LIKE '%{$searchTerm}%'
-                         OR LOWER(loc.lokasi_nm) LIKE '%{$searchTerm}%'
-                         OR LOWER(pgw.pegawai_nm) LIKE '%{$searchTerm}%'
-                       ) ";
-        }
-        
-        // Panggil DbModel::datatablesQuery dengan parameter yang benar
-        $result = DbModel::datatablesQuery($query, $search, $conditionsForDbModel, $isWhereString);
-        return $result;
+    }
+    public function getLogByOrderId($order_kerja_id)
+    {
+        $query = "SELECT lk.*, p.pegawai_nm as teknisi_nm
+                  FROM log_kerja lk
+                  LEFT JOIN mst_pegawai p ON lk.teknisi_pegawai_id = p.pegawai_id
+                  WHERE lk.order_kerja_id = ? AND lk.deleted_st = 0";
+        return DbModel::rawData('row_array', $query, [$order_kerja_id]);
+    }
+
+    /**
+     * Mengambil semua foto bukti berdasarkan log_kerja_id.
+     */
+    public function getPhotosByLogId($log_kerja_id)
+    {
+        return DbModel::allData('log_kerja_foto', ['log_kerja_id' => $log_kerja_id]);
     }
 }
