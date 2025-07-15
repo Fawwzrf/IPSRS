@@ -172,13 +172,16 @@ class OrderKerjaModel extends Model
     {
         try {
             \DB::beginTransaction();
-            DbModel::updateData('order_kerja', ['deleted_st' => 1], ['order_kerja_id' => $id]);
-            DbModel::updateData('penugasan_teknisi', ['deleted_st' => 1], ['order_kerja_id' => $id]);
+
+            // Hapus data terkait
+            \DB::table('penugasan_teknisi')->where('order_kerja_id', $id)->delete();
+            \DB::table('order_kerja')->where('order_kerja_id', $id)->delete();
+
             \DB::commit();
-            return true;
+            return ['status' => true, 'message' => 'Data berhasil dihapus'];
         } catch (\Exception $e) {
             \DB::rollBack();
-            return false;
+            return ['status' => false, 'message' => 'Gagal menghapus: ' . $e->getMessage()];
         }
     }
 }
