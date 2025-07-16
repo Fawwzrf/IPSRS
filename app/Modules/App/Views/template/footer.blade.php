@@ -1,4 +1,3 @@
-
 <!-- Start Body Loading -->
 <div class="offcanvas offcanvas-bottom loading-box" id="offcanvasBottom" data-bs-backdrop="static" aria-labelledby="offcanvasBottomLabel" style="z-index: 9999999999;">
   <div class="offcanvas-body">
@@ -85,6 +84,9 @@
 
   changeTitle();
 </script>
+<!-- Tambahkan di bagian bawah footer sebelum penutup body -->
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.40.0/dist/apexcharts.min.js"></script>
+@yield('scripts')
 </body>
 
 </html>

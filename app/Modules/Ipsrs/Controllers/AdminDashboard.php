@@ -35,6 +35,14 @@ class AdminDashboard extends MyController
         // Mengambil data untuk tabel pekerjaan darurat
         $d['urgent_jobs'] = $this->model->getUrgentJobs();
 
-        return $this->renderView($this->template . 'index', $d);
+        // Pastikan data chart valid
+        if (!isset($d['chart_komplain_harian']) || !is_array($d['chart_komplain_harian'])) {
+            $d['chart_komplain_harian'] = [];
+        }
+
+        // Tambahkan flag untuk memuat ApexCharts
+        $d['load_apexcharts'] = true;
+
+        return $this->renderView('ipsrs::admin.dashboard.index', $d);
     }
 }

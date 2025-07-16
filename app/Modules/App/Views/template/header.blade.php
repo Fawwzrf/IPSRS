@@ -53,7 +53,8 @@
   <link href="<?= asset('dist/libs/fullcalendar/main.css') ?>" rel="stylesheet" />
   <!-- Calendar -->
   <link href="<?= asset('dist/libs/calendar/calendar.css') ?>" rel="stylesheet" />
-  
+  {{-- apexcharts --}}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/apexcharts@3.40.0/dist/apexcharts.css">
   <style>
     :root {
       --tblr-font-sans-serif: 'Inter Var', -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, Helvetica Neue, sans-serif;
@@ -200,6 +201,7 @@
   <script type="text/javascript" src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
   {{-- repeater --}}
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.repeater/1.2.1/jquery.repeater.min.js"></script>
+  
   
   
 

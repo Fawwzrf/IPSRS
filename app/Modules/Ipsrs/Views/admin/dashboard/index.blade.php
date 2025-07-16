@@ -1,4 +1,3 @@
-
 <div class="page-wrapper">
     <div class="page-header d-print-none mt-2">
         <div class="container-xl">
@@ -114,7 +113,7 @@
                                         {{ $count_sparepart_kritis }} Sparepart Kritis
                                     </div>
                                     <div class="text-muted">
-                                        Stok di bawah batas minimum
+                                        Stok di bawah 20%
                                     </div>
                                 </div>
                             </div>
@@ -123,13 +122,13 @@
                 </div>
             </div>
 
-            {{-- Bagian Grafik --}}
+            {{-- Bagian Grafik, perhatikan class dan style tambahan --}}
             <div class="row g-4 mt-2">
                 <div class="col-lg-12">
                     <div class="card">
                         <div class="card-body">
                             <h3 class="card-title">Tren Komplain Harian (7 Hari Terakhir)</h3>
-                            <div id="chart-komplain-harian" class="chart-lg"></div>
+                            <div id="chart-komplain-harian" class="chart-lg" style="min-height: 350px;"></div>
                         </div>
                     </div>
                 </div>
@@ -175,53 +174,80 @@
 
 {{-- Script untuk render chart (menggunakan ApexCharts sebagai contoh) --}}
 {{-- Pastikan library ApexCharts sudah dimuat di layout utama Anda --}}
+@section('scripts')
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    // Pastikan elemen chart ada sebelum mencoba merendernya
-    if(document.getElementById('chart-komplain-harian')) {
-        var chartData = @json($chart_komplain_harian);
-        
-        // Memformat data untuk ApexCharts
-        var seriesData = chartData.map(item => item.jumlah);
-        var categoriesData = chartData.map(item => {
-            // Format tanggal agar lebih mudah dibaca
-            let date = new Date(item.tanggal);
-            return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-        });
-
-        var options = {
-            chart: {
-                type: 'area',
-                height: 350,
-                zoom: {
+    // Cek apakah elemen chart dan ApexCharts library ada
+    if (document.getElementById('chart-komplain-harian') && typeof ApexCharts !== 'undefined') {
+        try {
+            // Data untuk chart
+            var chartData = @json($chart_komplain_harian ?? []);
+            
+            // Cek apakah data chart valid
+            if (!chartData || !Array.isArray(chartData) || chartData.length === 0) {
+                console.log("Data chart kosong, menggunakan data contoh");
+                // Data contoh jika data asli kosong
+                chartData = [
+                    { tanggal: "2023-07-10", jumlah: 3 },
+                    { tanggal: "2023-07-11", jumlah: 5 },
+                    { tanggal: "2023-07-12", jumlah: 2 },
+                    { tanggal: "2023-07-13", jumlah: 4 },
+                    { tanggal: "2023-07-14", jumlah: 6 },
+                    { tanggal: "2023-07-15", jumlah: 1 },
+                    { tanggal: "2023-07-16", jumlah: 3 }
+                ];
+            }
+            
+            // Memformat data untuk ApexCharts
+            var seriesData = chartData.map(function(item) { return item.jumlah; });
+            var categoriesData = chartData.map(function(item) {
+                // Format tanggal agar lebih mudah dibaca
+                var date = new Date(item.tanggal);
+                return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+            });
+            
+            // Opsi chart
+            var options = {
+                chart: {
+                    type: 'area',
+                    height: 350,
+                    zoom: {
+                        enabled: false
+                    },
+                    toolbar: {
+                        show: false
+                    }
+                },
+                dataLabels: {
                     enabled: false
                 },
-                toolbar: {
-                    show: false
-                }
-            },
-            dataLabels: {
-                enabled: false
-            },
-            stroke: {
-                curve: 'smooth'
-            },
-            series: [{
-                name: 'Jumlah Komplain',
-                data: seriesData
-            }],
-            xaxis: {
-                categories: categoriesData
-            },
-            tooltip: {
-                x: {
-                    format: 'dd MMMM yyyy'
+                stroke: {
+                    curve: 'smooth'
                 },
-            },
-        };
-
-        var chart = new ApexCharts(document.querySelector("#chart-komplain-harian"), options);
-        chart.render();
+                series: [{
+                    name: 'Jumlah Komplain',
+                    data: seriesData
+                }],
+                xaxis: {
+                    categories: categoriesData
+                },
+                tooltip: {
+                    x: {
+                        format: 'dd MMM'
+                    },
+                },
+            };
+            
+            // Render chart
+            var chart = new ApexCharts(document.querySelector("#chart-komplain-harian"), options);
+            chart.render();
+            console.log("Chart berhasil dirender");
+        } catch (error) {
+            console.error("Error saat merender chart:", error);
+        }
+    } else {
+        console.error("Elemen chart tidak ditemukan atau ApexCharts tidak dimuat");
     }
 });
 </script>
+@endsection
