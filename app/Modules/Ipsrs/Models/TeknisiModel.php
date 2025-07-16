@@ -76,38 +76,48 @@ class TeknisiModel extends Model
     public function updateStatusPenugasan($penugasan_id, $status_baru, $alasan = null)
     {
         try {
-            \DB::beginTransaction();
+            DB::beginTransaction();
 
             // 1. Ambil data penugasan
-            $penugasan = DbModel::getData('penugasan_teknisi', ['penugasan_id' => $penugasan_id]);
+            $penugasan = DbModel::rawData('row_array', "SELECT * FROM penugasan_teknisi WHERE penugasan_id = ?", [$penugasan_id]);
             if (!$penugasan) {
                 throw new \Exception("Data penugasan tidak ditemukan.");
             }
 
-            // 2. Siapkan data untuk update penugasan teknisi
+            $order_kerja_id = $penugasan['order_kerja_id'];
+
+            // 2. Update penugasan teknisi
             $updateData = ['status' => $status_baru];
             if ($alasan !== null) {
                 $updateData['catatan_penolakan'] = $alasan;
             }
             DbModel::updateData('penugasan_teknisi', $updateData, ['penugasan_id' => $penugasan_id]);
 
-            // 3. Update status order_kerja utama berdasarkan status baru
-            //    (INI BAGIAN YANG DIPERBAIKI)
+            // 3. Logika update status order_kerja utama
             if ($status_baru == 'sedang_dikerjakan') {
-                // Jika tugas diterima, status order kerja menjadi 'diproses'
-                DbModel::updateData('order_kerja', ['status' => 'diproses'], ['order_kerja_id' => $penugasan['order_kerja_id']]);
-            } else if ($status_baru == 'ditugaskan') {
-                // Jika penerimaan dibatalkan, kembalikan status order kerja menjadi 'ditugaskan'
-                DbModel::updateData('order_kerja', ['status' => 'ditugaskan'], ['order_kerja_id' => $penugasan['order_kerja_id']]);
-            }
-            // Jika status 'dibatalkan', status order kerja tidak diubah (tetap 'ditugaskan')
+                DbModel::updateData('order_kerja', ['status' => 'diproses'], ['order_kerja_id' => $order_kerja_id]);
+            } else if ($status_baru == 'dibatalkan') {
 
-            \DB::commit();
+                // Hitung teknisi yang masih aktif (status 'ditugaskan' atau 'sedang_dikerjakan')
+                $sql_teknisi_aktif = "SELECT COUNT(*) as total FROM penugasan_teknisi WHERE order_kerja_id = ? AND status IN ('ditugaskan', 'sedang_dikerjakan') AND deleted_st = 0";
+                $result = DbModel::rawData('row_array', $sql_teknisi_aktif, [$order_kerja_id]);
+                $teknisi_aktif = $result['total'] ?? 0;
+
+                // Jika TIDAK ADA lagi teknisi yang aktif
+                if ($teknisi_aktif == 0) {
+                    // **Kembalikan status Order Kerja ke 'baru'**
+                    DbModel::updateData('order_kerja', ['status' => 'baru'], ['order_kerja_id' => $order_kerja_id]);
+                }
+            } else if ($status_baru == 'ditugaskan') {
+                // Jika ada penugasan baru, pastikan status OK adalah 'ditugaskan'
+                DbModel::updateData('order_kerja', ['status' => 'ditugaskan'], ['order_kerja_id' => $order_kerja_id]);
+            }
+
+            DB::commit();
             return ['success' => true, 'msg' => 'Status berhasil diperbarui.'];
         } catch (\Exception $e) {
-            \DB::rollBack();
-            // Mengembalikan pesan error yang lebih spesifik untuk debugging
-            return ['success' => false, 'msg' => $e->getMessage()];
+            DB::rollBack();
+            return ['success' => false, 'msg' => 'Terjadi kesalahan: ' . $e->getMessage()];
         }
     }
 }
