@@ -65,9 +65,9 @@
             data-id="{{ $tugas['penugasan_id'] }}">
             Batalkan Penerimaan
         </button>
-        <a href="{{ url('master/asset/detail/' . $tugas['asset_id']) }}" class="btn btn-primary">
-            <i class="fas fa-arrow-right me-2"></i> Lanjutkan & Buat Laporan
-        </a>
+        <button class="btn btn-primary" onclick="_modal(event, {uri: '{{ url('ipsrs/teknisitugas/form_scan_modal/' . $tugas['order_kerja_id']) }}', size: 'modal-lg', title: 'Scan Barcode Aset'})">
+            <i class="fas fa-barcode me-2"></i> Scan & Lanjutkan
+        </button>
     @elseif($tugas['status'] == 'dibatalkan')
         {{-- Tombol Terima Kembali (diubah menjadi button) --}}
         <button class="btn btn-success btn-task-action" data-url="{{ url('ipsrs/teknisitugas/terima') }}"

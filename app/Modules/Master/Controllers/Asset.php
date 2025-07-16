@@ -6,6 +6,7 @@ use App\Http\Controllers\MyController;
 use App\Modules\App\Models\DbModel;
 use App\Modules\Master\Models\AssetModel;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Request;
 
 
 class Asset extends MyController
@@ -18,6 +19,27 @@ class Asset extends MyController
 
     function index()
     {
+        if (request()->ajax() && request('action') === 'find_by_barcode') {
+            $noSeri = request('no_seri');
+            if (empty($noSeri)) {
+                return response()->json(_response('10', null, ['message' => 'Nomor seri wajib diisi.']));
+            }
+
+            $asset = AssetModel::getAssetByNoSeri($noSeri);
+
+            if ($asset) {
+                // Gunakan helper _response yang sudah ada di sistem Anda
+                $response = _response('00', null, ['asset' => $asset]);
+                // Tambahkan kode status '00' secara manual untuk konsistensi
+                $response['code'] = '00';
+                return response()->json($response);
+            } else {
+                $response = _response('10', null, ['message' => 'Aset dengan nomor seri tersebut tidak ditemukan.']);
+                $response['code'] = '10';
+                return response()->json($response);
+            }
+        }
+
         $d = [];
         $d['all_lokasi'] = DbModel::allData('mst_lokasi', ['deleted_st' => '0', 'active_st' => '1', 'tipe_lokasi' => 'Ruangan']);
         $d['all_kategori_asset'] = DbModel::allData('mst_kategori_asset', ['deleted_st' => '0', 'active_st' => '1']);
@@ -148,19 +170,5 @@ class Asset extends MyController
     }
 
 
-    public function find_by_barcode($noSeri)
-    {
-
-        if (empty($noSeri)) {
-            return response()->json(_response('10', null, ['message' => 'Nomor seri/barcode wajib diisi.']));
-        }
-
-        $asset = AssetModel::getAssetByNoSeri($noSeri);
-
-        if ($asset) {
-            return response()->json(_response('00', null, ['asset' => $asset]));
-        } else {
-            return response()->json(_response('10', null, ['message' => 'Aset dengan nomor seri/barcode tersebut tidak ditemukan.']));
-        }
-    }
+   
 }

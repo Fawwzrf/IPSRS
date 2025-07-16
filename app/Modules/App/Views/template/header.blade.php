@@ -196,7 +196,11 @@
   <script src="<?= asset('dist/js/hotkeys.min.js') ?>"></script>
   <!-- Fullcalendar -->
   <script src="<?= asset('dist/libs/fullcalendar/main.min.js') ?>"></script>
-
+  {{-- qrscan --}}
+  <script type="text/javascript" src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
+  {{-- repeater --}}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.repeater/1.2.1/jquery.repeater.min.js"></script>
+  
   
 
   <!-- Custom -->
