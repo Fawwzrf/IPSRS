@@ -9,6 +9,20 @@ use Illuminate\Database\Eloquent\Model;
 class AssetModel extends Model
 {
     protected static $nav_sess;
+    // Konstanta status aset untuk konsistensi
+    const STATUS_AKTIF = 'aktif';
+    const STATUS_PERBAIKAN = 'perbaikan';
+    const STATUS_NONAKTIF = 'nonaktif';
+    const STATUS_DIHAPUS = 'dihapus';
+    
+    // Array status yang valid untuk validasi
+    protected static $valid_statuses = [
+        self::STATUS_AKTIF, 
+        self::STATUS_PERBAIKAN, 
+        self::STATUS_NONAKTIF, 
+        self::STATUS_DIHAPUS
+    ];
+    
     public function __construct()
     {
         parent::__construct();
@@ -21,7 +35,99 @@ class AssetModel extends Model
             self::$nav_sess = session(request('n'));
         }
     }
+    
+    /**
+     * Memperbarui status aset dengan konsistensi active_st dan deleted_st
+     * 
+     * @param string $asset_id ID aset yang akan diperbarui
+     * @param string $status Status baru ('aktif', 'perbaikan', 'nonaktif', 'dihapus')
+     * @return array Hasil operasi
+     */
+    public function updateStatus($asset_id, $status)
+    {
+        // Validasi status yang valid
+        if (!in_array($status, self::$valid_statuses)) {
+            return ['status' => false, 'message' => 'Status tidak valid. Status yang diperbolehkan: ' . implode(', ', self::$valid_statuses)];
+        }
+        
+        // Tentukan nilai active_st dan deleted_st berdasarkan status
+        $active_st = 0;
+        $deleted_st = 0;
+        
+        switch ($status) {
+            case self::STATUS_AKTIF:
+            case self::STATUS_PERBAIKAN:
+                $active_st = 1;
+                break;
+            case self::STATUS_NONAKTIF:
+                $active_st = 0;
+                break;
+            case self::STATUS_DIHAPUS:
+                $active_st = 0;
+                $deleted_st = 1;
+                break;
+        }
+        
+        // Update status aset
+        $data = [
+            'status' => $status,
+            'active_st' => $active_st,
+            'deleted_st' => $deleted_st
+        ];
+        
+        $result = DbModel::updateData('asset', $data, ['asset_id' => $asset_id]);
+        
+        if ($result) {
+            // Log perubahan status jika diperlukan
+            $log_data = [
+                'asset_id' => $asset_id,
+                'status_lama' => DbModel::getData('asset', ['asset_id' => $asset_id])['status'] ?? '',
+                'status_baru' => $status,
+                'created_by' => auth()->id() ?? 0,
+                'created_at' => now()
+            ];
+            
+            // Jika ada tabel log_status_asset, gunakan ini:
+            // DbModel::insertData('log_status_asset', $log_data);
+            
+            return ['status' => true, 'message' => 'Status aset berhasil diperbarui'];
+        }
+        
+        return ['status' => false, 'message' => 'Gagal memperbarui status aset'];
+    }
+    
+    /**
+     * Mengambil semua status valid untuk aset
+     * 
+     * @return array Array status valid
+     */
+    public static function getValidStatuses()
+    {
+        return self::$valid_statuses;
+    }
 
+    /**
+     * Memperbarui status aset menjadi perbaikan
+     * 
+     * @param string $asset_id ID aset
+     * @return array Hasil operasi
+     */
+    public function setRepairStatus($asset_id)
+    {
+        return $this->updateStatus($asset_id, self::STATUS_PERBAIKAN);
+    }
+    
+    /**
+     * Memperbarui status aset menjadi aktif
+     * 
+     * @param string $asset_id ID aset
+     * @return array Hasil operasi
+     */
+    public function setActiveStatus($asset_id)
+    {
+        return $this->updateStatus($asset_id, self::STATUS_AKTIF);
+    }
+    
     static function loadDatatables()
     {
         self::initSession(); // Inisialisasi sesi

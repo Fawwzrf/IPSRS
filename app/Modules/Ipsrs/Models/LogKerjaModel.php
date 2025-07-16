@@ -88,8 +88,8 @@ class LogKerjaModel extends Model
                 // Periksa apakah memerlukan sparepart
                 $status_baru = !empty($data['sparepart']) ? 'menunggu_sparepart' : 'diproses';
             } else {
-                // Kasus tidak berhasil - bisa berbagai alasan
-                $status_baru = 'diproses'; // atau status lain yang sesuai
+                // Kasus tidak berhasil
+                $status_baru = 'diproses'; // Gunakan status yang tepat dari enum yang distandarisasi
             }
 
             // Dapatkan status saat ini sebelum diupdate
