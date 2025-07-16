@@ -80,9 +80,86 @@ class LogKerjaModel extends Model
                 }
             }
 
-            // Update status Order Kerja
-            $status_baru = ($data['hasil'] == 'berhasil') ? 'selesai' : 'menunggu_sparepart'; // Contoh logika
+            // Logika pembaruan status Order Kerja yang lebih detail
+            $status_baru = '';
+            if ($data['hasil'] == 'berhasil') {
+                $status_baru = 'selesai';
+            } elseif ($data['hasil'] == 'perlu_tindak_lanjut') {
+                // Periksa apakah memerlukan sparepart
+                $status_baru = !empty($data['sparepart']) ? 'menunggu_sparepart' : 'diproses';
+            } else {
+                // Kasus tidak berhasil - bisa berbagai alasan
+                $status_baru = 'diproses'; // atau status lain yang sesuai
+            }
+
+            // Dapatkan status saat ini sebelum diupdate
+            $order_current = DbModel::getData('order_kerja', ['order_kerja_id' => $order_kerja_id]);
+            $status_sebelumnya = $order_current['status'] ?? null;
+
+            // Update status order_kerja
             DbModel::updateData('order_kerja', ['status' => $status_baru], ['order_kerja_id' => $order_kerja_id]);
+
+            // Catat perubahan status
+            $log_status_data = [
+                'log_status_id' => DbModel::getId('log_status_order_kerja', 2, 12),
+                'order_kerja_id' => $order_kerja_id,
+                'status_sebelumnya' => $status_sebelumnya,
+                'status_baru' => $status_baru,
+                'oleh_pegawai_id' => $pegawai_id,
+                'catatan' => 'Update dari log kerja: ' . $data['hasil']
+            ];
+            DbModel::insertData('log_status_order_kerja', $log_status_data);
+
+            // Update sumber asli (jika pekerjaan selesai)
+            if ($status_baru == 'selesai') {
+                if (!empty($order_current['permintaan_id'])) {
+                    DbModel::updateData(
+                        'permintaan_komplain',
+                        ['status' => 'selesai'],
+                        ['permintaan_id' => $order_current['permintaan_id']]
+                    );
+                }
+
+                if (!empty($order_current['jadwal_pm_id'])) {
+                    DbModel::updateData(
+                        'jadwal_pm',
+                        ['status' => 'selesai'],
+                        ['jadwal_pm_id' => $order_current['jadwal_pm_id']]
+                    );
+                }
+            }
+
+            // TAMBAHKAN KODE PEMBARUAN STATUS ASET DI SINI
+            // Dapatkan asset_id dari permintaan atau jadwal
+            $asset_id = null;
+            if (!empty($order_current['permintaan_id'])) {
+                $permintaan = DbModel::getData('permintaan_komplain', ['permintaan_id' => $order_current['permintaan_id']]);
+                $asset_id = $permintaan['asset_id'] ?? null;
+            } elseif (!empty($order_current['jadwal_pm_id'])) {
+                $jadwal = DbModel::getData('jadwal_pm', ['jadwal_pm_id' => $order_current['jadwal_pm_id']]);
+                $asset_id = $jadwal['asset_id'] ?? null;
+            }
+
+            if ($asset_id) {
+                if ($status_baru == 'diproses' || $status_baru == 'menunggu_sparepart') {
+                    // Update status aset menjadi 'perbaikan'
+                    DbModel::updateData('asset', ['status' => 'perbaikan'], ['asset_id' => $asset_id]);
+                } elseif ($status_baru == 'selesai') {
+                    // Cek apakah masih ada order kerja lain yang aktif untuk aset ini
+                    $active_orders_query = "SELECT COUNT(*) as jumlah FROM order_kerja 
+                                          WHERE (permintaan_id IN (SELECT permintaan_id FROM permintaan_komplain WHERE asset_id = ?) 
+                                          OR jadwal_pm_id IN (SELECT jadwal_pm_id FROM jadwal_pm WHERE asset_id = ?))
+                                          AND status NOT IN ('selesai', 'dibatalkan')
+                                          AND order_kerja_id != ?";
+
+                    $active_orders = DbModel::rawData('row_array', $active_orders_query, [$asset_id, $asset_id, $order_kerja_id]);
+
+                    if ($active_orders['jumlah'] == 0) {
+                        // Tidak ada order kerja aktif lain, kembalikan status aset menjadi 'aktif'
+                        DbModel::updateData('asset', ['status' => 'aktif'], ['asset_id' => $asset_id]);
+                    }
+                }
+            }
 
             \DB::commit();
             return ['status' => true];
