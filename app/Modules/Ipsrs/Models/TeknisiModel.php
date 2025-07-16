@@ -26,7 +26,8 @@ class TeknisiModel extends Model
      */
     public function getListTugasByStatus($teknisi_id, $status, $limit = null)
     {
-        $sql = "SELECT pt.penugasan_id,pt.catatan_penolakan, ok.order_kerja_id, a.asset_id, a.asset_nm, l.lokasi_nm, ok.jenis, ok.tgl_dibuat,
+        $sql = "SELECT pt.penugasan_id,pt.catatan_penolakan, ok.order_kerja_id, a.asset_id, a.asset_nm, l.lokasi_nm, ok.jenis,ok.prioritas,ok.permintaan_id,
+        ok.jadwal_pm_id, ok.tgl_dibuat,
                        COALESCE(pk.deskripsi, 'Pemeliharaan Rutin') as deskripsi
                 FROM penugasan_teknisi pt
                 JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id

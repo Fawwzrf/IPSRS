@@ -1,3 +1,17 @@
+@php
+    function getPrioritasBadge($prioritas)
+    {
+        switch (strtolower($prioritas)) {
+            case 'mendesak':
+                return '<span class="badge bg-warning me-1">Mendesak</span>';
+            case 'darurat':
+                return '<span class="badge bg-danger me-1">Darurat</span>';
+            default:
+                return '<span class="badge bg-secondary me-1">Normal</span>';
+        }
+    }
+@endphp
+
 @include('ipsrs::teknisi.tugas._js')
 
 @if (session('success'))
@@ -43,8 +57,20 @@
                                     <a href="javascript:void(0)"
                                         onclick="_modal(event, {uri: '{{ url('ipsrs/teknisitugas/form_detail_modal/' . $tugas['penugasan_id']) }}', size: 'modal-lg', title: 'Detail Tugas'})"
                                         class="list-group-item list-group-item-action">
-                                        <strong class="d-block">{{ $tugas['asset_nm'] }}</strong>
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <strong class="d-block">{{ $tugas['asset_nm'] }}</strong>
+                                            {{-- Tampilkan Prioritas --}}
+                                            <span>{!! getPrioritasBadge($tugas['prioritas']) !!}</span>
+                                        </div>
                                         <small class="text-muted">{{ $tugas['lokasi_nm'] }}</small>
+                                        {{-- Tampilkan Sumber Pekerjaan --}}
+                                        <div class="my-1">
+                                            @if (!empty($tugas['permintaan_id']))
+                                                <span class="badge bg-azure-lt">Sumber: Komplain</span>
+                                            @elseif(!empty($tugas['jadwal_pm_id']))
+                                                <span class="badge bg-purple-lt">Sumber: Jadwal PM</span>
+                                            @endif
+                                        </div>
                                         <p class="mb-0 text-muted small">
                                             {{ \Illuminate\Support\Str::limit($tugas['deskripsi'], 100) }}</p>
                                     </a>
@@ -61,8 +87,20 @@
                                     <a href="javascript:void(0)"
                                         onclick="_modal(event, {uri: '{{ url('ipsrs/teknisitugas/form_detail_modal/' . $tugas['penugasan_id']) }}', size: 'modal-lg', title: 'Detail Tugas'})"
                                         class="list-group-item list-group-item-action">
-                                        <strong class="d-block">{{ $tugas['asset_nm'] }}</strong>
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <strong class="d-block">{{ $tugas['asset_nm'] }}</strong>
+                                            {{-- Tampilkan Prioritas --}}
+                                            <span>{!! getPrioritasBadge($tugas['prioritas']) !!}</span>
+                                        </div>
                                         <small class="text-muted">{{ $tugas['lokasi_nm'] }}</small>
+                                        {{-- Tampilkan Sumber Pekerjaan --}}
+                                        <div class="my-1">
+                                            @if(!empty($tugas['permintaan_id']))
+                                                <span class="badge bg-azure-lt">Sumber: Komplain</span>
+                                            @elseif(!empty($tugas['jadwal_pm_id']))
+                                                <span class="badge bg-purple-lt">Sumber: Jadwal PM</span>
+                                            @endif
+                                        </div>
                                         <p class="mb-0 text-muted small">
                                             {{ \Illuminate\Support\Str::limit($tugas['deskripsi'], 100) }}</p>
                                     </a>
