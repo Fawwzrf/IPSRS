@@ -9,6 +9,15 @@ use Illuminate\Support\Facades\DB;
 
 class LogKerjaModel extends Model
 {
+    protected static $nav_sess;
+
+    protected static function initSession()
+    {
+        if (is_null(self::$nav_sess)) {
+            self::$nav_sess = session(request('n'));
+        }
+    }
+
     public function saveData($order_kerja_id, $data)
     {
         $pegawai_id = Auth::id();
@@ -183,5 +192,66 @@ class LogKerjaModel extends Model
     public function getPhotosByLogId($log_kerja_id)
     {
         return DbModel::allData('log_kerja_foto', ['log_kerja_id' => $log_kerja_id]);
+    }
+
+    /**
+     * Method untuk memuat data di DataTables.
+     */
+    static function loadDatatables()
+    {
+        self::initSession();
+
+        $where = "1 = 1 ";
+
+        // Filter berdasarkan order kerja
+        if (@self::$nav_sess['search']['data']['order_kerja_id'] != '') {
+            $where .= " AND lk.order_kerja_id = '" . @self::$nav_sess['search']['data']['order_kerja_id'] . "' ";
+        }
+
+        // Filter berdasarkan teknisi
+        if (@self::$nav_sess['search']['data']['teknisi_pegawai_id'] != '') {
+            $where .= " AND lk.teknisi_pegawai_id = '" . @self::$nav_sess['search']['data']['teknisi_pegawai_id'] . "' ";
+        }
+
+        // Filter berdasarkan hasil
+        if (@self::$nav_sess['search']['data']['hasil'] != '') {
+            $where .= " AND lk.hasil = '" . @self::$nav_sess['search']['data']['hasil'] . "' ";
+        }
+
+        // Filter berdasarkan pencarian
+        if (@self::$nav_sess['search']['data']['term'] != '') {
+            $where .= " AND (
+            LOWER(lk.diagnosa) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%' OR 
+            LOWER(lk.tindakan) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%' OR
+            LOWER(p.pegawai_nm) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%' OR
+            LOWER(ok.order_kerja_id) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%'
+        ) ";
+        }
+
+        $query = "SELECT * FROM (
+                SELECT 
+                    lk.log_kerja_id,
+                    lk.order_kerja_id,
+                    lk.tgl_mulai,
+                    lk.tgl_selesai,
+                    lk.hasil,
+                    lk.diagnosa,
+                    lk.tindakan,
+                    lk.durasi_menit,
+                    p.pegawai_nm as teknisi_nm,
+                    (SELECT COUNT(*) FROM log_kerja_foto WHERE log_kerja_id = lk.log_kerja_id) as foto_count
+                FROM 
+                    log_kerja lk
+                    LEFT JOIN mst_pegawai p ON lk.teknisi_pegawai_id = p.pegawai_id
+                    LEFT JOIN order_kerja ok ON lk.order_kerja_id = ok.order_kerja_id
+                WHERE $where AND lk.deleted_st = 0
+            ) x ";
+
+        $search = ['order_kerja_id', 'teknisi_nm', 'diagnosa', 'tindakan', 'hasil'];
+        $where = null;
+        $isWhere = null;
+
+        $result = DbModel::datatablesQuery($query, $search, $where, $isWhere);
+        return response()->json($result);
     }
 }

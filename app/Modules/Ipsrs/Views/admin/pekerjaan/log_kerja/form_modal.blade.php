@@ -1,93 +1,9 @@
 @include ('ipsrs::admin.pekerjaan.log_kerja._js')
 
-{{-- PERBAIKAN: Menggunakan form_act untuk action --}}
 <form id="form-log-kerja" action="{{ $form_act }}" method="post" autocomplete="off" enctype="multipart/form-data">
     @csrf
     <input type="hidden" name="action" value="save_log_kerja">
-    <!-- Tambahkan di form_modal.blade.php -->
-    <input type="hidden" name="asset_id" value="{{ $order_kerja['asset_id'] ?? (request('asset_id') ?? '') }}">    <script>
-        // ...kode inisialisasi yang sudah ada...
-    
-        $(document).off('submit', '#form-log-kerja').on('submit', '#form-log-kerja', function(e) {
-            e.preventDefault();
-    
-            const form = $(this);
-            const btn = form.find('button[type="submit"]');
-            let url = form.attr('action');
-            
-            // Mengambil parameter 'n' dari hidden field di form
-            const n_param = form.find('input[name="n"]').val();
-            
-            // Ambil ID aset dari URL atau hidden field jika tersedia
-            const assetId = form.find('input[name="asset_id"]').val() || 
-                            new URLSearchParams(window.location.search).get('asset_id');
-                            
-            console.log("Mengirim form dengan parameter 'n':", n_param, "dan asset ID:", assetId);
-            
-            btn.prop('disabled', true).html('<i class="fas fa-spin fa-spinner"></i> Menyimpan...');
-            
-            // Buat FormData dari form
-            const formData = new FormData(this);
-            
-            $.ajax({
-                type: "POST",
-                url: url,
-                data: formData,
-                processData: false,
-                contentType: false,
-                dataType: "json",
-                success: function(res) {
-                    const responseData = res.data || res;
-                    
-                    if (responseData.code == '01' || responseData.code == '02' || res.status === true) {
-                        _toast('success', responseData.message || res.message || 'Data berhasil disimpan.');
-                        _modalHide(1);
-                        
-                        // PERBAIKAN: Redirect ke halaman detail aset dengan parameter n
-                        if (assetId && n_param) {
-                            // Buat URL detail aset dengan parameter n
-                            const detailUrl = new URL(`${window.location.protocol}//${window.location.host}/master/asset/detail/${assetId}`);
-                            detailUrl.searchParams.set('n', n_param);
-                            
-                            console.log("Redirect ke halaman detail aset:", detailUrl.toString());
-                            window.location.href = detailUrl.toString();
-                        } else if (res.uri) {
-                            // Fallback: Gunakan URI dari server tapi tambahkan parameter n
-                            if (n_param) {
-                                try {
-                                    const redirectUrl = new URL(res.uri);
-                                    redirectUrl.searchParams.set('n', n_param);
-                                    window.location.href = redirectUrl.toString();
-                                } catch (e) {
-                                    console.error("Error saat mengolah URI redirect:", e);
-                                    window.location.href = res.uri + (res.uri.includes('?') ? '&' : '?') + 'n=' + n_param;
-                                }
-                            } else {
-                                window.location.href = res.uri;
-                            }
-                        } else {
-                            // Jika tidak ada opsi lain, reload halaman dengan mempertahankan parameter 'n'
-                            if (n_param) {
-                                const currentUrl = new URL(window.location.href);
-                                currentUrl.searchParams.set('n', n_param);
-                                window.location.href = currentUrl.toString();
-                            } else {
-                                window.location.reload();
-                            }
-                        }
-                    } else {
-                        _toast('error', responseData.message || 'Gagal memproses data.');
-                        btn.prop('disabled', false).html('<i class="fas fa-save me-2"></i> Simpan Laporan');
-                    }
-                },
-                error: function(xhr) {
-                    const errorMsg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Terjadi kesalahan pada server.';
-                    _toast('error', errorMsg);
-                    btn.prop('disabled', false).html('<i class="fas fa-save me-2"></i> Simpan Laporan');
-                }
-            });
-        });
-    </script>
+    <input type="hidden" name="asset_id" value="{{ $asset_id ?? '' }}">
     <input type="hidden" name="n" value="{{ request('n') }}">
 
     <div class="card-body">
@@ -165,11 +81,26 @@
                 <label for="formFileMultiple" class="form-label">Unggah Foto Bukti</label>
                 <input class="form-control" type="file" name="fotos[]" multiple>
             </div>
+            
+            {{-- Tampilkan foto-foto yang sudah ada --}}
+            @if(!empty($log_fotos))
+            <div class="row mt-3">
+                <div class="col-12">
+                    <p><strong>Foto Bukti yang Sudah Diunggah:</strong></p>
+                    <div class="d-flex flex-wrap">
+                        @foreach($log_fotos as $foto)
+                        <div class="me-2 mb-2">
+                            <img src="{{ $foto['foto_url'] }}" alt="Foto Bukti" class="img-thumbnail" style="height: 100px;">
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+            @endif
         </fieldset>
 
         <div class="row mt-3">
             <div class="col-lg-12">
-                {{-- PERBAIKAN: Tombol kembali ke pola standar --}}
                 <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i> Simpan Laporan</button>
                 <button type="button" class="btn btn-link" data-bs-dismiss="modal">Batal</button>
             </div>
