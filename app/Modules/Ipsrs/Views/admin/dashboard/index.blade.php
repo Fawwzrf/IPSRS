@@ -177,8 +177,13 @@
 @section('scripts')
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    // Cek apakah elemen chart dan ApexCharts library ada
-    if (document.getElementById('chart-komplain-harian') && typeof ApexCharts !== 'undefined') {
+    // Pastikan ApexCharts tersedia sebelum menggunakannya
+    if (typeof ApexCharts === 'undefined') {
+        console.error("ApexCharts library not found!");
+        return;
+    }
+
+    if (document.getElementById('chart-komplain-harian')) {
         try {
             // Data untuk chart
             var chartData = @json($chart_komplain_harian ?? []);
@@ -245,8 +250,6 @@ document.addEventListener("DOMContentLoaded", function () {
         } catch (error) {
             console.error("Error saat merender chart:", error);
         }
-    } else {
-        console.error("Elemen chart tidak ditemukan atau ApexCharts tidak dimuat");
     }
 });
 </script>
