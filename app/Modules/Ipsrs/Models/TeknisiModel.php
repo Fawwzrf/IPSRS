@@ -5,45 +5,80 @@ namespace App\Modules\Ipsrs\Models;
 use App\Modules\App\Models\DbModel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class TeknisiModel extends Model
 {
+    protected static $nav_sess;
+    
+    public function __construct()
+    {
+        parent::__construct();
+        self::initSession();
+    }
+    
+    protected static function initSession()
+    {
+        if (is_null(self::$nav_sess)) {
+            self::$nav_sess = session(request('n'));
+        }
+    }
+    
     /**
      * Menghitung jumlah tugas dengan status tertentu menggunakan Raw Query.
+     * 
+     * @param string $teknisi_id ID teknisi
+     * @param string $status Status tugas
+     * @return int Jumlah tugas
      */
     public function getCountTugasByStatus($teknisi_id, $status)
     {
-        $sql = "SELECT COUNT(*) as total 
-                FROM penugasan_teknisi 
-                WHERE pegawai_id = ? AND status = ? AND deleted_st = 0";
+        try {
+            $sql = "SELECT COUNT(*) as total 
+                    FROM penugasan_teknisi 
+                    WHERE pegawai_id = ? AND status = ? AND deleted_st = 0";
 
-        $result = DbModel::rawData('row_array', $sql, [$teknisi_id, $status]);
-        return $result['total'] ?? 0;
+            $result = DbModel::rawData('row_array', $sql, [$teknisi_id, $status]);
+            return $result['total'] ?? 0;
+        } catch (\Exception $e) {
+            Log::error('Error getCountTugasByStatus: ' . $e->getMessage());
+            return 0;
+        }
     }
 
     /**
      * Mengambil daftar tugas dengan status tertentu menggunakan Raw Query.
+     * 
+     * @param string $teknisi_id ID teknisi
+     * @param string $status Status tugas
+     * @param int|null $limit Batasan jumlah data
+     * @return array Daftar tugas
      */
     public function getListTugasByStatus($teknisi_id, $status, $limit = null)
     {
-        $sql = "SELECT pt.penugasan_id,pt.catatan_penolakan, ok.order_kerja_id, a.asset_id, a.asset_nm, l.lokasi_nm, ok.jenis,ok.prioritas,ok.permintaan_id,
-        ok.jadwal_pm_id, ok.tgl_dibuat,
-                       COALESCE(pk.deskripsi, 'Pemeliharaan Rutin') as deskripsi
-                FROM penugasan_teknisi pt
-                JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
-                LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-                LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
-                LEFT JOIN asset a ON pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id
-                LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
-                WHERE pt.pegawai_id = ? AND pt.status = ? AND pt.deleted_st = 0
-                ORDER BY ok.tgl_dibuat DESC";
+        try {
+            $sql = "SELECT pt.penugasan_id, pt.catatan_penolakan, ok.order_kerja_id, a.asset_id, a.asset_nm, l.lokasi_nm, ok.jenis, ok.prioritas, ok.permintaan_id,
+            ok.jadwal_pm_id, ok.tgl_dibuat,
+                        COALESCE(pk.deskripsi, 'Pemeliharaan Rutin') as deskripsi
+                    FROM penugasan_teknisi pt
+                    JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
+                    LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+                    LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+                    LEFT JOIN asset a ON pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id
+                    LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
+                    WHERE pt.pegawai_id = ? AND pt.status = ? AND pt.deleted_st = 0
+                    ORDER BY ok.tgl_dibuat DESC";
 
-        if ($limit) {
-            $sql .= " LIMIT " . (int)$limit;
+            if ($limit) {
+                $sql .= " LIMIT " . (int)$limit;
+            }
+
+            $result = DbModel::rawData('result_array', $sql, [$teknisi_id, $status]);
+            return is_array($result) ? $result : [];
+        } catch (\Exception $e) {
+            Log::error('Error getListTugasByStatus: ' . $e->getMessage());
+            return [];
         }
-
-        $result = DbModel::rawData('result_array', $sql, [$teknisi_id, $status]);
-        return is_array($result) ? $result : []; // Pastikan selalu mengembalikan array
     }
 
     public function getDetailTugas($penugasan_id)
@@ -270,97 +305,117 @@ class TeknisiModel extends Model
 
     /**
      * Mendapatkan data untuk dashboard teknisi seperti pendekatan dashboard admin
+     * 
+     * @param string $teknisi_id ID teknisi
+     * @return array Data dashboard
      */
     public function getDashboardData($teknisi_id)
     {
-        $data = [];
+        try {
+            $data = [];
 
-        // Tugas baru (ditugaskan)
-        $sql = "SELECT COUNT(*) as total FROM penugasan_teknisi 
-                WHERE pegawai_id = ? AND status = 'ditugaskan' AND deleted_st = 0";
-        $result = DbModel::rawData('row_array', $sql, [$teknisi_id]);
-        $data['tugas_baru_count'] = $result['total'] ?? 0;
+            // Tugas baru (ditugaskan)
+            $sql = "SELECT COUNT(*) as total FROM penugasan_teknisi 
+                    WHERE pegawai_id = ? AND status = 'ditugaskan' AND deleted_st = 0";
+            $result = DbModel::rawData('row_array', $sql, [$teknisi_id]);
+            $data['tugas_baru_count'] = $result['total'] ?? 0;
 
-        // Tugas aktif (sedang dikerjakan)
-        $sql = "SELECT pt.penugasan_id, ok.order_kerja_id, a.asset_nm, l.lokasi_nm, ok.prioritas, 
-                ok.tgl_dibuat, COALESCE(pk.deskripsi, jp.deskripsi, 'Pemeliharaan Rutin') as deskripsi
-                FROM penugasan_teknisi pt
-                JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
-                LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-                LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
-                LEFT JOIN asset a ON (pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id)
-                LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
-                WHERE pt.pegawai_id = ? AND pt.status = 'sedang_dikerjakan' AND pt.deleted_st = 0
-                ORDER BY ok.tgl_dibuat DESC LIMIT 5";
-        $data['tugas_aktif_list'] = DbModel::rawData('result_array', $sql, [$teknisi_id]) ?: [];
+            // Tugas aktif (sedang dikerjakan)
+            $sql = "SELECT pt.penugasan_id, ok.order_kerja_id, a.asset_nm, l.lokasi_nm, ok.prioritas, 
+                    ok.tgl_dibuat, COALESCE(pk.deskripsi, jp.deskripsi, 'Pemeliharaan Rutin') as deskripsi
+                    FROM penugasan_teknisi pt
+                    JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
+                    LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+                    LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+                    LEFT JOIN asset a ON (pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id)
+                    LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
+                    WHERE pt.pegawai_id = ? AND pt.status = 'sedang_dikerjakan' AND pt.deleted_st = 0
+                    ORDER BY ok.tgl_dibuat DESC LIMIT 5";
+            $data['tugas_aktif_list'] = DbModel::rawData('result_array', $sql, [$teknisi_id]) ?: [];
 
-        // Tugas selesai bulan ini
-        $start_date = date('Y-m-01');
-        $end_date = date('Y-m-t');
-        $sql = "SELECT COUNT(*) as total FROM penugasan_teknisi 
-                WHERE pegawai_id = ? AND status = 'selesai' 
-                AND (
-                    (tgl_selesai IS NOT NULL AND DATE(tgl_selesai) BETWEEN ? AND ?) 
-                    OR 
-                    (tgl_selesai IS NULL AND updated_at BETWEEN ? AND ? AND status = 'selesai')
-                )
-                AND deleted_st = 0";
-        $result = DbModel::rawData('row_array', $sql, [$teknisi_id, $start_date, $end_date, $start_date, $end_date]);
-        $data['tugas_selesai_count'] = $result['total'] ?? 0;
-
-        // Tugas mendesak
-        $sql = "SELECT COUNT(*) as total FROM penugasan_teknisi pt
-                JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
-                WHERE pt.pegawai_id = ? AND pt.status IN ('ditugaskan','sedang_dikerjakan') 
-                AND ok.prioritas IN ('tinggi','darurat') AND pt.deleted_st = 0";
-        $result = DbModel::rawData('row_array', $sql, [$teknisi_id]);
-        $data['tugas_mendesak_count'] = $result['total'] ?? 0;
-
-        // Tugas ditolak
-        $sql = "SELECT COUNT(*) as total FROM penugasan_teknisi 
-                WHERE pegawai_id = ? AND status = 'dibatalkan' AND deleted_st = 0";
-        $result = DbModel::rawData('row_array', $sql, [$teknisi_id]);
-        $data['tugas_ditolak_count'] = $result['total'] ?? 0;
-
-        // Jadwal pemeliharaan mendatang
-        $today = date('Y-m-d');
-        $next_month = date('Y-m-d', strtotime('+30 days'));
-        $sql = "SELECT jp.jadwal_pm_id, jp.tgl_jadwal, a.asset_nm, l.lokasi_nm, 
-                COALESCE(jp.deskripsi, 'Pemeliharaan Rutin') as deskripsi
-                FROM jadwal_pm jp
-                JOIN asset a ON jp.asset_id = a.asset_id
-                LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
-                WHERE jp.tgl_jadwal BETWEEN ? AND ? AND jp.status = 'aktif'
-                AND (jp.teknisi_pegawai_id = ? OR a.lokasi_id IN (
-                    SELECT DISTINCT a2.lokasi_id FROM asset a2
-                    JOIN permintaan_komplain pk ON a2.asset_id = pk.asset_id
-                    JOIN order_kerja ok ON pk.permintaan_id = ok.permintaan_id
-                    JOIN penugasan_teknisi pt ON ok.order_kerja_id = pt.order_kerja_id
-                    WHERE pt.pegawai_id = ?
-                ))
-                ORDER BY jp.tgl_jadwal ASC LIMIT 5";
-        $data['jadwal_mendatang'] = DbModel::rawData('result_array', $sql, [$today, $next_month, $teknisi_id, $teknisi_id]) ?: [];
-
-        // Data untuk chart kinerja
-        $data['chart_kinerja'] = $this->getSimplePerformanceChartData($teknisi_id);
-
-        // Sparepart yang sering digunakan
-        $sql = "SELECT s.sparepart_id, s.sparepart_nm, s.stok, COALESCE(s.stok_min, 0) as stok_min,
-                COUNT(ps.penggunaan_id) as jumlah_pakai
-                FROM mst_sparepart s
-                JOIN penggunaan_sparepart ps ON s.sparepart_id = ps.sparepart_id
-                JOIN log_kerja lk ON ps.log_kerja_id = lk.log_kerja_id
-                WHERE lk.teknisi_pegawai_id = ? OR lk.teknisi_pegawai_id IN (
-                    SELECT pegawai_id FROM penugasan_teknisi 
-                    WHERE order_kerja_id IN (
-                        SELECT order_kerja_id FROM penugasan_teknisi WHERE pegawai_id = ?
+            // Tugas selesai bulan ini
+            $start_date = date('Y-m-01');
+            $end_date = date('Y-m-t');
+            $sql = "SELECT COUNT(*) as total FROM penugasan_teknisi 
+                    WHERE pegawai_id = ? AND status = 'selesai' 
+                    AND (
+                        (tgl_selesai IS NOT NULL AND DATE(tgl_selesai) BETWEEN ? AND ?) 
+                        OR 
+                        (tgl_selesai IS NULL AND updated_at BETWEEN ? AND ? AND status = 'selesai')
                     )
-                )
-                GROUP BY s.sparepart_id, s.sparepart_nm, s.stok, s.stok_min
-                ORDER BY jumlah_pakai DESC LIMIT 5";
-        $data['top_spareparts'] = DbModel::rawData('result_array', $sql, [$teknisi_id, $teknisi_id]) ?: [];
+                    AND deleted_st = 0";
+            $result = DbModel::rawData('row_array', $sql, [$teknisi_id, $start_date, $end_date, $start_date, $end_date]);
+            $data['tugas_selesai_count'] = $result['total'] ?? 0;
 
-        return $data;
+            // Tugas mendesak
+            $sql = "SELECT COUNT(*) as total FROM penugasan_teknisi pt
+                    JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
+                    WHERE pt.pegawai_id = ? AND pt.status IN ('ditugaskan','sedang_dikerjakan') 
+                    AND ok.prioritas IN ('tinggi','darurat') AND pt.deleted_st = 0";
+            $result = DbModel::rawData('row_array', $sql, [$teknisi_id]);
+            $data['tugas_mendesak_count'] = $result['total'] ?? 0;
+
+            // Tugas ditolak
+            $sql = "SELECT COUNT(*) as total FROM penugasan_teknisi 
+                    WHERE pegawai_id = ? AND status = 'dibatalkan' AND deleted_st = 0";
+            $result = DbModel::rawData('row_array', $sql, [$teknisi_id]);
+            $data['tugas_ditolak_count'] = $result['total'] ?? 0;
+
+            // Jadwal pemeliharaan mendatang
+            $today = date('Y-m-d');
+            $next_month = date('Y-m-d', strtotime('+30 days'));
+            $sql = "SELECT jp.jadwal_pm_id, jp.tgl_jadwal, a.asset_nm, l.lokasi_nm, 
+                    COALESCE(jp.deskripsi, 'Pemeliharaan Rutin') as deskripsi
+                    FROM jadwal_pm jp
+                    JOIN asset a ON jp.asset_id = a.asset_id
+                    LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
+                    WHERE jp.tgl_jadwal BETWEEN ? AND ? AND jp.status = 'aktif'
+                    AND (jp.teknisi_pegawai_id = ? OR a.lokasi_id IN (
+                        SELECT DISTINCT a2.lokasi_id FROM asset a2
+                        JOIN permintaan_komplain pk ON a2.asset_id = pk.asset_id
+                        JOIN order_kerja ok ON pk.permintaan_id = ok.permintaan_id
+                        JOIN penugasan_teknisi pt ON ok.order_kerja_id = pt.order_kerja_id
+                        WHERE pt.pegawai_id = ?
+                    ))
+                    ORDER BY jp.tgl_jadwal ASC LIMIT 5";
+            $data['jadwal_mendatang'] = DbModel::rawData('result_array', $sql, [$today, $next_month, $teknisi_id, $teknisi_id]) ?: [];
+
+            // Data untuk chart kinerja
+            $data['chart_kinerja'] = $this->getSimplePerformanceChartData($teknisi_id);
+
+            // Sparepart yang sering digunakan
+            $sql = "SELECT s.sparepart_id, s.sparepart_nm, s.stok, COALESCE(s.stok_min, 0) as stok_min,
+                    COUNT(ps.penggunaan_id) as jumlah_pakai
+                    FROM mst_sparepart s
+                    JOIN penggunaan_sparepart ps ON s.sparepart_id = ps.sparepart_id
+                    JOIN log_kerja lk ON ps.log_kerja_id = lk.log_kerja_id
+                    WHERE lk.teknisi_pegawai_id = ? OR lk.teknisi_pegawai_id IN (
+                        SELECT pegawai_id FROM penugasan_teknisi 
+                        WHERE order_kerja_id IN (
+                            SELECT order_kerja_id FROM penugasan_teknisi WHERE pegawai_id = ?
+                        )
+                    )
+                    GROUP BY s.sparepart_id, s.sparepart_nm, s.stok, s.stok_min
+                    ORDER BY jumlah_pakai DESC LIMIT 5";
+            $data['top_spareparts'] = DbModel::rawData('result_array', $sql, [$teknisi_id, $teknisi_id]) ?: [];
+
+            return $data;
+        } catch (\Exception $e) {
+            Log::error('Error getDashboardData: ' . $e->getMessage());
+            return [
+                'tugas_baru_count' => 0,
+                'tugas_aktif_list' => [],
+                'tugas_selesai_count' => 0,
+                'tugas_mendesak_count' => 0,
+                'tugas_ditolak_count' => 0,
+                'jadwal_mendatang' => [],
+                'chart_kinerja' => [
+                    'selesai' => [0, 0, 0, 0],
+                    'baru' => [0, 0, 0, 0]
+                ],
+                'top_spareparts' => []
+            ];
+        }
     }
 
     /**
