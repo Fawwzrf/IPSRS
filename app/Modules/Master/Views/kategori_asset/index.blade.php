@@ -19,7 +19,7 @@
                     </div>
                 </div>
             </div>
-            {{-- Bagian Filter Pencarian (Sesuai pola Pegawai, hanya status aktif dan term) --}}
+            {{-- Bagian Filter Pencarian --}}
             <div class="row mt-2">
                 <div class="col">
                     <div class="card mb-1">
@@ -28,6 +28,8 @@
                                 <div id="filter" class="accordion-collapse collapse show" data-bs-parent="#accordion-example">
                                     <div class="accordion-body bg-white p-2">
                                         <form class="mb-0" id="search" action="<?= $search_act ?>" method="post" autocomplete="off" onsubmit="_search(event)">
+                                            @csrf
+                                            <input type="hidden" name="search_act" value="save">
                                             <div class="row">
                                                 <div class="col-lg-3">
                                                     <label class="form-label">Aktif Sistem?</label>
@@ -56,9 +58,9 @@
                     </div>
                 </div>
             </div>
-            {{-- End Bagian Filter Pencarian --}}
         </div>
     </div>
+    {{-- Body untuk tabel tetap sama --}}
     <div class="page-wrapper">
         <div class="page-body mt-1">
             <div class="container-xl">
