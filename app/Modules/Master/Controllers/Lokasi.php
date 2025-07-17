@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Master\Controllers; // Perbaiki namespace: namespace App\Modules\Master\Controllers;
+namespace App\Modules\Master\Controllers;
 
 use App\Http\Controllers\MyController;
 use App\Modules\App\Models\DbModel;
@@ -19,11 +19,13 @@ class Lokasi extends MyController
     function index()
     {
         $d = [];
+        
+        // Penting: Panggil save_session_search untuk mengelola session pencarian
+        $this->save_session_search($d);
 
+        // Ambil data untuk dropdown filter
         $sql = "SELECT lokasi_id, lokasi_nm, tipe_lokasi FROM mst_lokasi WHERE deleted_st = 0 AND active_st = 1 AND tipe_lokasi IN ('Gedung', 'Lantai')";
         $d['all_parent_lokasi'] = DbModel::rawData('result_array', $sql);
-
-        $d['nav_sess'] = session(request('n'));
 
         return $this->renderView($this->template . 'index', $d);
     }

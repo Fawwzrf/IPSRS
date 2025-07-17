@@ -31,10 +31,12 @@
                                 <div id="filter" class="accordion-collapse collapse show" data-bs-parent="#accordion-example">
                                     <div class="accordion-body bg-white p-2">
                                         <form class="mb-0" id="search" action="<?= $search_act ?>" method="post" autocomplete="off" onsubmit="_search(event)">
+                                            @csrf
+                                            <input type="hidden" name="search_act" value="save">
                                             <div class="row">
                                                 <div class="col-lg-3">
                                                     <label class="form-label">Tipe Lokasi</label>
-                                                    <select class="form-select chosen-select" id="tipe_lokasi_filter" name="tipe_lokasi">
+                                                    <select class="form-select chosen-select" id="tipe_lokasi" name="tipe_lokasi">
                                                         <option value="">-- Pilih --</option>
                                                         <option value="Gedung" <?= 'Gedung' == @$nav_sess['search']['data']['tipe_lokasi'] ? 'selected' : '' ?>>Gedung</option>
                                                         <option value="Lantai" <?= 'Lantai' == @$nav_sess['search']['data']['tipe_lokasi'] ? 'selected' : '' ?>>Lantai</option>
@@ -43,7 +45,7 @@
                                                 </div>
                                                 <div class="col-lg-3">
                                                     <label class="form-label">Lokasi Induk</label>
-                                                    <select class="form-select chosen-select" id="parent_lokasi_id_filter" name="parent_lokasi_id">
+                                                    <select class="form-select chosen-select" id="parent_lokasi_id" name="parent_lokasi_id">
                                                         <option value="">-- Pilih --</option>
                                                         <?php foreach($all_parent_lokasi as $r) : ?>
                                                             <option value="<?= $r['lokasi_id'] ?>" <?= (@$nav_sess['search']['data']['parent_lokasi_id'] == $r['lokasi_id']) ? 'selected' : '' ?>>

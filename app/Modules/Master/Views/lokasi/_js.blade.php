@@ -1,52 +1,16 @@
 <script type="text/javascript">
-    if (typeof _loading === 'undefined') {
-        window._loading = function(s, m) {
-            console.warn("'_loading' undefined");
-        };
-    }
-    if (typeof _modal === 'undefined') {
-        window._modal = function() {
-            alert("_modal undefined.");
-        };
-    }
-    if (typeof _delete === 'undefined') {
-        window._delete = function() {
-            alert("_delete undefined.");
-        };
-    }
-    if (typeof _save === 'undefined') {
-        window._save = function() {
-            alert("_save undefined.");
-        };
-    }
-    if (typeof ifNull === 'undefined') {
-        window.ifNull = function(v, f = '') {
-            return (v === null || v === undefined) ? f : v;
-        };
-    }
-
     var tabel = null;
     $(document).ready(function() {
+        // Inisialisasi Select2 untuk filter
         $('.accordion-body .chosen-select').select2({
             theme: "bootstrap-5",
             dropdownParent: $('.accordion-body')
         });
 
-        $('.accordion-body .datepicker-notauto').daterangepicker({
-            singleDatePicker: true,
-            showDropdowns: true,
-            minYear: 1900,
-            maxYear: parseInt(moment().format('YYYY'), 10) + 5,
-            locale: {
-                format: 'DD-MM-YYYY'
-            }
-        });
-
         tabel = $('#datatable-main').DataTable({
             "language": {
-                url: _base_url + 'dist/libs/DataTables/id.json'
+                url: _base_url + 'dist/libs/DataTables/id.json',
             },
-            "stateSave": true,
             "autoWidth": false,
             "processing": true,
             "responsive": true,
@@ -57,19 +21,17 @@
             ],
             "ajax": {
                 "url": "<?= $uri . '/ajax_datatables?n=' . request('n') ?>",
-                "type": "POST",
-                "data": function(d) {
-                    d.search_data = <?= json_encode(@$nav_sess['search']['data']) ?: '{}' ?>;
-                    d._token = _token;
+                "type": "POST"
+            },
+            "createdRow": function(row, data, dataIndex) {
+                if (data.active_st == 0) {
+                    $(row).addClass('bg-pink');
                 }
             },
+            "bFilter": false,
             "deferRender": true,
             "aLengthMenu": _datatableLengthMenu,
             "pageLength": 10,
-            "createdRow": function(row, data, dataIndex) {
-                if (data.active_st == 0) $(row).addClass('bg-pink');
-            },
-            "bFilter": false,
             "columns": [{
                     "data": "lokasi_id",
                     "sortable": false,
@@ -159,14 +121,7 @@
             theme: "bootstrap-5",
             dropdownParent: $('#my-modal-1')
         });
-        modalContent.find('.datepicker-notauto').daterangepicker({
-            singleDatePicker: true,
-            showDropdowns: true,
-            locale: {
-                format: 'DD-MM-YYYY'
-            }
-        });
-
+        
         var tipeLokasiSelect = modalContent.find('#tipe_lokasi');
         if (tipeLokasiSelect.length) {
             var divParentLokasi = modalContent.find('#div_parent_lokasi');

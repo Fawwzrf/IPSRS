@@ -23,9 +23,5 @@ class AppServiceProvider extends ServiceProvider
     {
         //
         $this->app->register(\App\Providers\ModuleServiceProvider::class);
-        View::composer(
-            'master::lokasi.form_modal', // Nama view (sesuaikan jika berbeda)
-            LokasiFormComposer::class
-        );
     }
 }
