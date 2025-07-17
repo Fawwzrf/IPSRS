@@ -5,6 +5,8 @@ namespace App\Modules\Ipsrs\Controllers;
 use App\Http\Controllers\MyController;
 use App\Modules\App\Models\DbModel;
 use App\Modules\Ipsrs\Models\LaporanModel;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Request;
 
 class AdminLaporan extends MyController
 {
@@ -24,14 +26,25 @@ class AdminLaporan extends MyController
     {
         $d = [];
         $this->save_session_search($d);
-        $d['nav_sess'] = session(request('n'));
-
+        
         // Ambil data untuk filter
         $d['all_kategori_asset'] = DbModel::allData('mst_kategori_asset', ['deleted_st' => 0]);
         $d['all_lokasi'] = DbModel::allData('mst_lokasi', ['deleted_st' => 0]);
 
         // Ambil data laporan berdasarkan filter
         $d['laporan'] = $this->model->getLaporanKinerjaAset($d['nav_sess']['search']['data'] ?? []);
+        
+        // Untuk ekspor ke Excel jika diminta
+        if (request('export') == 'excel') {
+            try {
+                return $this->exportToExcel($d['laporan'], 'Laporan_Kinerja_Aset', [
+                    'Nama Aset', 'Lokasi', 'Jumlah OK', 'Jumlah Perbaikan', 'Jumlah PM', 'Terakhir Ditangani'
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Error exporting laporan: ' . $e->getMessage());
+                return back()->with('error', 'Gagal mengekspor data: ' . $e->getMessage());
+            }
+        }
 
         return $this->renderView($this->template . 'kinerja_aset', $d);
     }
@@ -43,13 +56,24 @@ class AdminLaporan extends MyController
     {
         $d = [];
         $this->save_session_search($d);
-        $d['nav_sess'] = session(request('n'));
-
+        
         // Ambil data untuk filter
         $d['all_teknisi'] = DbModel::allData('mst_pegawai', ['jabatan_id' => '90', 'deleted_st' => 0]);
 
         // Ambil data laporan berdasarkan filter
         $d['laporan'] = $this->model->getLaporanKinerjaTeknisi($d['nav_sess']['search']['data'] ?? []);
+
+        // Untuk ekspor ke Excel jika diminta
+        if (request('export') == 'excel') {
+            try {
+                return $this->exportToExcel($d['laporan'], 'Laporan_Kinerja_Teknisi', [
+                    'Nama Teknisi', 'Total Tugas', 'Tugas Selesai', 'Rata-rata Durasi (Menit)'
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Error exporting laporan: ' . $e->getMessage());
+                return back()->with('error', 'Gagal mengekspor data: ' . $e->getMessage());
+            }
+        }
 
         return $this->renderView($this->template . 'kinerja_teknisi', $d);
     }
@@ -61,12 +85,122 @@ class AdminLaporan extends MyController
     {
         $d = [];
         $this->save_session_search($d);
-        $d['nav_sess'] = session(request('n'));
+        
+        // Set default date range jika tidak ada
+        if (empty($d['nav_sess']['search']['data']['tgl_start'])) {
+            $d['nav_sess']['search']['data']['tgl_start'] = date('d-m-Y', strtotime('-30 days'));
+            $d['nav_sess']['search']['data']['tgl_end'] = date('d-m-Y');
+        }
 
         // Ambil data laporan berdasarkan filter
         $d['laporan'] = $this->model->getLaporanBiaya($d['nav_sess']['search']['data'] ?? []);
         $d['total_biaya'] = array_sum(array_column($d['laporan'], 'total_biaya_ok'));
 
+        // Untuk ekspor ke Excel jika diminta
+        if (request('export') == 'excel') {
+            try {
+                return $this->exportToExcel($d['laporan'], 'Laporan_Biaya_Pemeliharaan', [
+                    'Tanggal OK', 'ID Order Kerja', 'Aset', 'Jenis Pekerjaan', 
+                    'Biaya Sparepart (Rp)', 'Biaya Lain (Rp)', 'Total Biaya (Rp)'
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Error exporting laporan: ' . $e->getMessage());
+                return back()->with('error', 'Gagal mengekspor data: ' . $e->getMessage());
+            }
+        }
+
         return $this->renderView($this->template . 'biaya_pemeliharaan', $d);
+    }
+
+    /**
+     * Helper method untuk mengekspor data ke Excel.
+     * 
+     * @param array $data Data yang akan diekspor
+     * @param string $filename Nama file excel
+     * @param array $headers Header kolom
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    protected function exportToExcel($data, $filename, $headers)
+    {
+        // Fungsi ini bisa diimplementasikan dengan library Excel seperti PhpSpreadsheet
+        // Untuk sekarang, kita gunakan CSV sebagai fallback sederhana
+        
+        $filename = $filename . '_' . date('Ymd_His') . '.csv';
+        $handle = fopen('php://temp', 'r+');
+        
+        // Tulis header
+        fputcsv($handle, $headers);
+        
+        // Tulis data
+        foreach ($data as $row) {
+            $values = [];
+            foreach ($headers as $header) {
+                switch ($header) {
+                    case 'Nama Aset':
+                        $values[] = $row['asset_nm'] ?? '';
+                        break;
+                    case 'Lokasi':
+                        $values[] = $row['lokasi_nm'] ?? '';
+                        break;
+                    case 'Jumlah OK':
+                        $values[] = $row['jumlah_ok'] ?? 0;
+                        break;
+                    case 'Jumlah Perbaikan':
+                        $values[] = $row['jumlah_perbaikan'] ?? 0;
+                        break;
+                    case 'Jumlah PM':
+                        $values[] = $row['jumlah_pemeliharaan'] ?? 0;
+                        break;
+                    case 'Terakhir Ditangani':
+                        $values[] = to_date($row['terakhir_ditangani'] ?? '') ?? '';
+                        break;
+                    case 'Nama Teknisi':
+                        $values[] = $row['pegawai_nm'] ?? '';
+                        break;
+                    case 'Total Tugas':
+                        $values[] = $row['total_tugas'] ?? 0;
+                        break;
+                    case 'Tugas Selesai':
+                        $values[] = $row['tugas_selesai'] ?? 0;
+                        break;
+                    case 'Rata-rata Durasi (Menit)':
+                        $values[] = number_format($row['rata_rata_durasi'] ?? 0, 2);
+                        break;
+                    case 'Tanggal OK':
+                        $values[] = to_date($row['tgl_dibuat'] ?? '') ?? '';
+                        break;
+                    case 'ID Order Kerja':
+                        $values[] = $row['order_kerja_id'] ?? '';
+                        break;
+                    case 'Jenis Pekerjaan':
+                        $values[] = ucfirst($row['jenis'] ?? '');
+                        break;
+                    case 'Biaya Sparepart (Rp)':
+                        $values[] = $row['total_biaya_sparepart'] ?? 0;
+                        break;
+                    case 'Biaya Lain (Rp)':
+                        $values[] = $row['biaya_lain'] ?? 0;
+                        break;
+                    case 'Total Biaya (Rp)':
+                        $values[] = $row['total_biaya_ok'] ?? 0;
+                        break;
+                    default:
+                        $values[] = '';
+                }
+            }
+            fputcsv($handle, $values);
+        }
+        
+        rewind($handle);
+        $content = stream_get_contents($handle);
+        fclose($handle);
+        
+        // Set headers dan kirim file
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+        
+        return response($content, 200, $headers);
     }
 }
