@@ -6,7 +6,7 @@ use App\Http\Controllers\MyController;
 use App\Modules\App\Models\DbModel;
 use App\Modules\Ipsrs\Models\OrderKerjaModel;
 use App\Modules\Ipsrs\Models\LogKerjaModel;
-use Illuminate\Http\Request; // Gunakan Request class untuk file
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class AdminOrderKerja extends MyController
@@ -20,31 +20,79 @@ class AdminOrderKerja extends MyController
         $this->template = 'ipsrs::admin.pekerjaan.order_kerja.';
     }
 
-    // ... (metode index dan form_modal biarkan seperti yang sudah ada)
     public function index()
     {
         $d = [];
+        
+        // Penting: Panggil save_session_search untuk mengelola session pencarian
         $this->save_session_search($d);
-        $d['nav_sess'] = session(request('n'));
+        
+        // Data untuk dropdown dan filter
         $d['all_teknisi'] = DbModel::allData('mst_pegawai', ['deleted_st' => '0', 'active_st' => '1', 'jabatan_id' => '90']);
+        
         return $this->renderView($this->template . 'index', $d);
     }
 
     public function form_modal($id = null)
     {
-        $d['main'] = $id ? $this->model->getById($id) : null;
-        if ($id) {
+        $d = [];
+        
+        if ($id == null) {
+            // Form baru
+            // Ambil jadwal PM yang tersedia (bukan dibatalkan)
+            $d['all_jadwal_pm'] = OrderKerjaModel::getAvailableJadwalPM();
+            
+            // Ambil permintaan komplain yang belum dibuatkan order kerja
+            $sql = "SELECT pk.*, a.asset_nm 
+                    FROM permintaan_komplain pk 
+                    JOIN asset a ON pk.asset_id = a.asset_id 
+                    WHERE pk.deleted_st = 0 
+                    AND pk.status = 'diverifikasi'
+                    AND pk.permintaan_id NOT IN (
+                        SELECT DISTINCT permintaan_id FROM order_kerja 
+                        WHERE permintaan_id IS NOT NULL 
+                        AND deleted_st = 0
+                        AND status NOT IN ('selesai', 'dibatalkan')
+                    )";
+            $d['all_komplain'] = DbModel::rawData('result_array', $sql);
+            $d['assigned_teknisi'] = [];
+        } else {
+            // Form edit
+            $d['main'] = $this->model->getById($id);
+            
+            // Data jadwal PM jika ada
+            if (!empty($d['main']['jadwal_pm_id'])) {
+                $sql = "SELECT jp.*, a.asset_nm 
+                        FROM jadwal_pm jp 
+                        JOIN asset a ON jp.asset_id = a.asset_id 
+                        WHERE jp.jadwal_pm_id = ?";
+                $d['all_jadwal_pm'] = DbModel::rawData('result_array', $sql, [$d['main']['jadwal_pm_id']]);
+            } else {
+                $d['all_jadwal_pm'] = [];
+            }
+            
+            // Data permintaan jika ada
+            if (!empty($d['main']['permintaan_id'])) {
+                $sql = "SELECT pk.*, a.asset_nm 
+                        FROM permintaan_komplain pk 
+                        JOIN asset a ON pk.asset_id = a.asset_id 
+                        WHERE pk.permintaan_id = ?";
+                $d['all_komplain'] = DbModel::rawData('result_array', $sql, [$d['main']['permintaan_id']]);
+            } else {
+                $d['all_komplain'] = [];
+            }
+            
+            // Data teknisi yang ditugaskan
             $d['assigned_teknisi'] = array_column(
                 DbModel::allData('penugasan_teknisi', ['order_kerja_id' => $id, 'deleted_st' => 0]),
                 'pegawai_id'
             );
-        } else {
-            $d['assigned_teknisi'] = [];
         }
-        $d['all_jadwal_pm'] = DbModel::rawData('result_array', "SELECT jp.*, a.asset_nm FROM jadwal_pm jp JOIN asset a ON jp.asset_id = a.asset_id WHERE jp.deleted_st = 0 AND (jp.jadwal_pm_id NOT IN (SELECT jadwal_pm_id FROM order_kerja WHERE jadwal_pm_id IS NOT NULL AND deleted_st = 0) OR jp.jadwal_pm_id = ?)", [@$d['main']['jadwal_pm_id']]);
-        $d['all_komplain'] = DbModel::rawData('result_array', "SELECT pk.*, a.asset_nm FROM permintaan_komplain pk JOIN asset a ON pk.asset_id = a.asset_id WHERE pk.deleted_st = 0 AND (pk.permintaan_id NOT IN (SELECT permintaan_id FROM order_kerja WHERE permintaan_id IS NOT NULL AND deleted_st = 0) OR pk.permintaan_id = ?)", [@$d['main']['permintaan_id']]);
+        
+        // Data umum yang selalu dibutuhkan
         $d['all_teknisi'] = DbModel::allData('mst_pegawai', ['deleted_st' => '0', 'active_st' => '1', 'jabatan_id' => '90']);
-        $d['form_act'] = $id ? url('ipsrs/adminorderkerja/save/' . $id) : url('ipsrs/adminorderkerja/save');
+        $d['form_act'] = $this->uri . '/save/' . $id;
+        
         return $this->renderView($this->template . 'form_modal', $d);
     }
 
@@ -58,14 +106,14 @@ class AdminOrderKerja extends MyController
             $result = $logKerjaModel->saveData($id, $d);
 
             if ($result['status']) {
-                // INI ADALAH RESPONSE YANG BENAR: Kode 01, tanpa redirect
                 return response()->json(_response('01', $this->uri, ['message' => 'Laporan kerja berhasil disimpan.']));
             } else {
                 return response()->json(_response('11', $this->uri, ['message' => $result['message']]));
             }
         } else {
-            // Ini adalah blok untuk menyimpan Order Kerja (bukan log kerja), JANGAN DIHAPUS
+            // Ini adalah blok untuk menyimpan Order Kerja
             $result = $this->model->saveData($id, $d);
+            
             if ($result['status']) {
                 $response_code = ($result['mode'] == 'insert') ? '01' : '02';
                 return response()->json(_response($response_code, $this->uri, $d));
@@ -85,4 +133,6 @@ class AdminOrderKerja extends MyController
     {
         return OrderKerjaModel::loadDatatables();
     }
+    
+    // Method tambahan lainnya tetap dipertahankan...
 }

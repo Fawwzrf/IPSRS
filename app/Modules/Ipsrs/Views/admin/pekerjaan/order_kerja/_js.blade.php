@@ -1,28 +1,31 @@
 <script type="text/javascript">
     var tabel = null;
     $(document).ready(function() {
-        $('#filter-body .chosen-select').select2({
+        // Inisialisasi Select2 untuk filter
+        $('#filter .chosen-select').select2({
             theme: "bootstrap-5",
-            dropdownParent: $('#filter-body')
+            dropdownParent: $('#filter')
         });
 
+        // Inisialisasi DataTables
         tabel = $('#datatable-main').DataTable({
             "language": {
                 url: _base_url + 'dist/libs/DataTables/id.json'
             },
             "processing": true,
             "serverSide": true,
+            "responsive": true,
             "ordering": true,
             "order": [
                 [2, 'desc']
             ],
             "ajax": {
-                "url": "{{ url($uri . '/ajax_datatables?n=' . request('n')) }}",
-                "type": "POST",
-                "data": function(d) {
-                    d._token = _token;
-                }
+                "url": "<?= $uri . '/ajax_datatables?n=' . request('n') ?>",
+                "type": "POST"
             },
+            "deferRender": true,
+            "aLengthMenu": _datatableLengthMenu,
+            "pageLength": 10,
             "bFilter": false,
             "columns": [{
                     "data": null,
@@ -50,7 +53,7 @@
                             '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick="_modal(event, {uri: \'' + uri_edit + '\', size: \'modal-lg\', position: \'normal\'})">' +
                             '             <i class="fas fa-pencil-alt text-warning me-2"></i> Ubah Data' +
                             '         </a>' +
-                            '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick=_delete("' + uri_delete + '")>' +
+                            '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick="_delete(\'' + uri_delete + '\')">' +
                             '             <i class="fas fa-trash text-danger me-2"></i> Hapus Data' +
                             '         </a>' +
                             '      </div>' +
@@ -58,10 +61,8 @@
                             '</div>';
                     }
                 },
-                {
-                    "data": "order_kerja_id"
-                },
-                {
+                { "data": "order_kerja_id" },
+                { 
                     "data": "jenis",
                     "render": function(data) {
                         return data ? data.charAt(0).toUpperCase() + data.slice(1) : '-';
@@ -73,29 +74,76 @@
                         return `<strong>${data || 'N/A'}</strong><br><small class="text-muted">${row.deskripsi_sumber || 'N/A'}</small>`;
                     }
                 },
-                {
-                    "data": "tim_teknisi"
+                { "data": "tim_teknisi" },
+                { 
+                    "data": "prioritas",
+                    "className": "text-center",
+                    "render": function(data, type, row) {
+                        if (!data) {
+                            return '<span class="badge bg-secondary">-</span>';
+                        }
+                        
+                        // Pemetaan prioritas ke warna dan ikon yang lebih sederhana
+                        var badgeClass, badgeIcon, badgeText;
+                        
+                        switch(data) {
+                            case 'Normal':
+                                badgeClass = 'bg-success';
+                                badgeIcon = 'fa fa-check-circle';
+                                badgeText = 'Normal';
+                                break;
+                            case 'Mendesak':
+                                badgeClass = 'bg-warning text-dark';
+                                badgeIcon = 'fa fa-exclamation-circle';
+                                badgeText = 'Mendesak';
+                                break;
+                            case 'Darurat':
+                                badgeClass = 'bg-danger';
+                                badgeIcon = 'fa fa-exclamation-triangle';
+                                badgeText = 'Darurat';
+                                break;
+                            default:
+                                badgeClass = 'bg-secondary';
+                                badgeIcon = 'fa fa-question-circle';
+                                badgeText = data.charAt(0).toUpperCase() + data.slice(1);
+                        }
+                        
+                        // Pastikan HTML dirender dengan benar
+                        return '<span class="badge ' + badgeClass + '"><i class="' + badgeIcon + ' me-1"></i> ' + badgeText + '</span>';
+                    }
                 },
-                {
-                    "data": "prioritas"
-                },
-                {
+                { 
                     "data": "status",
                     "className": "text-center",
                     "render": function(data) {
-                        var badgeClass = {
-                            'baru': 'bg-info',
-                            'diproses': 'bg-warning',
-                            'selesai': 'bg-success',
-                            'ditugaskan': 'bg-primary'
-                        };
-                        return `<span class="badge ${badgeClass[data] || 'bg-secondary'}">${data ? data.charAt(0).toUpperCase() + data.slice(1) : ''}</span>`;
+                        if (!data) {
+                            return '<span class="badge bg-secondary">-</span>';
+                        }
+                        
+                        var badgeClass;
+                        switch(data) {
+                            case 'baru': badgeClass = 'bg-info'; break;
+                            case 'ditugaskan': badgeClass = 'bg-primary'; break;
+                            case 'diproses': badgeClass = 'bg-warning text-dark'; break;
+                            case 'selesai': badgeClass = 'bg-success'; break;
+                            case 'dibatalkan': badgeClass = 'bg-danger'; break;
+                            default: badgeClass = 'bg-secondary';
+                        }
+                        
+                        return '<span class="badge ' + badgeClass + '">' + data.charAt(0).toUpperCase() + data.slice(1) + '</span>';
                     }
                 }
-            ]
+            ],
+            "createdRow": function(row, data, dataIndex) {
+                // Beri highlight pada baris dengan prioritas darurat
+                if (data.prioritas == 'darurat') {
+                    $(row).addClass('bg-danger-subtle');
+                }
+            }
         });
     });
 
+    // Inisialisasi plugin di dalam modal
     $(document).on('shown.bs.modal', '#my-modal-1', function (e) {
         var modal = $(this);
         modal.find('.chosen-select').select2({ theme: "bootstrap-5", dropdownParent: modal });
@@ -123,10 +171,8 @@
             toggleSource($(this), jadwalSelect);
         });
         
-        // ======================================================
-        // PERBAIKAN KUNCI: Panggil fungsi toggle saat modal dibuka
-        // untuk menangani state saat mode edit.
-        // ======================================================
+        // Panggil fungsi toggle saat modal dibuka
+        // untuk menangani state saat mode edit
         toggleSource(jadwalSelect, komplainSelect);
         toggleSource(komplainSelect, jadwalSelect);
     });
