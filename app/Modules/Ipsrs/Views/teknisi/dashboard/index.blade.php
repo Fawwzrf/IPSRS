@@ -1,12 +1,36 @@
+@include('ipsrs::teknisi.dashboard._js')
 <div class="page-wrapper">
     <div class="page-header d-print-none mt-2">
         <div class="container-xl">
-            <h2 class="page-title">Dashboard Teknisi</h2>
+            <div class="row align-items-center">
+                <div class="col">
+                    <div class="page-pretitle">
+                        Dashboard
+                    </div>
+                    <h2 class="page-title">
+                        Dashboard Teknisi
+                    </h2>
+                </div>
+                <div class="col-auto ms-auto d-print-none">
+                    <div class="btn-list">
+                        <a href="javascript:void(0)" onclick="refreshDashboard()" class="btn btn-outline-primary d-sm-inline-block">
+                            <i class="fas fa-sync"></i> Refresh Data
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     <div class="page-body mt-1">
         <div class="container-xl">
-            @if ($tugas_baru_count > 0)
+            @if (isset($error_message))
+                <div class="alert alert-danger" role="alert">
+                    <h4 class="alert-title">Terjadi Kesalahan</h4>
+                    <div>{{ $error_message }}</div>
+                </div>
+            @endif
+            
+            @if (isset($tugas_baru_count) && $tugas_baru_count > 0)
                 <div class="alert alert-info" role="alert">
                     <h4 class="alert-title">Anda memiliki {{ $tugas_baru_count }} tugas baru!</h4>
                     <div class="text-muted">Segera periksa daftar tugas Anda untuk menerima atau menolak pekerjaan.</div>
@@ -30,7 +54,7 @@
                                 </div>
                                 <div class="col">
                                     <div class="font-weight-medium">
-                                        {{ $tugas_baru_count }} Tugas Baru
+                                        {{ $tugas_baru_count ?? 0 }} Tugas Baru
                                     </div>
                                     <div class="text-muted">
                                         Menunggu tindakan
@@ -51,7 +75,7 @@
                                 </div>
                                 <div class="col">
                                     <div class="font-weight-medium">
-                                        {{ count($tugas_aktif_list ?? []) }} Pekerjaan Aktif
+                                        {{ isset($tugas_aktif_list) && is_array($tugas_aktif_list) ? count($tugas_aktif_list) : 0 }} Pekerjaan Aktif
                                     </div>
                                     <div class="text-muted">
                                         Sedang dikerjakan
@@ -135,21 +159,23 @@
                             <h3 class="card-title">Tugas yang Sedang Dikerjakan</h3>
                         </div>
                         <div class="list-group list-group-flush">
-                            @forelse($tugas_aktif_list as $tugas)
+                            @forelse($tugas_aktif_list ?? [] as $tugas)
                                 <a href="javascript:void(0)"
-                                    onclick="_modal(event, {uri: '{{ url('ipsrs/teknisitugas/detail/' . $tugas['penugasan_id']) }}?n={{ $n }}', size: 'modal-lg', title: 'Detail Tugas'})"
+                                    onclick="_modal(event, {uri: '{{ url('ipsrs/teknisitugas/detail/' . $tugas['penugasan_id']) }}?n={{ request('n') }}', size: 'modal-lg', title: 'Detail Tugas'})"
                                     class="list-group-item">
                                     <div class="d-flex w-100 justify-content-between">
-                                        <h5 class="mb-1">{{ $tugas['asset_nm'] }}</h5>
-                                        <small>{{ to_date($tugas['tgl_dibuat']) }}</small>
+                                        <h5 class="mb-1">{{ $tugas['asset_nm'] ?? 'Tidak ada nama aset' }}</h5>
+                                        <small>{{ isset($tugas['tgl_dibuat']) ? to_date($tugas['tgl_dibuat']) : '-' }}</small>
                                     </div>
                                     <div class="d-flex justify-content-between">
-                                        <p class="mb-1">{{ $tugas['deskripsi'] }}</p>
-                                        <span class="badge bg-{{ $tugas['prioritas'] == 'tinggi' ? 'danger' : ($tugas['prioritas'] == 'sedang' ? 'warning' : 'info') }} ms-2">
-                                            {{ ucfirst($tugas['prioritas']) }}
-                                        </span>
+                                        <p class="mb-1">{{ $tugas['deskripsi'] ?? 'Tidak ada deskripsi' }}</p>
+                                        @if(isset($tugas['prioritas']))
+                                            <span class="badge bg-{{ $tugas['prioritas'] == 'tinggi' ? 'danger' : ($tugas['prioritas'] == 'sedang' ? 'warning' : 'info') }} ms-2">
+                                                {{ ucfirst($tugas['prioritas']) }}
+                                            </span>
+                                        @endif
                                     </div>
-                                    <small class="text-muted">{{ $tugas['lokasi_nm'] }}</small>
+                                    <small class="text-muted">{{ $tugas['lokasi_nm'] ?? '-' }}</small>
                                 </a>
                             @empty
                                 <div class="list-group-item">
@@ -171,11 +197,11 @@
                                 @foreach($jadwal_mendatang as $jadwal)
                                     <div class="list-group-item">
                                         <div class="d-flex w-100 justify-content-between">
-                                            <h5 class="mb-1">{{ $jadwal['asset_nm'] }}</h5>
-                                            <small class="text-danger">{{ to_date($jadwal['tgl_jadwal']) }}</small>
+                                            <h5 class="mb-1">{{ $jadwal['asset_nm'] ?? 'Tidak ada nama aset' }}</h5>
+                                            <small class="text-danger">{{ isset($jadwal['tgl_jadwal']) ? to_date($jadwal['tgl_jadwal']) : '-' }}</small>
                                         </div>
                                         <p class="mb-1">{{ $jadwal['deskripsi'] ?? 'Pemeliharaan Rutin' }}</p>
-                                        <small class="text-muted">{{ $jadwal['lokasi_nm'] }}</small>
+                                        <small class="text-muted">{{ $jadwal['lokasi_nm'] ?? '-' }}</small>
                                     </div>
                                 @endforeach
                             @else
@@ -221,13 +247,13 @@
                                         <tbody>
                                             @foreach($top_spareparts as $part)
                                                 <tr>
-                                                    <td>{{ $part['sparepart_nm'] }}</td>
-                                                    <td>{{ $part['jumlah_pakai'] }}</td>
+                                                    <td>{{ $part['sparepart_nm'] ?? '-' }}</td>
+                                                    <td>{{ $part['jumlah_pakai'] ?? 0 }}</td>
                                                     <td>
-                                                        @if($part['stok'] <= $part['stok_min'])
+                                                        @if(isset($part['stok']) && isset($part['stok_min']) && $part['stok'] <= $part['stok_min'])
                                                             <span class="badge bg-danger">{{ $part['stok'] }}</span>
                                                         @else
-                                                            <span class="badge bg-success">{{ $part['stok'] }}</span>
+                                                            <span class="badge bg-success">{{ $part['stok'] ?? 0 }}</span>
                                                         @endif
                                                     </td>
                                                 </tr>
