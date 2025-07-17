@@ -25,45 +25,40 @@ class SparepartModel extends Model
     static function loadDatatables()
     {
         self::initSession();
+        
+        $where = "1 = 1 ";
 
-        // 1. Siapkan query utama TANPA klausa WHERE
-        $query = "SELECT
-                    sparepart_id, sparepart_nm, no_seri, merk, satuan, harga, stok, lokasi_penyimpanan, active_st
-                  FROM mst_sparepart";
-
-        // 2. Siapkan array untuk menampung kondisi WHERE
-        $where = [];
-        $where[] = "deleted_st = 0"; // Kondisi dasar
-
-        // Filter dari sesi pencarian
-        if (($active_st = @self::$nav_sess['search']['data']['active_st']) !== '' && $active_st !== null) {
-            $where[] = "active_st = " . (int)$active_st;
+        // Filter berdasarkan status aktif
+        if (@self::$nav_sess['search']['data']['active_st'] != '') {
+            $where .= " AND a.active_st = '" . @self::$nav_sess['search']['data']['active_st'] . "' ";
         }
-        if ($term = @self::$nav_sess['search']['data']['term']) {
-            $searchTerm = strtolower(addslashes($term));
-            // Tambahkan pencarian pada ID, No. Seri, Merk, dan Lokasi Penyimpanan
-            $where[] = "(LOWER(sparepart_id) LIKE '%{$searchTerm}%' 
-                          OR LOWER(sparepart_nm) LIKE '%{$searchTerm}%' 
-                          OR LOWER(no_seri) LIKE '%{$searchTerm}%' 
-                          OR LOWER(merk) LIKE '%{$searchTerm}%' 
-                          OR LOWER(lokasi_penyimpanan) LIKE '%{$searchTerm}%')";
+        
+        // Filter berdasarkan pencarian
+        if (@self::$nav_sess['search']['data']['term'] != '') {
+            $where .= " AND (
+                LOWER(a.sparepart_id) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%' 
+                OR LOWER(a.sparepart_nm) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%'
+                OR LOWER(a.no_seri) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%'
+                OR LOWER(a.merk) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%'
+                OR LOWER(a.lokasi_penyimpanan) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%'
+            ) ";
         }
 
-        // 3. Gabungkan semua kondisi
-        $whereClause = implode(' AND ', $where);
-
-        // Kolom yang bisa dicari
-        $search = [
-            'sparepart_id',
-            'sparepart_nm',
-            'no_seri',
-            'merk',
-            'lokasi_penyimpanan'
-        ];
-
-        // 4. Panggil datatablesQuery
-        $result = DbModel::datatablesQuery($query, $search, null, $whereClause);
-
+        // Gunakan subquery dengan alias seperti pada PegawaiModel
+        $query = "SELECT * FROM (
+                    SELECT 
+                        a.sparepart_id, a.sparepart_nm, a.no_seri, a.merk, a.satuan, 
+                        a.harga, a.stok, a.lokasi_penyimpanan, a.active_st
+                    FROM 
+                        mst_sparepart a
+                    WHERE $where AND a.deleted_st = 0
+                ) x ";
+                
+        $search = ['sparepart_id', 'sparepart_nm', 'no_seri', 'merk', 'lokasi_penyimpanan'];
+        $where = null;
+        $isWhere = null;
+        
+        $result = DbModel::datatablesQuery($query, $search, $where, $isWhere);
         return response()->json($result);
     }
 }

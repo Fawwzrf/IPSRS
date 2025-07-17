@@ -1,29 +1,16 @@
 <script type="text/javascript">
-    // --- Placeholder _loading function (untuk mengatasi ReferenceError) ---
-    if (typeof _loading === 'undefined') {
-        window._loading = function(show, message) {
-            console.warn("'_loading' function is not defined globally. Using a minimal fallback. No visual spinner will appear.");
-            console.log("Loading state: " + show + ", Message: " + message);
-        };
-    }
-    // --- AKHIR Placeholder _loading ---
-
-
     var tabel = null;
     $(document).ready(function() {
-        // --- INISIALISASI UNTUK HALAMAN INDEX (DATATABLES FILTER) ---
+        // Inisialisasi Select2 untuk filter
         $('.accordion-body .chosen-select').select2({
             theme: "bootstrap-5",
             dropdownParent: $('.accordion-body')
         });
 
-        // Datepicker tidak ada di sini karena tidak ada filter tanggal di index sparepart
-
         tabel = $('#datatable-main').DataTable({
             "language": {
                 url: _base_url + 'dist/libs/DataTables/id.json',
             },
-            "stateSave": true,
             "autoWidth": false,
             "processing": true,
             "responsive": true,
@@ -34,31 +21,26 @@
             ],
             "ajax": {
                 "url": "<?= $uri . '/ajax_datatables?n=' . request('n') ?>",
-                "type": "POST",
-                "data": function(d) {
-                    var searchData = <?= json_encode(@$nav_sess['search']['data']) ?: '{}' ?>;
-                    d.search_data = searchData;
-                    d._token = _token;
-                }
+                "type": "POST"
             },
-            "deferRender": true,
-            "aLengthMenu": _datatableLengthMenu,
-            "pageLength": 10,
             "createdRow": function(row, data, dataIndex) {
                 if (data.active_st == 0) {
                     $(row).addClass('bg-pink');
                 }
             },
             "bFilter": false,
+            "deferRender": true,
+            "aLengthMenu": _datatableLengthMenu,
+            "pageLength": 10,
             "columns": [{
-                    "data": "sparepart_id", // Untuk nomor urut
+                    "data": "sparepart_id",
                     "sortable": false,
                     "render": function(data, type, row, meta) {
                         return meta.row + meta.settings._iDisplayStart + 1;
                     }
                 },
                 {
-                    "data": "sparepart_id", // Untuk Aksi
+                    "data": "sparepart_id",
                     "className": "text-left",
                     "render": function(data, type, row, meta) {
                         var uri_edit = '<?= $uri . '/form_modal/' ?>' + data;
@@ -74,7 +56,7 @@
                             '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick="_modal(event, {uri: \'' + uri_edit + '\', size: \'modal-lg\', position: \'normal\'})">' +
                             '             <i class="fas fa-pencil-alt text-warning me-2"></i> Ubah Data' +
                             '         </a>' +
-                            '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick=_delete("' + uri_delete + '")>' +
+                            '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick="_delete(\'' + uri_delete + '\')">' +
                             '             <i class="fas fa-trash text-danger me-2"></i> Hapus Data' +
                             '         </a>' +
                             '      </div>' +
@@ -95,7 +77,7 @@
                     "className": "text-center",
                     "render": function(data, type, row, meta) {
                         if (row['active_st'] == 1) {
-                            return '<i class="fas fa-check-circle text-success "></i>';
+                            return '<i class="fas fa-check-circle text-success"></i>';
                         } else {
                             return '<i class="fas fa-times-circle text-danger"></i>';
                         }
@@ -103,21 +85,9 @@
                 },
             ],
         });
-        
-        // Memaksa DataTables untuk reload setelah filter disubmit
-        $('#search').on('submit', function(e) {
-            e.preventDefault();
-            tabel.ajax.reload();
-        });
-
-
-        window._searchReset = function() {
-            $('#search')[0].reset();
-            $('.chosen-select').val('').trigger('change');
-            tabel.ajax.reload();
-        };
     });
 
+    // Modal initialization untuk form
     $(document).on('shown.bs.modal', '#my-modal-1', function (e) { 
         var formModalId = $(this).attr('id'); 
         var modalContent = $('#' + formModalId + ' .modal-body');
@@ -129,15 +99,11 @@
         });
 
         // Inisialisasi Autonumeric untuk input harga
-        modalContent.find('.autonumeric').autoNumeric({
+        modalContent.find('#harga').autoNumeric({
             aSep: ".",
             aDec: ",",
             vMax: "999999999999999",
             vMin: "0"
         });
-        
-        // Datepicker tidak ada di sini karena tidak ada input tanggal di form sparepart
-
-        
     });
 </script>
