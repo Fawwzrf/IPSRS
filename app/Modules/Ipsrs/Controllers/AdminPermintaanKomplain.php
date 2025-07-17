@@ -21,8 +21,10 @@ class AdminPermintaanKomplain extends MyController
     public function index()
     {
         $d = [];
+        // Penting: Gunakan save_session_search untuk mengelola session pencarian
         $this->save_session_search($d);
-        $d['nav_sess'] = session(request('n'));
+        
+        // Hapus $d['nav_sess'] = session(request('n')); karena redundan (sudah ada di parent)
 
         // Data untuk dropdown filter di halaman utama
         $d['all_asset'] = DbModel::allData('asset', ['deleted_st' => 0, 'active_st' => 1]);
@@ -41,7 +43,8 @@ class AdminPermintaanKomplain extends MyController
         $d['all_asset'] = DbModel::allData('asset', ['deleted_st' => 0, 'active_st' => 1]);
         $d['all_pegawai'] = DbModel::allData('mst_pegawai', ['deleted_st' => '0', 'active_st' => '1']);
 
-        $d['form_act'] = $id ? url('ipsrs/adminpermintaankomplain/save/' . $id) : url('ipsrs/adminpermintaankomplain/save');
+        // Standardisasi format URI untuk konsistensi
+        $d['form_act'] = $this->uri . '/save/' . $id;
         return $this->renderView($this->template . 'form_modal', $d);
     }
 
@@ -49,7 +52,7 @@ class AdminPermintaanKomplain extends MyController
     {
         $d = _post();
 
-        // Validasi dasar yang berlaku untuk semua
+        // Validasi dasar
         if (empty($d['asset_id'])) {
             return response()->json(_response('11', $this->uri, ['message' => 'Aset wajib dipilih!']));
         }
@@ -58,44 +61,19 @@ class AdminPermintaanKomplain extends MyController
         }
 
         try {
-            \DB::beginTransaction();
-
-            // PERBAIKAN: Hapus lokasi_id dari data yang akan disimpan
-            // karena tabel permintaan_komplain tidak memiliki kolom ini
-            if (isset($d['lokasi_id'])) {
-                unset($d['lokasi_id']);
-            }
-
-            if ($id == null) { // Mode INSERT (Laporan baru dari Pelapor atau Admin)
-                // Siapkan data yang diisi otomatis oleh sistem
-                $d['permintaan_id'] = DbModel::getId('permintaan_komplain', 2, 12);
-                $d['pegawai_id'] = $d['pegawai_id'] ?? session('pegawai_id');
-                $d['tgl'] = date('Y-m-d');
-                $d['status'] = 'baru'; // Setiap laporan baru statusnya PASTI "baru"
-
-                $result = DbModel::insertData('permintaan_komplain', $d);
-                $response_code = '01';
-            } else { // Mode UPDATE (Hanya bisa dilakukan oleh Admin)
-                // Validasi tambahan khusus untuk admin
-                if (empty($d['status'])) {
-                    return response()->json(_response('11', $this->uri, ['message' => 'Status Komplain wajib dipilih saat mengedit.']));
+            // Alihkan logika save ke model untuk konsistensi
+            $result = $this->model->saveData($id, $d);
+            
+            if ($result['status']) {
+                if ($result['mode'] === 'insert') {
+                    return response()->json(_response('01', $this->uri, $d));
+                } else {
+                    return response()->json(_response('02', $this->uri, $d));
                 }
-                if (empty($d['pegawai_id'])) {
-                    return response()->json(_response('11', $this->uri, ['message' => 'Pembuat Komplain wajib dipilih saat mengedit.']));
-                }
-
-                $result = DbModel::updateData('permintaan_komplain', $d, ['permintaan_id' => $id]);
-                $response_code = '02';
-            }
-
-            if (!$result) {
+            } else {
                 throw new \Exception("Gagal menyimpan data ke database.");
             }
-
-            \DB::commit();
-            return response()->json(_response($response_code, $this->uri, $d));
         } catch (\Throwable $th) {
-            \DB::rollBack();
             Log::error('Error saving komplain: ' . $th->getMessage());
             return response()->json(_response('10', $this->uri, ['message' => 'Terjadi kesalahan saat menyimpan laporan.']));
         }
@@ -103,12 +81,17 @@ class AdminPermintaanKomplain extends MyController
 
     public function delete($id)
     {
+        // Validasi relasi sebelum hapus
+        if (DbModel::getData('order_kerja', ['permintaan_id' => $id, 'deleted_st' => 0])) {
+            return response()->json(_response('13', $this->uri, ['message' => 'Permintaan komplain ini sudah dibuatkan Order Kerja dan tidak dapat dihapus.']));
+        }
+        
         $result = $this->model->deleteData($id);
         return response()->json(_response($result ? '03' : '13', $this->uri));
     }
 
     public function ajax_datatables()
     {
-        return PermintaanKomplainModel::loadDatatables();
+        return $this->model->loadDatatables();
     }
 }

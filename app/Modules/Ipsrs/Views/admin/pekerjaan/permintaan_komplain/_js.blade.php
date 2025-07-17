@@ -3,7 +3,7 @@
     
     // Blok ini dieksekusi saat halaman utama dimuat
     $(document).ready(function() {
-        // --- Inisialisasi Plugin untuk Form Filter (jika ada) ---
+        // --- Inisialisasi Plugin untuk Form Filter ---
         $('#filter-body .chosen-select').select2({ 
             theme: "bootstrap-5", 
             dropdownParent: $('#filter-body') 
@@ -11,49 +11,77 @@
 
         // --- Inisialisasi Tabel Utama (DataTables) ---
         tabel = $('#datatable-main').DataTable({
-            "language": { url: _base_url + 'dist/libs/DataTables/id.json' },
+            "language": { 
+                url: _base_url + 'dist/libs/DataTables/id.json'
+            },
             "processing": true,
             "serverSide": true,
             "ordering": true,
             "order": [ [3, 'desc'] ], // Default sort: Tgl Komplain terbaru
             "ajax": {
-                "url": "{{ url($uri . '/ajax_datatables?n=' . request('n')) }}",
-                "type": "POST",
-                "data": function(d) { d._token = _token; }
+                "url": "<?= $uri . '/ajax_datatables?n=' . request('n') ?>",
+                "type": "POST"
             },
+            "deferRender": true,
+            "aLengthMenu": _datatableLengthMenu,
+            "pageLength": 10,
             "bFilter": false,
             "columns": [
-                { "data": null, "orderable": false, "className": "text-center", "render": function (data, type, row, meta) { return meta.row + meta.settings._iDisplayStart + 1; }},
+                { "data": null, "orderable": false, "className": "text-center", "render": function (data, type, row, meta) { 
+                    return meta.row + meta.settings._iDisplayStart + 1; 
+                }},
                 { "data": "permintaan_id", "orderable": false, "className": "text-center", "render": function (data) {
-                    var uri_edit = '{{ url($uri . "/form_modal/") }}' + data;
-                    var uri_delete = '{{ url($uri . "/delete/") }}' + data;
-                    return `<div class="btn-list flex-nowrap">
-                                <div class="dropdown">
-                                    <button class="btn btn-outline-primary btn-sm dropdown-toggle align-text-top" data-bs-toggle="dropdown">Aksi</button>
-                                    <div class="dropdown-menu">
-                                        <a class="dropdown-item p-1" href="javascript:void(0)" onclick="_modal(event, {uri: '${uri_edit}', size: 'modal-lg'})"><i class="fas fa-pencil-alt text-warning me-2"></i> Ubah Data</a>
-                                        <a class="dropdown-item p-1" href="javascript:void(0)" onclick="_delete('${uri_delete}')"><i class="fas fa-trash text-danger me-2"></i> Hapus Data</a>
-                                    </div>
-                                </div>
-                            </div>`;
+                    var uri_edit = '<?= $uri . '/form_modal/' ?>' + data;
+                    var uri_delete = '<?= $uri . '/delete/' ?>' + data;
+                    
+                    return '' +
+                        '<div class="btn-list btn-sm flex-nowrap">' +
+                        '   <div class="dropdown"> ' +
+                        '      <button class="btn btn-outline-primary btn-sm dropdown-toggle align-text-top" data-bs-toggle="dropdown">' +
+                        '          Aksi' +
+                        '      </button>' +
+                        '      <div class="dropdown-menu">' +
+                        '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick="_modal(event, {uri: \'' + uri_edit + '\', size: \'modal-lg\'})">' +
+                        '             <i class="fas fa-pencil-alt text-warning me-2"></i> Ubah Data' +
+                        '         </a>' +
+                        '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick="_delete(\'' + uri_delete + '\')">' +
+                        '             <i class="fas fa-trash text-danger me-2"></i> Hapus Data' +
+                        '         </a>' +
+                        '      </div>' +
+                        '   </div>' +
+                        '</div>';
                 }},
                 { "data": "permintaan_id" },
                 { "data": "tgl", "render": function(data) { return data ? toDate(data) : '-'; }},
                 { "data": "asset_nm" },
                 { "data": "pegawai_nm" },
-                { "data": "deskripsi", "render": function(data) { return data && data.length > 50 ? `<span title="${data}">${data.substr(0, 50)}...</span>` : data; }},
+                { "data": "deskripsi", "render": function(data) { 
+                    return data && data.length > 50 ? `<span title="${data}">${data.substr(0, 50)}...</span>` : data; 
+                }},
                 { "data": "status", "className": "text-center", "render": function(data) {
-                    var badgeClass = { 'baru': 'bg-info', 'diproses': 'bg-warning', 'selesai': 'bg-success' };
-                    return `<span class="badge ${badgeClass[data] || 'bg-secondary'}">${data.charAt(0).toUpperCase() + data.slice(1)}</span>`;
+                    if (!data) {
+                        return '<span class="badge bg-secondary">-</span>';
+                    }
+                    
+                    var badgeClass = { 
+                        'baru': 'bg-info', 
+                        'diproses': 'bg-warning', 
+                        'selesai': 'bg-success' 
+                    };
+                    
+                    return '<span class="badge ' + (badgeClass[data] || 'bg-secondary') + '">' + 
+                           data.charAt(0).toUpperCase() + data.slice(1) + '</span>';
                 }},
                 { "data": "anotasi_url", "orderable": false, "className": "text-center", "render": function(data) {
-                    return data ? '<i class="fas fa-map-marked-alt text-success" title="Ada denah"></i>' : '<i class="fas fa-map text-muted" title="Tidak ada denah"></i>';
+                    return data ? '<i class="fas fa-map-marked-alt text-success" title="Ada denah"></i>' : 
+                                  '<i class="fas fa-map text-muted" title="Tidak ada denah"></i>';
                 }},
                 { "data": "active_st", "className": "text-center", "render": function(data) {
-                    return data == 1 ? '<i class="fas fa-check-circle text-success"></i>' : '<i class="fas fa-times-circle text-danger"></i>';
+                    return data == 1 ? '<i class="fas fa-check-circle text-success"></i>' : 
+                                      '<i class="fas fa-times-circle text-danger"></i>';
                 }}
             ],
-             "createdRow": function(row, data, dataIndex) {
+            "createdRow": function(row, data, dataIndex) {
                 if (data.active_st == 0) {
                     $(row).addClass('bg-pink');
                 }
@@ -66,7 +94,11 @@
         var modal = $(this);
         // Inisialisasi plugin dasar di dalam modal
         modal.find('.chosen-select').select2({ theme: "bootstrap-5", dropdownParent: modal });
-        modal.find('.datepicker-notauto').daterangepicker({ singleDatePicker: true, showDropdowns: true, locale: { format: 'DD-MM-YYYY' }});
+        modal.find('.datepicker-notauto').daterangepicker({ 
+            singleDatePicker: true, 
+            showDropdowns: true, 
+            locale: { format: 'DD-MM-YYYY' }
+        });
         
         const lokasiSelect = modal.find('#lokasi-select');
         if (!lokasiSelect.length) return;

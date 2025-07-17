@@ -81,7 +81,7 @@ class JadwalPmModel extends Model
             // 1. Siapkan array untuk menampung data yang akan disimpan
             $dataToSave = [
                 'asset_id'      => $post['asset_id'],
-                'frekuensi'     => $post['frekuensi'],
+                'frekuensi'     => $post['frekuensi'] ?? 'Bulanan', // Berikan nilai default
                 'jenis'         => $post['jenis'],
                 'status'        => $post['status'],
                 'deskripsi'     => $post['deskripsi'] ?? null,

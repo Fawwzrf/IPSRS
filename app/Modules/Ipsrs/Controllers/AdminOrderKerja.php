@@ -39,8 +39,22 @@ class AdminOrderKerja extends MyController
         
         if ($id == null) {
             // Form baru
-            // Ambil jadwal PM yang tersedia (bukan dibatalkan)
-            $d['all_jadwal_pm'] = OrderKerjaModel::getAvailableJadwalPM();
+            // Pastikan semua field yang diperlukan tersedia
+            $sql = "SELECT jp.*, a.asset_nm, 
+                    COALESCE(jp.frekuensi, 'N/A') as frekuensi, 
+                    COALESCE(jp.jenis, 'N/A') as jenis
+                    FROM jadwal_pm jp 
+                    JOIN asset a ON jp.asset_id = a.asset_id 
+                    WHERE jp.deleted_st = 0 
+                    AND jp.active_st = 1
+                    AND jp.status != 'dibatalkan'
+                    AND jp.jadwal_pm_id NOT IN (
+                        SELECT DISTINCT jadwal_pm_id FROM order_kerja 
+                        WHERE jadwal_pm_id IS NOT NULL 
+                        AND deleted_st = 0
+                        AND status NOT IN ('selesai', 'dibatalkan')
+                    )";
+            $d['all_jadwal_pm'] = DbModel::rawData('result_array', $sql);
             
             // Ambil permintaan komplain yang belum dibuatkan order kerja
             $sql = "SELECT pk.*, a.asset_nm 
@@ -57,12 +71,13 @@ class AdminOrderKerja extends MyController
             $d['all_komplain'] = DbModel::rawData('result_array', $sql);
             $d['assigned_teknisi'] = [];
         } else {
-            // Form edit
+            // Form edit - pastikan data jadwal_pm lengkap jika ada
             $d['main'] = $this->model->getById($id);
             
-            // Data jadwal PM jika ada
             if (!empty($d['main']['jadwal_pm_id'])) {
-                $sql = "SELECT jp.*, a.asset_nm 
+                $sql = "SELECT jp.*, a.asset_nm, 
+                        COALESCE(jp.frekuensi, 'N/A') as frekuensi, 
+                        COALESCE(jp.jenis, 'N/A') as jenis
                         FROM jadwal_pm jp 
                         JOIN asset a ON jp.asset_id = a.asset_id 
                         WHERE jp.jadwal_pm_id = ?";

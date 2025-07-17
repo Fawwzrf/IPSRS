@@ -9,11 +9,13 @@
                 <div class="col-lg-9">
                     <select class="form-select chosen-select" name="jadwal_pm_id" id="jadwal_pm_id">
                         <option value="">- Pilih Jadwal PM (jika ada) -</option>
-                        @foreach($all_jadwal_pm as $jadwal)
-                            <option value="{{ $jadwal['jadwal_pm_id'] }}" @if(@$main['jadwal_pm_id'] == $jadwal['jadwal_pm_id']) selected @endif>
-                                {{ $jadwal['jadwal_pm_id'] }} - {{ $jadwal['asset_nm'] }} ({{ $jadwal['jenis'] }} - {{ $jadwal['frekuensi'] }})
-                            </option>
-                        @endforeach
+                        @if(isset($all_jadwal_pm) && !empty($all_jadwal_pm))
+                            @foreach($all_jadwal_pm as $jadwal)
+                                <option value="{{ $jadwal['jadwal_pm_id'] }}" @if(@$main['jadwal_pm_id'] == $jadwal['jadwal_pm_id']) selected @endif>
+                                    {{ $jadwal['jadwal_pm_id'] }} - {{ $jadwal['asset_nm'] }} ({{ $jadwal['jenis'] }} - {{ $jadwal['frekuensi'] }})
+                                </option>
+                            @endforeach
+                        @endif
                     </select>
                 </div>
             </div>
