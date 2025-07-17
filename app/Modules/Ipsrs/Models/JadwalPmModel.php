@@ -27,56 +27,58 @@ class JadwalPmModel extends Model
     static function loadDatatables()
     {
         self::initSession();
+        
+        $where = "1 = 1 ";
 
-        // 1. Siapkan query utama TANPA klausa WHERE
-        $query = "SELECT
-                    pm.jadwal_pm_id,
-                    a.asset_nm,
-                    pm.frekuensi,
-                    pm.jenis,
-                    pm.tgl_terakhir,
-                    pm.tgl_berikutnya,
-                    pm.status,
-                    pm.active_st
-                  FROM jadwal_pm pm
-                  LEFT JOIN asset a ON pm.asset_id = a.asset_id";
-
-        // 2. Kolom yang bisa dicari oleh Datatables
-        $searchableColumns = ['a.asset_nm', 'pm.frekuensi', 'pm.jenis', 'pm.status'];
-
-        // 3. Kumpulkan kondisi WHERE dalam bentuk array key-value
-        $whereConditions = [];
-        $whereConditions['pm.deleted_st'] = 0; // Kondisi dasar
-
-        if (!empty(self::$nav_sess['search']['data']['asset_id'])) {
-            $whereConditions['pm.asset_id'] = self::$nav_sess['search']['data']['asset_id'];
-        }
-        if (!empty(self::$nav_sess['search']['data']['status'])) {
-            $whereConditions['pm.status'] = self::$nav_sess['search']['data']['status'];
-        }
-
-        // 4. Kondisi pencarian 'term' sebagai string SQL murni (jika ada)
-        $whereString = '';
-        if (!empty(self::$nav_sess['search']['data']['term'])) {
-            $searchTerm = strtolower(addslashes(self::$nav_sess['search']['data']['term']));
-            $whereString = " (LOWER(a.asset_nm) LIKE '%{$searchTerm}%' OR LOWER(pm.jenis) LIKE '%{$searchTerm}%') ";
+        // Filter berdasarkan aset
+        if (@self::$nav_sess['search']['data']['asset_id'] != '') {
+            $where .= " AND pm.asset_id = '" . @self::$nav_sess['search']['data']['asset_id'] . "' ";
         }
         
-        // 5. Panggil datatablesQuery dengan parameter yang benar
-        $result = DbModel::datatablesQuery($query, $searchableColumns, $whereConditions, $whereString);
+        // Filter berdasarkan status
+        if (@self::$nav_sess['search']['data']['status'] != '') {
+            $where .= " AND pm.status = '" . @self::$nav_sess['search']['data']['status'] . "' ";
+        }
         
+        // Filter berdasarkan pencarian
+        if (@self::$nav_sess['search']['data']['term'] != '') {
+            $where .= " AND (LOWER(a.asset_nm) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%' 
+                      OR LOWER(pm.jenis) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%'
+                      OR LOWER(pm.frekuensi) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%') ";
+        }
+
+        // Gunakan subquery dengan alias seperti pada modul acuan
+        $query = "SELECT * FROM (
+                    SELECT 
+                      pm.jadwal_pm_id,
+                      a.asset_nm,
+                      pm.frekuensi,
+                      pm.jenis,
+                      pm.tgl_terakhir,
+                      pm.tgl_berikutnya,
+                      pm.status,
+                      pm.active_st
+                    FROM 
+                      jadwal_pm pm
+                      LEFT JOIN asset a ON pm.asset_id = a.asset_id
+                    WHERE $where AND pm.deleted_st = 0
+                ) x ";
+                
+        $search = ['asset_nm', 'frekuensi', 'jenis', 'status'];
+        $where = null;
+        $isWhere = null;
+        
+        $result = DbModel::datatablesQuery($query, $search, $where, $isWhere);
         return response()->json($result);
     }
-    public static function saveData($post)
+
+    public static function saveData($post, $id = null)
     {
         // Memulai transaksi database untuk memastikan integritas data
         DB::beginTransaction();
 
         try {
-            // 1. Ambil ID dari data post. Jika kosong, berarti ini adalah record baru.
-            $id = $post['jadwal_pm_id'] ?? null;
-
-            // 2. Siapkan array untuk menampung data yang akan disimpan.
+            // 1. Siapkan array untuk menampung data yang akan disimpan
             $dataToSave = [
                 'asset_id'      => $post['asset_id'],
                 'frekuensi'     => $post['frekuensi'],
@@ -85,18 +87,15 @@ class JadwalPmModel extends Model
                 'deskripsi'     => $post['deskripsi'] ?? null,
                 'estimasi_menit' => $post['estimasi_menit'] ?? 0,
                 'active_st'     => $post['active_st'] ?? 1,
-                // Meta data untuk tracking
-                'updated_by'    => session('user_name'),
-                'updated_at'    => now()
             ];
 
-            // 3. Kalkulasi dan format tanggal secara otomatis
-            $tglTerakhir = Carbon::createFromFormat('d-m-Y', $post['tgl_terakhir']);
-            $dataToSave['tgl_terakhir'] = $tglTerakhir->format('Y-m-d'); // Simpan format Y-m-d ke DB
+            // 2. Konversi tanggal ke format database
+            $dataToSave['tgl_terakhir'] = to_date($post['tgl_terakhir'], '-', 'date');
 
+            // 3. Kalkulasi tanggal berikutnya
+            $tglTerakhir = Carbon::createFromFormat('Y-m-d', $dataToSave['tgl_terakhir']);
             $tglBerikutnya = clone $tglTerakhir;
 
-            // Menggunakan enum dari file .sql Anda
             switch ($post['frekuensi']) {
                 case 'Harian':
                     $tglBerikutnya->addDay();
@@ -109,7 +108,7 @@ class JadwalPmModel extends Model
                     break;
                 case 'Kuartalan':
                     $tglBerikutnya->addMonths(3);
-                    break; // Sesuai file .sql
+                    break;
                 case 'Tahunan':
                     $tglBerikutnya->addYear();
                     break;
@@ -118,31 +117,45 @@ class JadwalPmModel extends Model
                     break;
             }
 
-            // Masukkan tanggal berikutnya ke array data jika berhasil dihitung
             $dataToSave['tgl_berikutnya'] = $tglBerikutnya ? $tglBerikutnya->format('Y-m-d') : null;
 
-            // 4. Proses Insert atau Update
-            if (is_null($id)) {
-                // INSERT (Data Baru)
-                // Generate ID baru & tambahkan meta data 'created'
-                $dataToSave['jadwal_pm_id'] = self::generateId();
+            // 4. Proses simpan data
+            if ($id == null) {
+                // Insert mode
+                if (empty($post['jadwal_pm_id'])) {
+                    $dataToSave['jadwal_pm_id'] = DbModel::getId('jadwal_pm', 2, 12);
+                } else {
+                    $dataToSave['jadwal_pm_id'] = $post['jadwal_pm_id'];
+                }
+                
                 $dataToSave['created_by'] = session('user_name');
                 $dataToSave['created_at'] = now();
-
-                DB::table('jadwal_pm')->insert($dataToSave);
+                
+                $result = DB::table('jadwal_pm')->insert($dataToSave);
             } else {
-                // UPDATE (Data Lama)
-                DB::table('jadwal_pm')->where('jadwal_pm_id', $id)->update($dataToSave);
+                // Update mode
+                $dataToSave['updated_by'] = session('user_name');
+                $dataToSave['updated_at'] = now();
+                
+                $result = DB::table('jadwal_pm')
+                    ->where('jadwal_pm_id', $id)
+                    ->update($dataToSave);
             }
 
-            // Jika semua proses berhasil, commit transaksi
+            // Commit transaksi jika berhasil
             DB::commit();
-            return ['success' => true, 'msg' => 'Data jadwal PM berhasil disimpan!'];
+            
+            return true;
         } catch (\Exception $e) {
-            // Jika terjadi error, batalkan semua query dalam transaksi
+            // Rollback transaksi jika terjadi error
             DB::rollBack();
-            // Kembalikan pesan error yang informatif untuk debugging
-            return ['success' => false, 'msg' => 'Gagal menyimpan data: ' . $e->getMessage()];
+            
+            // Log error untuk debugging
+            \Log::error('Error saving jadwal_pm: ' . $e->getMessage());
+            
+            return false;
         }
     }
+
+    // Method lainnya tetap dipertahankan...
 }

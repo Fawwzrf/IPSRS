@@ -77,17 +77,6 @@
             ],
         });
 
-        $('#search').on('submit', function(e) {
-            e.preventDefault();
-            tabel.ajax.reload();
-        });
-
-
-        window._searchReset = function() {
-            $('#search')[0].reset();
-            $('.chosen-select').val('').trigger('change');
-            tabel.ajax.reload();
-        };
     });
     $('body').on('change', '#denah_url', function(event) {
         var modalBody = $(this).closest('.modal-body');
