@@ -9,15 +9,6 @@ use Illuminate\Support\Facades\DB;
 
 class LogKerjaModel extends Model
 {
-    protected static $nav_sess;
-
-    protected static function initSession()
-    {
-        if (is_null(self::$nav_sess)) {
-            self::$nav_sess = session(request('n'));
-        }
-    }
-
     public function saveData($order_kerja_id, $data)
     {
         $pegawai_id = Auth::id();
@@ -199,7 +190,9 @@ class LogKerjaModel extends Model
      */
     static function loadDatatables()
     {
-        self::initSession();
+        if (is_null(self::$nav_sess)) {
+            self::$nav_sess = session(request('n'));
+        }
 
         $where = "1 = 1 ";
 

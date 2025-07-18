@@ -6,8 +6,10 @@ use App\Http\Controllers\MyController;
 use App\Modules\App\Models\DbModel;
 use App\Modules\Ipsrs\Models\OrderKerjaModel;
 use App\Modules\Ipsrs\Models\LogKerjaModel;
+use App\Modules\Ipsrs\Models\LogStatusOrderKerjaModel; // Tambahkan use statement ini
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB; // Pastikan DB di-import
 
 class AdminOrderKerja extends MyController
 {
@@ -242,4 +244,83 @@ class AdminOrderKerja extends MyController
         return OrderKerjaModel::loadDatatables();
     }
     
+    /**
+     * Update status order kerja
+     * 
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateStatus(Request $request)
+    {
+        $order_kerja_id = $request->input('order_kerja_id');
+        $status_baru = $request->input('status_baru');
+        $keterangan = $request->input('keterangan');
+        
+        try {
+            DB::beginTransaction();
+            
+            // Ambil status lama
+            $query = "SELECT status FROM order_kerja WHERE order_kerja_id = ?";
+            $result = DB::select($query, [$order_kerja_id]);
+            
+            if (empty($result)) {
+                return response()->json(['status' => false, 'message' => 'Order kerja tidak ditemukan']);
+            }
+            
+            $status_lama = $result[0]->status;
+            $pegawai_id = session('pegawai_id');
+            
+            // Update status order kerja
+            $updateQuery = "UPDATE order_kerja SET 
+                            status = ?,
+                            updated_at = ?,
+                            updated_by = ?
+                            WHERE order_kerja_id = ?";
+            
+            DB::update($updateQuery, [
+                $status_baru, 
+                date('Y-m-d H:i:s'), 
+                session('user_id'), 
+                $order_kerja_id
+            ]);
+            
+            // Catat perubahan status ke log
+            $logStatusModel = new LogStatusOrderKerjaModel();
+            $result = $logStatusModel->logPerubahanStatus(
+                $order_kerja_id,
+                $status_lama,
+                $status_baru,
+                $pegawai_id,
+                $keterangan
+            );
+            
+            if (!$result['status']) {
+                DB::rollBack();
+                return response()->json($result);
+            }
+            
+            DB::commit();
+            return response()->json(['status' => true, 'message' => 'Status berhasil diperbarui']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['status' => false, 'message' => 'Gagal memperbarui status: ' . $e->getMessage()]);
+        }
+    }
+    
+    /**
+     * Menampilkan form update status
+     * 
+     * @param string $order_kerja_id ID order kerja
+     * @return \Illuminate\Http\Response
+     */
+    public function update_status_form($order_kerja_id)
+    {
+        $d['order_kerja'] = DbModel::getData('order_kerja', ['order_kerja_id' => $order_kerja_id]);
+        
+        if (!$d['order_kerja']) {
+            return '<div class="alert alert-danger">Data Order Kerja tidak ditemukan.</div>';
+        }
+        
+        return $this->renderView('ipsrs::admin.pekerjaan.order_kerja.update_status_modal', $d);
+    }
 }
