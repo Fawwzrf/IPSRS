@@ -26,14 +26,14 @@ class OrderKerjaModel extends Model
     static function loadDatatables()
     {
         self::initSession();
-        
+
         $where = "1 = 1 ";
-        
+
         // Filter berdasarkan jenis
         if (@self::$nav_sess['search']['data']['jenis'] != '') {
             $where .= " AND ok.jenis = '" . @self::$nav_sess['search']['data']['jenis'] . "' ";
         }
-        
+
         // Filter berdasarkan status
         if (@self::$nav_sess['search']['data']['status'] != '') {
             $where .= " AND ok.status = '" . @self::$nav_sess['search']['data']['status'] . "' ";
@@ -41,7 +41,7 @@ class OrderKerjaModel extends Model
             // Filter default: status bukan dibatalkan jika tidak ada filter status
             $where .= " AND ok.status != 'dibatalkan' ";
         }
-        
+
         // Filter berdasarkan pencarian
         if (@self::$nav_sess['search']['data']['term'] != '') {
             $term = @strtolower(self::$nav_sess['search']['data']['term']);
@@ -70,13 +70,13 @@ class OrderKerjaModel extends Model
                       LEFT JOIN asset a2 ON jp.asset_id = a2.asset_id
                     WHERE $where AND ok.deleted_st = 0
                 ) x";
-                
+
         $search = ['order_kerja_id', 'asset_nm', 'deskripsi_sumber', 'jenis', 'status', 'prioritas'];
         $where = null;
         $isWhere = null;
-        
+
         $result = DbModel::datatablesQuery($query, $search, $where, $isWhere);
-        
+
         // Tambahkan data Tim Teknisi secara manual setelah mendapatkan data utama
         if (!empty($result['data'])) {
             foreach ($result['data'] as $key => $row) {
@@ -94,7 +94,7 @@ class OrderKerjaModel extends Model
                 $result['data'][$key]['tim_teknisi'] = $teknisiData['tim_teknisi'] ?? 'Belum ditugaskan';
             }
         }
-        
+
         return response()->json($result);
     }
 
@@ -104,101 +104,181 @@ class OrderKerjaModel extends Model
         return DbModel::getData('order_kerja', ['order_kerja_id' => $id]);
     }
 
-    public static function saveData($id, $post_data)
+    public static function saveData($id = null, $d = [])
     {
-        // Validasi Input Utama
-        if (empty($post_data['jadwal_pm_id']) && empty($post_data['permintaan_id'])) {
-            return [
-                'status' => false,
-                'message' => 'Pilih salah satu sumber pekerjaan (Jadwal PM atau Komplain).',
-                'mode' => 'validation'
-            ];
-        }
-        
-        if (empty($post_data['pegawai_ids'])) {
-            return [
-                'status' => false,
-                'message' => 'Pilih minimal satu teknisi untuk ditugaskan.',
-                'mode' => 'validation'
-            ];
-        }
-
-        // Memulai Transaksi Database untuk keamanan data
-        DB::beginTransaction();
-
         try {
-            // Mengambil ID order kerja atau membuat yang baru
-            $is_insert = ($id == null);
-            $order_kerja_id = $id ?? DbModel::getId('order_kerja', 2, 12);
+            \Log::info('OrderKerjaModel::saveData input', [
+                'id' => $id,
+                'data' => array_keys($d)
+            ]);
 
-            // Menyiapkan data untuk tabel 'order_kerja'
-            $data_ok = [
-                'order_kerja_id' => $order_kerja_id,
-                'permintaan_id'  => $post_data['permintaan_id'] ?? null,
-                'jadwal_pm_id'   => $post_data['jadwal_pm_id'] ?? null,
-                'tgl_dibuat'     => to_date($post_data['tgl_dibuat'], '-', 'date'),
-                'tgl_target_selesai' => !empty($post_data['tgl_target_selesai']) ? to_date($post_data['tgl_target_selesai'], '-', 'date') : null,
-                'prioritas'      => $post_data['prioritas'],
-                'status'         => $post_data['status'],
-                'estimasi_biaya' => $post_data['estimasi_biaya'] ?? 0,
-                'catatan'        => $post_data['catatan'] ?? null,
-                'jenis'          => !empty($post_data['jadwal_pm_id']) ? 'pemeliharaan' : 'perbaikan',
-            ];
+            $result = ['status' => false, 'message' => '', 'mode' => ''];
+            $mode = !empty($id) ? 'update' : 'insert';
+            $result['mode'] = $mode;
 
-            // Menggunakan helper DbModel untuk insert atau update
-            if ($is_insert) {
-                $data_ok['created_by'] = session('user_name');
-                $data_ok['created_at'] = now();
-                DbModel::insertData('order_kerja', $data_ok);
-            } else {
-                $data_ok['updated_by'] = session('user_name');
-                $data_ok['updated_at'] = now();
-                DbModel::updateData('order_kerja', $data_ok, ['order_kerja_id' => $id]);
-            }
+            DB::beginTransaction();
 
-            // Proses penugasan teknisi
-            // Hapus penugasan lama terlebih dahulu untuk menghindari duplikat saat edit
-            DB::table('penugasan_teknisi')->where('order_kerja_id', $order_kerja_id)->update(['deleted_st' => 1]);
+            if ($mode == 'insert') {
+                // Generate order_kerja_id baru jika tidak ada
+                if (empty($d['order_kerja_id'])) {
+                    $d['order_kerja_id'] = self::generateOrderKerjaId();
+                }
 
-            // Loop untuk membuat penugasan baru
-            foreach ($post_data['pegawai_ids'] as $pegawai_id) {
-                $penugasan_data = [
-                    'penugasan_id'    => DbModel::getId('penugasan_teknisi', 2, 12),
-                    'order_kerja_id'  => $order_kerja_id,
-                    'pegawai_id'      => $pegawai_id,
-                    'status'          => 'ditugaskan', // Status default untuk penugasan baru
-                    'created_by'      => session('user_name'),
-                    'created_at'      => now(),
+                // PENTING: Cek apakah order sudah ada untuk mencegah double insert
+                $existingOrder = DB::table('order_kerja')
+                    ->where('order_kerja_id', $d['order_kerja_id'])
+                    ->first();
+
+                if ($existingOrder) {
+                    // Order sudah ada, kembalikan sukses dengan order_id yang sama
+                    \Log::info('OrderKerjaModel: Order already exists', ['order_kerja_id' => $d['order_kerja_id']]);
+
+                    DB::commit();
+                    $result['status'] = true;
+                    $result['order_kerja_id'] = $d['order_kerja_id'];
+                    $result['message'] = 'Order kerja sudah ada';
+                    return $result;
+                }
+
+                // Validasi check constraint chk_order_source
+                if (empty($d['jadwal_pm_id']) && empty($d['permintaan_id'])) {
+                    throw new \Exception("Order kerja harus memiliki jadwal PM atau permintaan");
+                }
+
+                // Daftar field yang valid sesuai struktur tabel sebenarnya
+                $validFields = [
+                    'order_kerja_id',
+                    'jadwal_pm_id',
+                    'permintaan_id',
+                    'jenis',
+                    'tgl_dibuat',
+                    'tgl_target_selesai',
+                    'tgl_selesai',
+                    'prioritas',
+                    'estimasi_biaya',
+                    'catatan',
+                    'status',
+                    'created_at',
+                    'created_by',
+                    'updated_at',
+                    'updated_by',
+                    'deleted_st',
+                    'active_st'
                 ];
-                DB::table('penugasan_teknisi')->insert($penugasan_data);
+
+                // Buat array data baru yang hanya berisi field valid
+                $dataToInsert = [];
+                foreach ($validFields as $field) {
+                    if (isset($d[$field])) {
+                        // Format tanggal jika perlu
+                        if (in_array($field, ['tgl_dibuat', 'tgl_target_selesai', 'tgl_selesai']) && !empty($d[$field])) {
+                            // Konversi format tanggal DD-MM-YYYY ke YYYY-MM-DD
+                            if (strpos($d[$field], '-') !== false) {
+                                $dateParts = explode('-', $d[$field]);
+                                if (count($dateParts) === 3 && strlen($dateParts[2]) === 4) {
+                                    $dataToInsert[$field] = $dateParts[2] . '-' . $dateParts[1] . '-' . $dateParts[0];
+                                } else {
+                                    $dataToInsert[$field] = $d[$field];
+                                }
+                            } else {
+                                $dataToInsert[$field] = $d[$field];
+                            }
+                        } else {
+                            $dataToInsert[$field] = $d[$field];
+                        }
+                    }
+                } // END OF FOREACH - PENTING: Jangan taruh kode lain dalam foreach
+
+                // Jika ada deskripsi, pindahkan ke catatan
+                if (isset($d['deskripsi']) && !isset($dataToInsert['catatan'])) {
+                    $dataToInsert['catatan'] = $d['deskripsi'];
+                }
+
+                // Set nilai default untuk kolom wajib
+                $dataToInsert['tgl_dibuat'] = $dataToInsert['tgl_dibuat'] ?? date('Y-m-d');
+                $dataToInsert['status'] = $dataToInsert['status'] ?? 'baru';
+                $dataToInsert['created_at'] = date('Y-m-d H:i:s');
+                $dataToInsert['created_by'] = session('nama_user') ?? session('nama_pegawai') ?? 'system';
+
+                // Pastikan jadwal_pm_id ada dalam dataToInsert jika ada di input
+                if (isset($d['jadwal_pm_id']) && !isset($dataToInsert['jadwal_pm_id'])) {
+                    $dataToInsert['jadwal_pm_id'] = $d['jadwal_pm_id'];
+                }
+
+                // Set jenis berdasarkan sumber order kerja
+                if (!isset($dataToInsert['jenis'])) {
+                    if (!empty($dataToInsert['jadwal_pm_id'])) {
+                        $dataToInsert['jenis'] = 'pemeliharaan';
+                    } elseif (!empty($dataToInsert['permintaan_id'])) {
+                        $dataToInsert['jenis'] = 'perbaikan';
+                    }
+                }
+
+                // Insert ke tabel order_kerja - HANYA SEKALI
+                \Log::info('OrderKerjaModel: Inserting filtered data', ['data' => $dataToInsert]);
+
+                $insert = DbModel::insertData('order_kerja', $dataToInsert);
+                if (!$insert) {
+                    throw new \Exception("Gagal menyimpan order kerja");
+                }
+
+                $order_kerja_id = $dataToInsert['order_kerja_id'];
+
+                // Jika ada teknisi yang dipilih, insert ke penugasan_teknisi
+                if (!empty($d['teknisi']) && is_array($d['teknisi'])) {
+                    foreach ($d['teknisi'] as $pegawai_id) {
+                        $penugasan_id = self::generatePenugasanId();
+
+                        $penugasan = [
+                            'penugasan_id' => $penugasan_id,
+                            'order_kerja_id' => $order_kerja_id,
+                            'pegawai_id' => $pegawai_id,
+                            'status' => 'ditugaskan',
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'created_by' => session('nama_user') ?? session('nama_pegawai') ?? 'system'
+                        ];
+
+                        \Log::info('OrderKerjaModel: Inserting penugasan', ['pegawai_id' => $pegawai_id]);
+                        $insertPenugasan = DbModel::insertData('penugasan_teknisi', $penugasan);
+
+                        if (!$insertPenugasan) {
+                            throw new \Exception("Gagal menyimpan penugasan teknisi");
+                        }
+                    }
+
+                    // Update status order kerja menjadi 'ditugaskan'
+                    DbModel::updateData(
+                        'order_kerja',
+                        ['status' => 'ditugaskan'],
+                        ['order_kerja_id' => $order_kerja_id]
+                    );
+                }
+
+                // PENTING: Commit setelah semua operasi database selesai
+                DB::commit();
+
+                // Baru log setelah semua proses selesai dan berhasil
+                \Log::info('OrderKerjaModel: Insert berhasil', ['order_kerja_id' => $order_kerja_id]);
+
+                // Set status hasil
+                $result['status'] = true;
+                $result['order_kerja_id'] = $order_kerja_id;
+                $result['message'] = 'Order kerja berhasil dibuat';
+            } else {
+                // Kode untuk update order kerja disini
             }
 
-            // Update status sumber pekerjaan
-            if (!empty($post_data['jadwal_pm_id'])) {
-                DB::table('jadwal_pm')
-                    ->where('jadwal_pm_id', $post_data['jadwal_pm_id'])
-                    ->update(['status' => 'diproses']);
-            }
-            if (!empty($post_data['permintaan_id'])) {
-                DB::table('permintaan_komplain')
-                    ->where('permintaan_id', $post_data['permintaan_id'])
-                    ->update(['status' => 'diproses']);
-            }
-
-            // Jika semua proses berhasil, simpan perubahan secara permanen
-            DB::commit();
-            return [
-                'status' => true,
-                'message' => 'Order Kerja berhasil disimpan.',
-                'mode' => $is_insert ? 'insert' : 'update'
-            ];
+            return $result;
         } catch (\Exception $e) {
             DB::rollBack();
-            return [
-                'status' => false,
-                'message' => 'Gagal menyimpan data: ' . $e->getMessage(),
-                'mode' => $id ? 'update' : 'insert'
-            ];
+            \Log::error('Error in OrderKerjaModel::saveData: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+
+            $result['status'] = false;
+            $result['message'] = $e->getMessage();
+            return $result;
         }
     }
 
@@ -211,7 +291,7 @@ class OrderKerjaModel extends Model
             DB::table('penugasan_teknisi')
                 ->where('order_kerja_id', $id)
                 ->update(['deleted_st' => 1, 'updated_by' => session('user_name'), 'updated_at' => now()]);
-            
+
             // Soft delete order kerja
             DB::table('order_kerja')
                 ->where('order_kerja_id', $id)
@@ -225,7 +305,7 @@ class OrderKerjaModel extends Model
             return false;
         }
     }
-    
+
     // Tambahkan method untuk mengambil jadwal PM yang tersedia (tidak dibatalkan)
     public static function getAvailableJadwalPM()
     {
@@ -252,7 +332,80 @@ class OrderKerjaModel extends Model
                     )
                 ) x
                 ORDER BY x.tgl_berikutnya ASC";
-        
+
         return DbModel::rawData('result_array', $sql);
+    }
+
+    /**
+     * Generate ID unik untuk order kerja baru
+     * Format: 12 digit angka
+     * 
+     * @return string ID order kerja yang baru
+     */
+    public static function generateOrderKerjaId()
+    {
+        try {
+            // Ambil ID terakhir dari database
+            $lastId = DB::table('order_kerja')
+                ->orderBy('order_kerja_id', 'desc')
+                ->value('order_kerja_id');
+
+            \Log::info('Last order_kerja_id', ['id' => $lastId]);
+
+            // Jika belum ada data, mulai dari 1
+            if (!$lastId) {
+                $nextId = '000000000001';
+            } else {
+                // Ambil angka dari ID terakhir dan tambahkan 1
+                $lastNumber = intval($lastId);
+                $nextNumber = $lastNumber + 1;
+
+                // Format menjadi 12 digit dengan leading zeros
+                $nextId = str_pad($nextNumber, 12, '0', STR_PAD_LEFT);
+            }
+
+            \Log::info('Generated new order_kerja_id', ['id' => $nextId]);
+            return $nextId;
+        } catch (\Exception $e) {
+            \Log::error('Error generating order_kerja_id: ' . $e->getMessage());
+            // Fallback: gunakan timestamp + random number
+            return date('YmdHis') . rand(100, 999);
+        }
+    }
+
+    /**
+     * Generate penugasan_id with proper format (12 digits with leading zeros)
+     * 
+     * @return string Formatted penugasan_id
+     */
+    public static function generatePenugasanId()
+    {
+        try {
+            // Get the last penugasan_id from database
+            $lastId = DB::table('penugasan_teknisi')
+                ->orderBy('penugasan_id', 'desc')
+                ->value('penugasan_id');
+
+            \Log::info('Last penugasan_id', ['id' => $lastId]);
+
+            // If no records exist yet, start with 1
+            if (!$lastId) {
+                $nextId = '000000000001';
+            } else {
+                // Extract the numeric part and increment
+                $lastNumber = intval($lastId);
+                $nextNumber = $lastNumber + 1;
+
+                // Format as 12 digits with leading zeros
+                $nextId = str_pad($nextNumber, 12, '0', STR_PAD_LEFT);
+            }
+
+            \Log::info('Generated new penugasan_id', ['id' => $nextId]);
+            return $nextId;
+        } catch (\Exception $e) {
+            \Log::error('Error generating penugasan_id: ' . $e->getMessage());
+            // Fallback: simple counter with leading zeros
+            return '000000' . time() % 1000000;
+        }
     }
 }

@@ -113,8 +113,9 @@
                         <div class="tab-pane" id="tabs-selesai">
                             <div class="list-group">
                                 @forelse($list_tugas_selesai as $tugas)
-                                    <a href="{{ url('master/asset/detail/' . $tugas['asset_id']) }}?n={{ request('n') }}"
-                                        class="list-group-item list-group-item-action">
+                                <a href="javascript:void(0)"
+                                onclick="_modal(event, {uri: '{{ url('ipsrs/teknisitugas/form_detail_modal/' . $tugas['penugasan_id']) }}', size: 'modal-lg', title: 'Detail Tugas'})"
+                                class="list-group-item list-group-item-action">
                                         <div class="d-flex w-100 justify-content-between">
                                             <strong class="d-block">{{ $tugas['asset_nm'] }}</strong>
                                             <small class="text-success">

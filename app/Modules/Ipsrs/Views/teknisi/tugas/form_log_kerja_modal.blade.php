@@ -1,96 +1,131 @@
-@include ('ipsrs::admin.pekerjaan.log_kerja._js')
+<div class="modal-header">
+    <h5 class="modal-title">Tambah Log Kerja</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
 
-{{-- PERBAIKAN: Menggunakan form_act untuk action --}}
-<form id="form-log-kerja" action="{{ $form_act }}" method="post" autocomplete="off" enctype="multipart/form-data">
-    @csrf
-    <input type="hidden" name="action" value="save_log_kerja">
-    <!-- Tambahkan di form_modal.blade.php -->
-    <input type="hidden" name="asset_id" value="{{ $asset_id }}">
-    <input type="hidden" name="n" value="{{ request('n') }}">
-
-    <div class="card-body">
-        <div class="alert alert-info">
-            Melaporkan untuk Order Kerja: <strong>{{ $order_kerja['order_kerja_id'] }}</strong>
+<div class="modal-body">
+    <div id="form-message"></div>
+    
+    <form id="form-log-kerja">
+        @csrf
+        <input type="hidden" name="order_kerja_id" value="{{ $order_kerja_id }}">
+        <input type="hidden" name="asset_id" value="{{ $asset_id }}">
+        <input type="hidden" name="n" value="{{ $n_param ?? '' }}">
+        
+        <div class="mb-3">
+            <label class="form-label required">Diagnosa</label>
+            <textarea class="form-control" name="diagnosa" rows="3" required></textarea>
         </div>
-
-        <fieldset class="border p-2 rounded mb-3">
-            <legend class="float-none w-auto px-2 fs-6 fw-bold">Detail Laporan</legend>
-            <div class="mb-3">
-                <label class="form-label required">Diagnosa Masalah</label>
-                <textarea name="diagnosa" class="form-control" rows="3" required>{{ @$log_kerja['diagnosa'] }}</textarea>
-            </div>
-            <div class="mb-3">
-                <label class="form-label required">Tindakan yang Dilakukan</label>
-                <textarea name="tindakan" class="form-control" rows="4" required>{{ @$log_kerja['tindakan'] }}</textarea>
-            </div>
-            <div class="mb-3">
-                <label class="form-label required">Hasil Pekerjaan</label>
-                <select class="form-select" name="hasil" required>
-                    <option value="">- Pilih Hasil -</option>
-                    <option value="berhasil" @if (@$log_kerja['hasil'] == 'berhasil') selected @endif>Berhasil</option>
-                    <option value="perlu_tindak_lanjut" @if (@$log_kerja['hasil'] == 'perlu_tindak_lanjut') selected @endif>Perlu Tindak
-                        Lanjut</option>
-                    <option value="tidak_berhasil" @if (@$log_kerja['hasil'] == 'tidak_berhasil') selected @endif>Tidak Berhasil
-                    </option>
-                </select>
-            </div>
-        </fieldset>
-
-        <fieldset class="border p-2 rounded mb-3">
-            <legend class="float-none w-auto px-2 fs-6 fw-bold">Penggunaan Sparepart</legend>
-            <div id="sparepart-repeater">
-                <div data-repeater-list="sparepart">
-                    <div data-repeater-item class="row mb-2 align-items-center">
-                        <div class="col-lg-7">
-                            <select name="id" class="form-select repeater-select">
-                                <option value="">- Pilih Sparepart -</option>
-                                @foreach ($all_sparepart as $sp)
-                                    <option value="{{ $sp['sparepart_id'] }}">{{ $sp['sparepart_nm'] }} (Stok:
-                                        {{ $sp['stok'] }})</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-lg-3">
-                            <input type="number" name="jumlah" class="form-control" placeholder="Jumlah"
-                                min="1" value="1">
-                        </div>
-                        <div class="col-lg-2">
-                            <button data-repeater-delete type="button" class="btn btn-danger btn-sm">Hapus</button>
-                        </div>
-                    </div>
-                </div>
-                <button data-repeater-create type="button" class="btn btn-outline-primary btn-sm mt-2">
-                    <i class="fas fa-plus"></i> Tambah Sparepart
-                </button>
-            </div>
-        </fieldset>
-
-        <fieldset class="border p-2 rounded mb-3">
-            <legend class="float-none w-auto px-2 fs-6 fw-bold">Biaya, Durasi & Bukti</legend>
-            <div class="row">
-                <div class="col-lg-6 mb-3">
-                    <label class="form-label">Durasi (Menit)</label>
-                    <input type="number" name="durasi_menit" class="form-control"
-                        value="{{ @$log_kerja['durasi_menit'] ?? 0 }}">
-                </div>
-                <div class="col-lg-6 mb-3">
-                    <label class="form-label">Biaya Lain-lain (Rp)</label>
-                    <input type="text" name="total_biaya" class="form-control autonumeric"
-                        value="{{ @$log_kerja['total_biaya'] ?? 0 }}">
+        
+        <div class="mb-3">
+            <label class="form-label required">Tindakan</label>
+            <textarea class="form-control" name="tindakan" rows="3" required></textarea>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label required">Hasil</label>
+                    <select name="hasil" class="form-select" required>
+                        <option value="">-- Pilih Hasil --</option>
+                        <option value="berhasil">Berhasil</option>
+                        <option value="perlu_tindak_lanjut">Perlu Tindak Lanjut</option>
+                        <option value="tidak_berhasil">Tidak Berhasil</option>
+                    </select>
                 </div>
             </div>
-            <div class="mb-3">
-                <label for="formFileMultiple" class="form-label">Unggah Foto Bukti</label>
-                <input class="form-control" type="file" name="fotos[]" multiple>
-            </div>
-        </fieldset>
-
-        <div class="row mt-3">
-            <div class="col-lg-12">
-                {{-- PERBAIKAN: Tombol kembali ke pola standar --}}
-                <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i> Simpan Laporan</button>
-                <button type="button" class="btn btn-link" data-bs-dismiss="modal">Batal</button>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Durasi (menit)</label>
+                    <input type="number" name="durasi_menit" class="form-control" min="1" value="0">
+                </div>
             </div>
         </div>
-    </div>
-</form>
+    </form>
+</div>
+
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+    <button type="button" class="btn btn-primary" onclick="submitLogKerja()">Simpan Log Kerja</button>
+</div>
+
+<script>
+function submitLogKerja() {
+    const form = document.getElementById('form-log-kerja');
+    
+    // Validasi form
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    // Disable button untuk mencegah double submit
+    const submitBtn = document.querySelector('.modal-footer .btn-primary');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+    
+    // Buat FormData dari form
+    const formData = new FormData(form);
+    const orderKerjaId = formData.get('order_kerja_id');
+    
+    // Ambil nilai-nilai untuk dikirim via URL parameter
+    const diagnosa = formData.get('diagnosa');
+    const tindakan = formData.get('tindakan');
+    const hasil = formData.get('hasil');
+    const durasi = formData.get('durasi_menit');
+    const assetId = formData.get('asset_id');
+    const nParam = formData.get('n');
+    
+    // Untuk debugging
+    console.log("Form data:", {
+        orderKerjaId, diagnosa, tindakan, hasil, durasi, assetId, nParam
+    });
+    
+    // Kirim data dengan fetch API (GET method)
+    fetch(`/ipsrs/teknisitugas/save_laporan/${orderKerjaId}?asset_id=${assetId}&diagnosa=${encodeURIComponent(diagnosa)}&tindakan=${encodeURIComponent(tindakan)}&hasil=${hasil}&durasi_menit=${durasi}&n=${nParam}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log("Response:", data);
+            
+            // Handle success
+            if (data.status === true) {
+                // Tampilkan pesan sukses
+                if (typeof _toast === 'function') {
+                    _toast('success', data.message || 'Log kerja berhasil disimpan');
+                } else {
+                    alert(data.message || 'Log kerja berhasil disimpan');
+                }
+                
+                // Tutup modal
+                $('.modal').modal('hide');
+                
+                // Redirect setelah simpan
+                if (data.data && data.data.redirect_url) {
+                    window.location.href = data.data.redirect_url;
+                } else {
+                    window.location.reload();
+                }
+            } else {
+                // Tampilkan pesan error
+                const errorMsg = data.message || 'Terjadi kesalahan';
+                if (typeof _toast === 'function') {
+                    _toast('error', errorMsg);
+                } else {
+                    document.getElementById('form-message').innerHTML = 
+                        `<div class="alert alert-danger">${errorMsg}</div>`;
+                }
+                
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Simpan Log Kerja';
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            document.getElementById('form-message').innerHTML = 
+                `<div class="alert alert-danger">Terjadi kesalahan: ${error.message}</div>`;
+            
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Simpan Log Kerja';
+        });
+}
+</script>

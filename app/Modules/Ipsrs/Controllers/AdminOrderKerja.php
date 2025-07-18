@@ -61,7 +61,7 @@ class AdminOrderKerja extends MyController
                     FROM permintaan_komplain pk 
                     JOIN asset a ON pk.asset_id = a.asset_id 
                     WHERE pk.deleted_st = 0 
-                    AND pk.status = 'diverifikasi'
+                    AND pk.status IN ('diverifikasi', 'baru', 'dikirim', 'diterima')
                     AND pk.permintaan_id NOT IN (
                         SELECT DISTINCT permintaan_id FROM order_kerja 
                         WHERE permintaan_id IS NOT NULL 
@@ -111,30 +111,123 @@ class AdminOrderKerja extends MyController
         return $this->renderView($this->template . 'form_modal', $d);
     }
 
-    public function save(Request $request, $id = null)
+    /**
+     * Menyimpan data order kerja atau log kerja
+     * 
+     * @param string|null $id ID order kerja untuk update (opsional)
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function save($id = null)
     {
-        $d = $request->all();
-
-        // Cek apakah ini aksi simpan log kerja
-        if (isset($d['action']) && $d['action'] == 'save_log_kerja') {
-            $logKerjaModel = new LogKerjaModel();
-            $result = $logKerjaModel->saveData($id, $d);
-
-            if ($result['status']) {
-                return response()->json(_response('01', $this->uri, ['message' => 'Laporan kerja berhasil disimpan.']));
-            } else {
-                return response()->json(_response('11', $this->uri, ['message' => $result['message']]));
-            }
-        } else {
-            // Ini adalah blok untuk menyimpan Order Kerja
-            $result = $this->model->saveData($id, $d);
+        try {
+            $d = request()->all();
             
-            if ($result['status']) {
-                $response_code = ($result['mode'] == 'insert') ? '01' : '02';
-                return response()->json(_response($response_code, $this->uri, $d));
-            } else {
-                return response()->json(_response('11', $this->uri, ['message' => $result['message']]));
+            // Hapus field yang tidak perlu disimpan ke database
+            $fieldsToRemove = ['_token', '_is_ajax', 'n', 'action'];
+            foreach ($fieldsToRemove as $field) {
+                if (isset($d[$field])) {
+                    unset($d[$field]);
+                }
             }
+            
+            // Log input data yang sudah dibersihkan
+            \Log::info('AdminOrderKerja::save input setelah dibersihkan', array_keys($d));
+            
+            // Cek apakah ini aksi simpan log kerja
+            if (isset($d['action']) && $d['action'] == 'save_log_kerja') {
+                $logKerjaModel = new LogKerjaModel();
+                $result = $logKerjaModel->saveData($id, $d);
+
+                if ($result['status']) {
+                    return response()->json(_response('01', $this->uri, [
+                        'message' => 'Laporan kerja berhasil disimpan.',
+                        'log_kerja_id' => $result['log_kerja_id'] ?? null
+                    ]));
+                } else {
+                    return response()->json(_response('11', $this->uri, [
+                        'message' => $result['message'] ?? 'Gagal menyimpan laporan kerja.'
+                    ]));
+                }
+            } else {
+                // Ini adalah blok untuk menyimpan Order Kerja
+                // Ubah pegawai_ids menjadi teknisi untuk kompatibilitas dengan model
+                if (isset($d['pegawai_ids']) && !empty($d['pegawai_ids'])) {
+                    $d['teknisi'] = $d['pegawai_ids'];
+                    unset($d['pegawai_ids']);
+                }
+                
+                // Format tanggal dengan benar
+                if (isset($d['tgl_dibuat']) && strpos($d['tgl_dibuat'], '-') !== false) {
+                    $parts = explode('-', $d['tgl_dibuat']);
+                    if (count($parts) === 3 && strlen($parts[2]) === 4) {
+                        // Ubah dari DD-MM-YYYY ke YYYY-MM-DD
+                        $d['tgl_dibuat'] = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
+                    }
+                }
+                
+                if (isset($d['tgl_target_selesai']) && strpos($d['tgl_target_selesai'], '-') !== false) {
+                    $parts = explode('-', $d['tgl_target_selesai']);
+                    if (count($parts) === 3 && strlen($parts[2]) === 4) {
+                        $d['tgl_target_selesai'] = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
+                    }
+                }
+                
+                // Ambil deskripsi dari jadwal_pm atau permintaan jika tersedia
+                if (empty($d['catatan']) && empty($d['deskripsi'])) {
+                    if (!empty($d['jadwal_pm_id'])) {
+                        $jadwal = DbModel::getData('jadwal_pm', ['jadwal_pm_id' => $d['jadwal_pm_id']]);
+                        if ($jadwal) {
+                            // PERBAIKAN: Gunakan catatan, bukan deskripsi
+                            $d['catatan'] = 'Pemeliharaan: ' . $jadwal['jenis'];
+                            $d['jenis'] = 'pemeliharaan';
+                        }
+                    } 
+                    else if (!empty($d['permintaan_id'])) {
+                        $permintaan = DbModel::getData('permintaan_komplain', ['permintaan_id' => $d['permintaan_id']]);
+                        if ($permintaan) {
+                            // PERBAIKAN: Gunakan catatan, bukan deskripsi
+                            $d['catatan'] = $permintaan['deskripsi'] ?? '';
+                            $d['jenis'] = 'perbaikan';
+                        }
+                    }
+                    
+                    // Jika masih tidak ada catatan, buat default
+                    if (empty($d['catatan'])) {
+                        $d['catatan'] = 'Order kerja baru dibuat tanggal ' . date('d-m-Y');
+                    }
+                } else if (!empty($d['deskripsi']) && empty($d['catatan'])) {
+                    // Pindahkan nilai deskripsi ke catatan
+                    $d['catatan'] = $d['deskripsi'];
+                    unset($d['deskripsi']);
+                }
+                
+                $result = $this->model->saveData($id, $d);
+                
+                if ($result['status']) {
+                    $response_code = ($result['mode'] == 'insert') ? '01' : '02';
+                    
+                    // Untuk keamanan, jangan kirim semua data request ke respons
+                    $response_data = [
+                        'order_kerja_id' => $result['order_kerja_id'] ?? $id,
+                        'message' => ($result['mode'] == 'insert') ? 
+                            'Order kerja berhasil dibuat.' : 
+                            'Order kerja berhasil diperbarui.'
+                    ];
+                    
+                    return response()->json(_response($response_code, $this->uri, $response_data));
+                } else {
+                    return response()->json(_response('11', $this->uri, [
+                        'message' => $result['message'] ?? 'Gagal menyimpan order kerja.'
+                    ]));
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error in AdminOrderKerja::save: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(_response('11', $this->uri, [
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ]));
         }
     }
 
@@ -149,5 +242,4 @@ class AdminOrderKerja extends MyController
         return OrderKerjaModel::loadDatatables();
     }
     
-    // Method tambahan lainnya tetap dipertahankan...
 }

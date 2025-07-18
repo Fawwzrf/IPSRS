@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
+
 class TeknisiModel extends Model
 {
     protected static $nav_sess;
@@ -112,57 +113,45 @@ class TeknisiModel extends Model
     /**
      * Update status penugasan teknisi
      */
-    public function updateStatusPenugasan($penugasan_id, $status_baru, $alasan = null, $pegawai_id = null)
+    public function updateStatusPenugasan($penugasan_id, $status, $alasan = null)
     {
         try {
-            DB::beginTransaction();
+            $update_data = [
+                'status' => $status,
+                'updated_at' => now(),
+                'updated_by' => session('user_name')
+            ];
 
-            // 1. Ambil data penugasan
-            $penugasan = DbModel::rawData('row_array', "SELECT * FROM penugasan_teknisi WHERE penugasan_id = ?", [$penugasan_id]);
-            if (!$penugasan) {
-                throw new \Exception("Data penugasan tidak ditemukan.");
+            // Atur tgl_mulai jika status = sedang_dikerjakan
+            if ($status == 'sedang_dikerjakan') {
+                $update_data['tgl_mulai'] = now();
+            } 
+            // Atur tgl_selesai jika status = selesai
+            elseif ($status == 'selesai') {
+                $update_data['tgl_selesai'] = now();
+            } 
+            // Simpan alasan jika status = dibatalkan
+            elseif ($status == 'dibatalkan' && $alasan) {
+                $update_data['catatan_penolakan'] = $alasan;
+            }
+            // Reset catatan_penolakan jika mengambil kembali tugas yang ditolak
+            elseif ($status == 'ditugaskan') {
+                // Reset catatan penolakan
+                $update_data['catatan_penolakan'] = null;
             }
 
-            $order_kerja_id = $penugasan['order_kerja_id'];
-
-            // 2. Update penugasan teknisi
-            $updateData = ['status' => $status_baru];
-            if ($alasan !== null) {
-                $updateData['catatan_penolakan'] = $alasan;
-            }
-
-            // PERBAIKAN: Pastikan tanggal selesai selalu diisi ketika status = selesai
-            if ($status_baru == 'selesai') {
-                $updateData['tgl_selesai'] = date('Y-m-d H:i:s');
-            }
-
-            DbModel::updateData('penugasan_teknisi', $updateData, ['penugasan_id' => $penugasan_id]);
-
-            // 3. Logika update status order_kerja utama
-            if ($status_baru == 'sedang_dikerjakan') {
-                DbModel::updateData('order_kerja', ['status' => 'diproses'], ['order_kerja_id' => $order_kerja_id]);
-            } else if ($status_baru == 'dibatalkan') {
-
-                // Hitung teknisi yang masih aktif (status 'ditugaskan' atau 'sedang_dikerjakan')
-                $sql_teknisi_aktif = "SELECT COUNT(*) as total FROM penugasan_teknisi WHERE order_kerja_id = ? AND status IN ('ditugaskan', 'sedang_dikerjakan') AND deleted_st = 0";
-                $result = DbModel::rawData('row_array', $sql_teknisi_aktif, [$order_kerja_id]);
-                $teknisi_aktif = $result['total'] ?? 0;
-
-                // Jika TIDAK ADA lagi teknisi yang aktif
-                if ($teknisi_aktif == 0) {
-                    // **Kembalikan status Order Kerja ke 'baru'**
-                    DbModel::updateData('order_kerja', ['status' => 'baru'], ['order_kerja_id' => $order_kerja_id]);
-                }
-            } else if ($status_baru == 'ditugaskan') {
-                // Jika ada penugasan baru, pastikan status OK adalah 'ditugaskan'
-                DbModel::updateData('order_kerja', ['status' => 'ditugaskan'], ['order_kerja_id' => $order_kerja_id]);
-            }
-
-            DB::commit();
-            return ['success' => true, 'msg' => 'Status berhasil diperbarui.'];
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return ['success' => false, 'msg' => 'Terjadi kesalahan: ' . $e->getMessage()];
+            // Update status penugasan
+            DbModel::updateData('penugasan_teknisi', $update_data, ['penugasan_id' => $penugasan_id]);
+            
+            return [
+                'success' => true,
+                'msg' => 'Status berhasil diperbarui'
+            ];
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'msg' => 'Error: ' . $e->getMessage()
+            ];
         }
     }
 
@@ -468,5 +457,93 @@ class TeknisiModel extends Model
         }
     
         return $result;
+    }
+
+    /**
+     * Mendapatkan data penugasan berdasarkan ID
+     * 
+     * @param string|int $penugasan_id ID Penugasan
+     * @return array|null Data penugasan atau null jika tidak ditemukan
+     */
+    public function getPenugasanById($penugasan_id)
+    {
+        try {
+            $sql = "SELECT pt.*, ok.order_kerja_id, ok.jenis, ok.prioritas, ok.tgl_dibuat,
+                      COALESCE(pk.deskripsi, jp.deskripsi, 'Pemeliharaan Rutin') as deskripsi
+                   FROM penugasan_teknisi pt
+                   JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
+                   LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+                   LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+                   WHERE pt.penugasan_id = ? AND pt.deleted_st = 0";
+        
+            $result = DbModel::rawData('row_array', $sql, [$penugasan_id]);
+            return $result ?: null;
+        } catch (Exception $e) {
+            // Log error jika diperlukan
+            return null;
+        }
+    }
+
+    /**
+     * Verifikasi barcode aset dengan order kerja
+     * 
+     * @param string|int $order_kerja_id ID Order Kerja
+     * @param string $barcode Barcode yang di-scan
+     * @return array Status verifikasi dan pesan
+     */
+    public function verifyAssetBarcode($order_kerja_id, $barcode)
+    {
+        try {
+            // Cari asset_id berdasarkan barcode
+            $assetResult = DbModel::rawData('row_array', 
+                "SELECT asset_id, asset_nm FROM asset WHERE barcode = ? AND deleted_st = 0", 
+                [$barcode]
+            );
+            
+            if (!$assetResult) {
+                return [
+                    'success' => false,
+                    'msg' => 'Barcode tidak terdaftar dalam sistem.'
+                ];
+            }
+            
+            // Ambil asset_id dari order kerja (baik dari permintaan maupun jadwal PM)
+            $orderAssetResult = DbModel::rawData('row_array', 
+                "SELECT 
+                    COALESCE(pk.asset_id, jp.asset_id) as asset_id 
+                 FROM order_kerja ok
+                 LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+                 LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+                 WHERE ok.order_kerja_id = ?", 
+                [$order_kerja_id]
+            );
+            
+            if (!$orderAssetResult || !$orderAssetResult['asset_id']) {
+                return [
+                    'success' => false,
+                    'msg' => 'Tidak dapat menemukan aset terkait order kerja ini.'
+                ];
+            }
+            
+            // Verifikasi apakah asset_id dari barcode sama dengan asset_id dari order kerja
+            if ($assetResult['asset_id'] == $orderAssetResult['asset_id']) {
+                return [
+                    'success' => true,
+                    'asset_id' => $assetResult['asset_id'],
+                    'asset_nm' => $assetResult['asset_nm'],
+                    'msg' => 'Barcode terverifikasi dengan benar.'
+                ];
+            }
+            
+            return [
+                'success' => false,
+                'msg' => 'Barcode yang di-scan tidak sesuai dengan aset yang tercatat pada order kerja ini.'
+            ];
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'msg' => 'Error: ' . $e->getMessage()
+            ];
+        }
     }
 }

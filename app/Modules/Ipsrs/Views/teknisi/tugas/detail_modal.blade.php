@@ -42,38 +42,44 @@
         </div>
     </div>
     @if ($tugas['status'] == 'dibatalkan' && !empty($tugas['catatan_penolakan']))
-        <div class="alert alert-danger mt-3">
-            <strong>Alasan Penolakan:</strong><br>
-            {{ $tugas['catatan_penolakan'] }}
+        <div class="alert alert-warning mt-3">
+            <strong>Alasan Penolakan:</strong> {{ $tugas['catatan_penolakan'] }}
         </div>
     @endif
 </div>
 <div class="modal-footer">
+    {{-- Tombol untuk tugas yang ditugaskan --}}
     @if ($tugas['status'] == 'ditugaskan')
-        {{-- Tombol Terima Tugas (diubah menjadi button) --}}
-        <button class="btn btn-success btn-task-action" data-url="{{ url('ipsrs/teknisitugas/terima') }}"
-            data-id="{{ $tugas['penugasan_id'] }}">
-            <i class="fas fa-check me-2"></i> Terima Tugas
+        <button type="button" class="btn btn-success btn-terima-tugas"
+            data-url="{{ url('ipsrs/teknisitugas/terima') }}" data-penugasan-id="{{ $tugas['penugasan_id'] }}">
+            <i class="fas fa-check"></i> Terima Tugas
         </button>
-        <button class="btn btn-danger"
-            onclick="_modal(event, {uri: '{{ url('ipsrs/teknisitugas/form_tolak_modal/' . $tugas['penugasan_id']) }}', size: 'modal-md', title: 'Tolak Tugas'})">
-            <i class="fas fa-times me-2"></i> Tolak Tugas
+
+        <button type="button" class="btn btn-danger btn-tolak-tugas" data-penugasan-id="{{ $tugas['penugasan_id'] }}"
+            data-n="{{ request('n') }}">
+            <i class="fas fa-times"></i> Tolak Tugas
         </button>
-    @elseif($tugas['status'] == 'sedang_dikerjakan')
-        {{-- Tombol Batalkan Penerimaan (diubah menjadi button) --}}
-        <button class="btn btn-outline-warning btn-task-action" data-url="{{ url('ipsrs/teknisitugas/batal_terima') }}"
-            data-id="{{ $tugas['penugasan_id'] }}">
-            Batalkan Penerimaan
-        </button>
-        <button class="btn btn-primary" onclick="_modal(event, {uri: '{{ url('ipsrs/teknisitugas/form_scan_modal/' . $tugas['order_kerja_id']) }}', size: 'modal-lg', title: 'Scan Barcode Aset'})">
-            <i class="fas fa-barcode me-2"></i> Scan & Lanjutkan
-        </button>
+        {{-- Tombol untuk tugas yang dibatalkan/ditolak --}}
     @elseif($tugas['status'] == 'dibatalkan')
-        {{-- Tombol Terima Kembali (diubah menjadi button) --}}
-        <button class="btn btn-success btn-task-action" data-url="{{ url('ipsrs/teknisitugas/terima') }}"
-            data-id="{{ $tugas['penugasan_id'] }}">
-            <i class="fas fa-check me-2"></i> Terima Kembali Tugas Ini
+        <button type="button" class="btn btn-info btn-ambil-kembali"
+            data-url="{{ url('ipsrs/teknisitugas/ambil_kembali') }}" data-penugasan-id="{{ $tugas['penugasan_id'] }}">
+            <i class="fas fa-undo"></i> Ambil Kembali Tugas
         </button>
+        {{-- Tombol untuk tugas yang sedang dikerjakan --}}
+    @elseif($tugas['status'] == 'sedang_dikerjakan')
+        <button type="button" class="btn btn-danger"
+            onclick="if(confirm('Apakah Anda yakin ingin membatalkan penerimaan tugas ini?')) { batalTerima('{{ $tugas['penugasan_id'] }}') }">
+            <i class="fas fa-undo"></i> Batalkan Penerimaan
+        </button>
+
+        {{-- Gunakan href langsung untuk mengatasi masalah event handler --}}
+        <a href="javascript:void(0)" class="btn btn-primary"
+            onclick="openScanModal('{{ $tugas['order_kerja_id'] }}', '{{ request('n') }}')">
+            <i class="fas fa-barcode"></i> Scan Barcode
+        </a>
     @endif
-    <button type="button" class="btn btn-link" data-bs-dismiss="modal">Tutup</button>
+
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        <i class="fas fa-times"></i> Tutup
+    </button>
 </div>

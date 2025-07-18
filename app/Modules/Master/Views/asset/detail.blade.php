@@ -1,3 +1,4 @@
+
 <div class="page-wrapper">
     <div class="page-header d-print-none mt-2">
         <div class="container-xl">
@@ -8,6 +9,17 @@
                 </div>
                 <div class="col-auto ms-auto d-print-none">
                     <div class="btn-list">
+                        {{-- Tambahkan tombol Tambah Log jika ada order_kerja_id --}}
+                        @if(isset($order_kerja_id) && $order_kerja_id)
+                            <button type="button" class="btn btn-success" 
+                                onclick="_modal(event, {
+                                    uri: '{{ url('ipsrs/teknisitugas/form_log_kerja/' . $order_kerja_id) }}?n={{ request('n') }}',
+                                    size: 'modal-lg'
+                                })">
+                                <i class="fas fa-plus me-2"></i> Tambah Log Kerja
+                            </button>
+                        @endif
+                        
                         <button onclick="window.location.href='{{ url('ipsrs/teknisitugas') }}?n={{ request('n') }}'" class="btn btn-primary">
                             <i class="fas fa-arrow-left me-2"></i> Kembali ke Daftar Tugas
                         </button>
@@ -62,31 +74,37 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @forelse($history as $item)
-                                        <tr>
-                                            <td>{{ to_date($item['tgl_dibuat']) }}</td>
-                                            <td>{{ ucfirst($item['jenis']) }}</td>
-                                            <td>{{ $item['deskripsi'] }}</td>
-                                            <td><span class="badge bg-secondary">{{ ucfirst($item['status']) }}</span>
-                                            </td>
-                                            <td>
-                                                @if ($item['status'] !== 'selesai' && $item['status'] !== 'ditolak')
-                                                    {{-- Tombol ini akan memanggil modal log kerja --}}
-                                                    <button class="btn btn-sm btn-success"
-                                                        onclick="_modal(event, {uri: '{{ url('ipsrs/adminlogkerja/form_modal/' . $item['order_kerja_id']) }}', size: 'modal-lg'})">
-                                                        <i class="fas fa-clipboard-check"></i> Selesaikan & Buat Log
-                                                    </button>
-                                                @else
-                                                    <i class="fas fa-check-circle text-success"></i> Selesai
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    @empty
+                                    @if(isset($log_kerja_list) && is_array($log_kerja_list) && count($log_kerja_list) > 0)
+                                        {{-- Loop through log_kerja_list data --}}
+                                        @foreach($log_kerja_list as $item)
+                                            <tr>
+                                                <td>{{ to_date($item['tgl_dibuat']) }}</td>
+                                                <td>{{ ucfirst($item['jenis']) }}</td>
+                                                <td>{{ $item['deskripsi'] }}</td>
+                                                <td><span class="badge bg-secondary">{{ ucfirst($item['status']) }}</span>
+                                                </td>
+                                                <td>
+                                                    <!-- Ubah ini jika perlu untuk membuka form log kerja modal -->
+                                                    @if ($item['status'] !== 'selesai' && $item['status'] !== 'ditolak')
+                                                        <button class="btn btn-sm btn-success"
+                                                            onclick="_modal(event, {
+                                                                uri: '{{ url('ipsrs/teknisitugas/form_log_kerja/' . $item['order_kerja_id']) }}?n={{ request('n') }}',
+                                                                size: 'modal-lg'
+                                                            })">
+                                                            <i class="fas fa-clipboard-check"></i> Selesaikan & Buat Log
+                                                        </button>
+                                                    @else
+                                                        <i class="fas fa-check-circle text-success"></i> Selesai
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    @else
                                         <tr>
                                             <td colspan="5" class="text-center">Belum ada riwayat pekerjaan untuk
                                                 aset ini.</td>
                                         </tr>
-                                    @endforelse
+                                    @endif
                                 </tbody>
                             </table>
                         </div>

@@ -80,4 +80,16 @@ abstract class MyController extends Controller
 
     $d['nav_sess'] = session($session_name);
   }
+  /**
+   * Render partial view (tanpa layout template)
+   * 
+   * @param string $view Nama view
+   * @param array $data Data yang akan dikirim ke view
+   * @return \Illuminate\View\View
+   */
+  protected function renderPartialView($view, $data = [])
+  {
+      // Jika method ini belum ada, silahkan tambahkan di MyController
+      return view($view, $data);
+  }
 }

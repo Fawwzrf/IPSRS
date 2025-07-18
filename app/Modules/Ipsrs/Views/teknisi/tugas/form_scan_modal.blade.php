@@ -1,149 +1,289 @@
 <div class="modal-body">
     <div class="row">
-        <div class="col-md-12 text-center">
-            <p class="text-muted">Arahkan kamera ke barcode pada aset yang akan dikerjakan.</p>
-            <video id="scanner-preview"
-                style="width: 100%; max-width: 400px; border: 1px solid #ccc; border-radius: 5px;"></video>
-            <div id="scan-loading" style="display: none;">
-                <div class="spinner-border"></div>
-                <p>Memvalidasi Aset...</p>
+        <div class="col-md-12 mb-3">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> Scan barcode aset menggunakan kamera atau masukkan kode secara manual.
+            </div>
+        </div>
+
+        <!-- Area Kamera -->
+        <div class="col-md-7">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">Kamera Scanner</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Area video dari kamera -->
+                    <div id="scanner-container" class="mb-2">
+                        <video id="scanner-video"
+                            style="width: 100%; height: 250px; border: 1px solid #ccc; background: #333;"></video>
+                    </div>
+                    <div class="btn-group w-100">
+                        <button type="button" class="btn btn-success btn-sm" id="start-scanner">
+                            <i class="fas fa-play"></i> Mulai Kamera
+                        </button>
+                        <button type="button" class="btn btn-danger btn-sm" id="stop-scanner" disabled>
+                            <i class="fas fa-stop"></i> Hentikan Kamera
+                        </button>
+                        <button type="button" class="btn btn-info btn-sm" id="switch-camera">
+                            <i class="fas fa-sync"></i> Ganti Kamera
+                        </button>
+                    </div>
+                    <div id="camera-status" class="small text-muted mt-2"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Input Manual -->
+        <div class="col-md-5">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">Input Manual</h5>
+                </div>
+                <div class="card-body">
+                    <form id="form-scan-barcode"
+                        action="{{ url('ipsrs/teknisitugas/verify_barcode') }}{{ isset($n_param) ? '?n=' . $n_param : '' }}"
+                        method="post">
+                        @csrf
+                        <input type="hidden" name="order_kerja_id" value="{{ $order_kerja_id }}">
+
+                        <div class="mb-3">
+                            <label class="form-label required">Kode Barcode</label>
+                            <input type="text" class="form-control" name="barcode" id="barcode-input" required
+                                placeholder="Scan atau ketik barcode aset...">
+                        </div>
+
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check"></i> Verifikasi
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
+
+    <div class="alert alert-info mt-3">
+        <strong>Kamera tampil hitam? Coba hal berikut:</strong>
+        <ul class="mb-0 mt-2">
+            <li>Pastikan tidak ada aplikasi lain yang menggunakan kamera</li>
+            <li>Periksa apakah webcam berfungsi di aplikasi lain</li>
+            <li>Pastikan pencahayaan ruangan cukup terang</li>
+            <li>Restart browser atau gunakan browser berbeda (Chrome/Firefox)</li>
+            <li>Periksa izin kamera di pengaturan browser</li>
+        </ul>
+    </div>
+
     <hr>
-    <div class="row align-items-end">
-        <div class="col">
-            <label for="no_seri_manual" class="form-label">Tidak bisa scan? Masukkan No. Seri manual:</label>
-            <input type="text" class="form-control" id="no_seri_manual" placeholder="Ketik No. Seri Aset">
-        </div>
-        <div class="col-auto">
-            <button class="btn btn-dark" id="btn-cek-manual">Cek Manual</button>
+    <div class="row">
+        <div class="col-12 text-end">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <i class="fas fa-times"></i> Tutup
+            </button>
         </div>
     </div>
 </div>
 
+<!-- Script untuk kamera dan barcode scanner menggunakan Instascan -->
 <script>
-    (function() {
-        // -------------------------------------------------------------------
-        // PERUBAHAN 1: Ambil Order Kerja ID dari controller
-        // -------------------------------------------------------------------
-        const orderKerjaId = '{{ $order_kerja_id }}';
-        const navParam = '{{ $n_param }}';
+// Hack untuk menghindari error babel-polyfill
+window._babelPolyfill = false;
+</script>
+<script type="text/javascript" src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
+<script>
+    // Script ini akan dijalankan ketika konten modal dimuat
+    $(function() {
+        console.log('Scan modal loaded with Instascan');
 
-        // Inisialisasi variabel dan elemen
+        // Variabel untuk menyimpan scanner dan kamera
         let scanner = null;
-        const loadingElement = $('#scan-loading');
-        const manualCheckButton = $('#btn-cek-manual');
-        const manualInput = $('#no_seri_manual');
-        let activeCameras = [];
+        let currentCameraIndex = 0;
+        let cameras = [];
+        let scannerActive = false;
 
-        /**
-         * Fungsi untuk memvalidasi barcode/nomor seri aset.
-         * Jika valid, akan membuka modal log kerja.
-         */
-        function validateBarcode(noSeri) {
-            if (!noSeri) {
-                _toast('warning', 'Nomor Seri tidak boleh kosong.');
+        // Fungsi untuk memulai scanner
+        function startScanner() {
+            $('#camera-status').text('Memulai kamera...');
+
+            // Pastikan instascan sudah dimuat
+            if (typeof Instascan === 'undefined') {
+                $('#camera-status').text('Error: Instascan tidak tersedia.');
                 return;
             }
 
-            loadingElement.show();
-            if (scanner) scanner.stop();
-
-            // Panggilan AJAX untuk memverifikasi aset ke server
-            $.get('{{ url('master/asset') }}', {
-                action: 'find_by_barcode',
-                no_seri: noSeri,
-                n: navParam
-            }, function(response) {
-
-                // Cek jika aset ditemukan dan valid
-                if (response.code === '00' && response.data.asset) {
-
-                    // -------------------------------------------------------------------
-                    // PERUBAHAN 2: Alur baru setelah scan berhasil
-                    // -------------------------------------------------------------------
-
-                    _toast("success", "Aset terverifikasi! Membuka laporan kerja...");
-
-                    // 1. Tutup modal scan saat ini (modal ke-2)
-                    _modalHide(2);
-
-                    // 2. Buat URI untuk memanggil modal log kerja teknisi
-                    const logKerjaUri =
-                        `{{ url('ipsrs/teknisitugas/form_log_kerja_modal') }}/${orderKerjaId}`;
-
-                    // 3. Buka modal log kerja setelah jeda singkat
-                    setTimeout(() => {
-                        const fakeEvent = {
-                            target: document.createElement('button')
-                        };
-                        _modal(fakeEvent, {
-                            uri: logKerjaUri,
-                            size: 'modal-xl', // Ukuran modal bisa disesuaikan
-                            title: `Buat Laporan Kerja (OK: ${orderKerjaId})`
-                        });
-                    }, 250);
-
-                } else {
-                    // Jika aset tidak ditemukan, tampilkan error dan aktifkan kembali scanner
-                    _toast("error", response.message ||
-                        "Aset tidak ditemukan atau tidak cocok dengan data.");
-                    loadingElement.hide();
-                    startScanner();
-                }
-            }, 'json').fail(function() {
-                _toast("error", "Gagal menghubungi server untuk validasi aset.");
-                loadingElement.hide();
-                startScanner();
-            });
-        }
-
-        /**
-         * Fungsi untuk memulai kamera scanner
-         */
-        function startScanner() {
-            if (scanner && activeCameras.length > 0) {
-                // Prioritaskan kamera belakang (jika ada)
-                let selectedCam = activeCameras.find(c => c.name.toLowerCase().indexOf('back') !== -1) ||
-                    activeCameras[0];
-                scanner.start(selectedCam);
+            // Cek apakah scanner sudah ada
+            if (scannerActive) {
+                $('#camera-status').text('Scanner sudah aktif!');
+                return;
             }
-        }
 
-        // Inisialisasi library Instascan
-        if (typeof Instascan !== 'undefined') {
+            // Nonaktifkan tombol start
+            $('#start-scanner').prop('disabled', true);
+
+            // Inisialisasi scanner
             scanner = new Instascan.Scanner({
-                video: document.getElementById('scanner-preview'),
-                scanPeriod: 5,
-                mirror: false
+                video: document.getElementById('scanner-video'),
+                scanPeriod: 5, // Scan setiap 5ms
+                mirror: false // Jangan mirror (untuk kamera belakang)
             });
-            scanner.addListener('scan', content => validateBarcode(content));
-            Instascan.Camera.getCameras().then(cameras => {
-                if (cameras.length > 0) {
-                    activeCameras = cameras;
-                    startScanner();
-                } else {
-                    console.error('Tidak ada kamera yang ditemukan.');
-                    _toast('error', 'Tidak ada kamera yang terdeteksi di perangkat ini.');
+
+            // Handler ketika kode terdeteksi
+            scanner.addListener('scan', function(content) {
+                console.log('Barcode terdeteksi:', content);
+
+                // Isi input dengan hasil scan
+                $('#barcode-input').val(content);
+
+                // Beri feedback
+                $('#camera-status').html('<div class="alert alert-success">Barcode terdeteksi: ' +
+                    content + '</div>');
+
+                // Auto submit form setelah scan berhasil
+                if (confirm("Barcode terdeteksi: " + content + "\nVerifikasi sekarang?")) {
+                    $('#form-scan-barcode').submit();
                 }
-            }).catch(e => {
-                console.error(e);
-                _toast('error', 'Tidak dapat mengakses kamera. Pastikan Anda memberikan izin.');
             });
-        } else {
-            console.error('Library Instascan tidak ditemukan.');
+
+            // Dapatkan daftar kamera
+            Instascan.Camera.getCameras().then(function(availableCameras) {
+                cameras = availableCameras;
+
+                if (cameras.length === 0) {
+                    $('#camera-status').text('Tidak ada kamera yang tersedia');
+                    $('#start-scanner').prop('disabled', false);
+                    return;
+                }
+
+                // Log info kamera
+                console.log('Kamera tersedia:', cameras.length);
+                cameras.forEach((camera, i) => {
+                    console.log(`Kamera ${i}: ${camera.name || 'Tanpa Nama'}`);
+                });
+
+                // Secara default gunakan kamera belakang jika ada
+                let selectedCamera = cameras[0]; // Default ke kamera pertama
+
+                // Cari kamera belakang berdasarkan nama (biasanya mengandung "back" atau tidak mengandung "front")
+                for (let i = 0; i < cameras.length; i++) {
+                    const cameraName = (cameras[i].name || '').toLowerCase();
+                    if (cameraName.includes('back') || (!cameraName.includes('front') && cameras
+                            .length > 1)) {
+                        selectedCamera = cameras[i];
+                        currentCameraIndex = i;
+                        break;
+                    }
+                }
+
+                // Mulai scanner dengan kamera yang dipilih
+                scanner.start(selectedCamera).then(function() {
+                    console.log('Scanner dimulai dengan kamera:', selectedCamera.name ||
+                        'Kamera ' + currentCameraIndex);
+                    $('#camera-status').text('Kamera aktif: ' + (selectedCamera.name ||
+                        'Kamera ' + currentCameraIndex));
+                    $('#stop-scanner').prop('disabled', false);
+                    scannerActive = true;
+                }).catch(function(e) {
+                    console.error('Error memulai scanner:', e);
+                    $('#camera-status').text('Error memulai scanner: ' + e.toString());
+                    $('#start-scanner').prop('disabled', false);
+                });
+            }).catch(function(e) {
+                console.error('Error mendapatkan daftar kamera:', e);
+                $('#camera-status').text('Error: ' + e.toString());
+                $('#start-scanner').prop('disabled', false);
+            });
         }
 
-        // Event listener untuk tombol cek manual
-        manualCheckButton.on('click', () => validateBarcode(manualInput.val()));
-
-        // Hentikan scanner ketika modal ditutup untuk menghemat resource
-        $('#my-modal-2, #my-modal-1').on('hidden.bs.modal', () => {
+        // Fungsi untuk menghentikan scanner
+        function stopScanner() {
             if (scanner) {
                 scanner.stop();
+                scannerActive = false;
+                $('#camera-status').text('Scanner dihentikan');
+                $('#start-scanner').prop('disabled', false);
+                $('#stop-scanner').prop('disabled', true);
             }
-        });
+        }
 
-    })();
+        // Fungsi untuk berganti kamera
+        function switchCamera() {
+            if (!scanner || cameras.length <= 1) {
+                $('#camera-status').text('Tidak ada kamera lain yang tersedia');
+                return;
+            }
+
+            // Hentikan scanner dulu
+            scanner.stop();
+
+            // Pilih kamera berikutnya
+            currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
+            let nextCamera = cameras[currentCameraIndex];
+
+            // Mulai scanner dengan kamera baru
+            scanner.start(nextCamera).then(function() {
+                console.log('Beralih ke kamera:', nextCamera.name || 'Kamera ' + currentCameraIndex);
+                $('#camera-status').text('Kamera aktif: ' + (nextCamera.name || 'Kamera ' +
+                    currentCameraIndex));
+            });
+        }
+
+        // Bind tombol-tombol
+        $('#start-scanner').on('click', startScanner);
+        $('#stop-scanner').on('click', stopScanner);
+        $('#switch-camera').on('click', switchCamera);
+
+        // Perbarui handler submit
+        $('#form-scan-barcode').on('submit', function(e) {
+            e.preventDefault();
+            
+            var form = $(this);
+            var submitBtn = form.find('button[type="submit"]');
+            var originalText = submitBtn.html();
+            
+            submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Verifikasi...');
+            
+            // Debug untuk memastikan handler berjalan
+            console.log('Form submit handler running');
+            
+            // Gunakan AJAX untuk mengirim form
+            $.ajax({
+                url: form.attr('action'),
+                type: 'POST',
+                data: form.serialize(),
+                dataType: 'json', // Penting! Menentukan bahwa kita mengharapkan response JSON
+                success: function(res) {
+                    console.log('AJAX success response:', res);
+                    
+                    if (res.status === true || res.code === '01' || res.code === '02') {
+                        // Tampilkan pesan sukses
+                        alert(res.message || 'Barcode terverifikasi!');
+                        
+                        // Hentikan scanner jika aktif
+                        if (typeof scanner !== 'undefined' && scanner) {
+                            scanner.stop();
+                        }
+                        
+                        // Tutup modal scan
+                        $('#scan-modal').modal('hide');
+                        
+                        // Redirect ke URL yang diberikan server setelah modal tertutup
+                        setTimeout(function() {
+                            console.log('Redirecting to:', res.redirect_url);
+                            window.location.href = res.redirect_url;
+                        }, 500);
+                    } else {
+                        // Tampilkan pesan error
+                        alert(res.message || 'Barcode tidak valid');
+                        submitBtn.prop('disabled', false).html(originalText);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX error:', xhr.responseText);
+                    alert('Terjadi kesalahan: ' + (xhr.responseJSON?.message || error));
+                    submitBtn.prop('disabled', false).html(originalText);
+                }
+            });
+        });
+    });
 </script>

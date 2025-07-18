@@ -107,15 +107,56 @@ class Asset extends MyController
     return $this->renderView($this->template . 'detail_modal', $d);
   }
 
-  // Fungsi detail - tetap dipertahankan sebagai fitur tambahan
-  function detail($id = null)
+  /**
+   * Menampilkan detail aset beserta riwayat
+   * 
+   * @param string $asset_id ID aset
+   * @return \Illuminate\View\View
+   */
+  public function detail($asset_id)
   {
-    $assetModel = new AssetModel();
-    $d['asset'] = $assetModel->getAssetDetailById($id);
-    $d['history'] = $assetModel->getAssetHistory($id);
-    $d['title'] = 'Detail Aset: ' . $d['asset']['asset_nm'];
-    
-    return $this->renderView($this->template . 'detail', $d);
+      try {
+          // Ambil data aset
+          $asset = DbModel::getData('asset', ['asset_id' => $asset_id]);
+          
+          // Validasi jika aset tidak ditemukan
+          if (!$asset) {
+              return redirect('master/asset')->with('error', 'Data aset tidak ditemukan');
+          }
+          
+          // Persiapkan data untuk view
+          $d = [];
+          $d['asset'] = $asset;
+          
+          // Tambahkan parameter order_kerja_id jika ada dari request
+          $order_kerja_id = request('order_kerja_id');
+          if ($order_kerja_id) {
+              $d['order_kerja_id'] = $order_kerja_id;
+              
+              // Ambil data order kerja
+              $order_kerja = DbModel::getData('order_kerja', ['order_kerja_id' => $order_kerja_id]);
+              if ($order_kerja) {
+                  $d['order_kerja'] = $order_kerja;
+              }
+          }
+          
+          // Ambil log_kerja_list (riwayat pekerjaan)
+          $log_kerja_list = DbModel::rawData('result_array', 
+              "SELECT ok.*, p.deskripsi, ok.status
+               FROM order_kerja ok
+               LEFT JOIN permintaan_komplain p ON ok.permintaan_id = p.permintaan_id
+               WHERE ok.asset_id = ? OR p.asset_id = ?
+               ORDER BY ok.tgl_dibuat DESC",
+              [$asset_id, $asset_id]
+          );
+          
+          $d['log_kerja_list'] = is_array($log_kerja_list) ? $log_kerja_list : [];
+          
+          return view('master::asset.detail', $d);
+      } catch (\Exception $e) {
+          \Log::error('Error in asset detail: ' . $e->getMessage());
+          return redirect('master/asset')->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+      }
   }
 
   // Penting: Fungsi untuk datatables yang memanggil model
