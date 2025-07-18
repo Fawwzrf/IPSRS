@@ -2,7 +2,7 @@
 
 <div class="container-fluid p-0">
     <div class="page-header d-flex flex-column">
-        <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="d-flex align-items-center justify-content-between m-3">
             <h2 class="page-title ml-3 mb-0">Dashboard Teknisi</h2>
             <button onclick="refreshDashboard()" class="btn btn-outline-primary btn-icon">
                 <i class="fas fa-sync"></i>
@@ -275,7 +275,7 @@
     
     .card-title {
         margin-bottom: 0;
-        font-size: 1.1rem;
+        font-size: 0.85rem;
     }
     
     /* Alert yang lebih baik */

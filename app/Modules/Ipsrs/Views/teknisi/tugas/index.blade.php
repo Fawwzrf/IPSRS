@@ -29,7 +29,7 @@
     @endif
 
     <div class="page-header d-flex flex-column">
-        <h2 class="page-title mx-3 mb-2">Daftar Tugas Saya</h2>
+        <h2 class="page-title m-3">Daftar Tugas Saya</h2>
     </div>
 
     <!-- Tab Navigation Scrollable untuk Mobile -->
