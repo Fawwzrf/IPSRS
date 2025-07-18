@@ -23,14 +23,14 @@
                     <h3 class="card-title">Riwayat Laporan Saya</h3>
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-vcenter card-table table-striped">
+                    <table class="table table-vcenter card-table" id="table-komplain">
                         <thead>
                             <tr>
-                                <th>Tanggal Lapor</th>
-                                <th>Aset yang Dilaporkan</th>
-                                <th>Lokasi</th>
-                                <th>Deskripsi Masalah</th>
-                                <th>Status</th>
+                                <th width="10%">Tanggal</th>
+                                <th width="20%">Aset</th>
+                                <th width="20%">Lokasi</th>
+                                <th>Deskripsi</th>
+                                <th width="10%">Status</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -43,11 +43,7 @@
                                 <td>
                                     @php
                                         $status = strtolower($item['status']);
-                                        $badgeClass = 'bg-secondary';
-                                        if ($status == 'baru') $badgeClass = 'bg-info';
-                                        elseif ($status == 'diproses') $badgeClass = 'bg-warning';
-                                        elseif ($status == 'selesai') $badgeClass = 'bg-success';
-                                        elseif ($status == 'ditolak') $badgeClass = 'bg-danger';
+                                        $badgeClass = \App\Modules\Ipsrs\Models\PelaporModel::getStatusBadgeClass($status);
                                     @endphp
                                     <span class="badge {{ $badgeClass }}">{{ ucfirst($status) }}</span>
                                 </td>
@@ -59,6 +55,76 @@
                             @endforelse
                         </tbody>
                     </table>
+                    
+                    @if(isset($pagination) && $pagination['total'] > $pagination['per_page'])
+                    <div class="mt-3">
+                        <ul class="pagination justify-content-center">
+                            {{-- First Page --}}
+                            <li class="page-item {{ $pagination['current_page'] == 1 ? 'disabled' : '' }}">
+                                <a class="page-link" href="javascript:void(0)" onclick="changePage(1)">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </a>
+                            </li>
+                            
+                            {{-- Previous Page --}}
+                            <li class="page-item {{ $pagination['current_page'] == 1 ? 'disabled' : '' }}">
+                                <a class="page-link" href="javascript:void(0)" onclick="changePage({{ $pagination['current_page'] - 1 }})">
+                                    <i class="fas fa-angle-left"></i>
+                                </a>
+                            </li>
+                            
+                            {{-- Page Numbers --}}
+                            @php
+                                $start = max(1, $pagination['current_page'] - 2);
+                                $end = min($pagination['last_page'], $pagination['current_page'] + 2);
+                            @endphp
+                            
+                            @for($i = $start; $i <= $end; $i++)
+                                <li class="page-item {{ $pagination['current_page'] == $i ? 'active' : '' }}">
+                                    <a class="page-link" href="javascript:void(0)" onclick="changePage({{ $i }})">{{ $i }}</a>
+                                </li>
+                            @endfor
+                            
+                            {{-- Next Page --}}
+                            <li class="page-item {{ $pagination['current_page'] == $pagination['last_page'] ? 'disabled' : '' }}">
+                                <a class="page-link" href="javascript:void(0)" onclick="changePage({{ $pagination['current_page'] + 1 }})">
+                                    <i class="fas fa-angle-right"></i>
+                                </a>
+                            </li>
+                            
+                            {{-- Last Page --}}
+                            <li class="page-item {{ $pagination['current_page'] == $pagination['last_page'] ? 'disabled' : '' }}">
+                                <a class="page-link" href="javascript:void(0)" onclick="changePage({{ $pagination['last_page'] }})">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <script>
+                        function changePage(page) {
+                            let url = 'ipsrs/pelapor/get_table_data?page=' + page;
+                            const currentToken = getParameterByName('n', window.location.href);
+                            if (currentToken) {
+                                url += '&n=' + currentToken;
+                            }
+                            
+                            const tableContainer = $('#table-komplain').closest('.table-container');
+                            tableContainer.html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin me-2"></i> Memuat data...</div>');
+                            
+                            $.ajax({
+                                url: url,
+                                method: 'GET',
+                                success: function(html) {
+                                    tableContainer.html(html);
+                                },
+                                error: function() {
+                                    tableContainer.html('<div class="alert alert-danger">Gagal memuat data</div>');
+                                }
+                            });
+                        }
+                    </script>
+                    @endif
                 </div>
             </div>
         </div>

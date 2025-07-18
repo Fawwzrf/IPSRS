@@ -1,8 +1,8 @@
 @include('ipsrs::pelapor._js')
 
-<form id="form-pelapor-komplain" action="{{ $form_act }}" method="post" autocomplete="off" enctype="multipart/form-data" onsubmit="_save(event)">
+<form id="form-pelapor-komplain" action="{{ url('ipsrs/pelapor/save') }}" method="post" autocomplete="off" enctype="multipart/form-data">
     @csrf
-    <input type="hidden" name="pegawai_id" value="{{ session('pegawai_id') }}">
+    <input type="hidden" name="pegawai_id" value="{{ $pegawai_id ?? session('pegawai_id') }}">
 
     <div class="card-body">
         <fieldset class="border p-2 rounded mb-3">
