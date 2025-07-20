@@ -1,4 +1,5 @@
 <script type="text/javascript">
+    var tabel = null;
     $(document).ready(function() {
         // Inisialisasi Select2 untuk dropdown filter
         $('.chosen-select').select2({
@@ -12,6 +13,34 @@
             locale: {
                 format: 'DD-MM-YYYY'
             }
+        });
+
+        // Inisialisasi DataTable
+        tabel = $('#datatable-main').DataTable({
+            "language": { url: _base_url + 'dist/libs/DataTables/id.json' },
+            "processing": true,
+            "serverSide": true,
+            "ordering": true,
+            "order": [[6, 'desc']],
+            "ajax": {
+                "url": "<?= $uri . '/ajax_datatables?n=' . request('n') ?>",
+                "type": "POST"
+            },
+            "bFilter": false,
+            "dom": 'rt<"d-flex justify-content-between"li p>',
+            "columns": [
+                { "data": null, "orderable": false, "className": "text-center", 
+                  "render": function (data, type, row, meta) { 
+                      return meta.row + meta.settings._iDisplayStart + 1; 
+                  }
+                },
+                { "data": "order_kerja_id", "className": "text-center" },
+                { "data": "nama_teknisi" },
+                { "data": "durasi_respon_admin", "className": "text-center", "render": function(data) { return data > 0 ? data : '-'; } },
+                { "data": "durasi_penerimaan_teknisi", "className": "text-center", "render": function(data) { return data > 0 ? data : '-'; } },
+                { "data": "durasi_pengerjaan", "className": "text-center", "render": function(data) { return data > 0 ? data : '-'; } },
+                { "data": "durasi_total", "className": "text-center fw-bold bg-blue-lt", "render": function(data) { return data > 0 ? data : '-'; } },
+            ]
         });
     });
 
