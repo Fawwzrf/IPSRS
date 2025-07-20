@@ -7,6 +7,7 @@ use App\Modules\App\Models\DbModel;
 use App\Modules\Ipsrs\Models\LaporanModel;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
+use App\Http\Helpers\Itm; // Tambahkan jika belum ada
 
 class AdminLaporan extends MyController
 {
@@ -33,17 +34,32 @@ class AdminLaporan extends MyController
 
         // Ambil data laporan berdasarkan filter
         $d['laporan'] = $this->model->getLaporanKinerjaAset($d['nav_sess']['search']['data'] ?? []);
-        
+
+        // Refactor: gunakan helper untuk format tanggal/angka pada data laporan
+        foreach ($d['laporan'] as &$row) {
+            $row['tgl_mulai'] = to_date($row['tgl_mulai'] ?? '');
+            $row['total_biaya'] = numId($row['total_biaya'] ?? 0);
+        }
+
         // Untuk ekspor ke Excel jika diminta
         if (request('export') == 'excel') {
-            try {
-                return $this->exportToExcel($d['laporan'], 'Laporan_Kinerja_Aset', [
-                    'Nama Aset', 'Lokasi', 'Jumlah OK', 'Jumlah Perbaikan', 'Jumlah PM', 'Terakhir Ditangani'
-                ]);
-            } catch (\Exception $e) {
-                Log::error('Error exporting laporan: ' . $e->getMessage());
-                return back()->with('error', 'Gagal mengekspor data: ' . $e->getMessage());
+            $headers = [
+                'No', 'Kode Aset', 'Nama Aset', 'Kategori', 'Lokasi', 'Tgl Mulai', 'Total Biaya (Rp)'
+            ];
+            $data = [];
+            $no = 1;
+            foreach ($d['laporan'] as $row) {
+                $data[] = [
+                    $no++,
+                    $row['kode_aset'] ?? '',
+                    $row['nama_aset'] ?? '',
+                    $row['kategori'] ?? '',
+                    $row['lokasi'] ?? '',
+                    $row['tgl_mulai'] ?? '',
+                    $row['total_biaya'] ?? 0,
+                ];
             }
+            return $this->exportToExcel($data, 'Laporan_Kinerja_Aset', $headers);
         }
 
         return $this->renderView($this->template . 'kinerja_aset', $d);
@@ -164,7 +180,7 @@ class AdminLaporan extends MyController
                         $values[] = $row['tugas_selesai'] ?? 0;
                         break;
                     case 'Rata-rata Durasi (Menit)':
-                        $values[] = number_format($row['rata_rata_durasi'] ?? 0, 2);
+                        $values[] = numId($row['rata_rata_durasi'] ?? 0, true);
                         break;
                     case 'Tanggal OK':
                         $values[] = to_date($row['tgl_dibuat'] ?? '') ?? '';
@@ -176,13 +192,13 @@ class AdminLaporan extends MyController
                         $values[] = ucfirst($row['jenis'] ?? '');
                         break;
                     case 'Biaya Sparepart (Rp)':
-                        $values[] = $row['total_biaya_sparepart'] ?? 0;
+                        $values[] = numId($row['total_biaya_sparepart'] ?? 0);
                         break;
                     case 'Biaya Lain (Rp)':
-                        $values[] = $row['biaya_lain'] ?? 0;
+                        $values[] = numId($row['biaya_lain'] ?? 0);
                         break;
                     case 'Total Biaya (Rp)':
-                        $values[] = $row['total_biaya_ok'] ?? 0;
+                        $values[] = numId($row['total_biaya_ok'] ?? 0);
                         break;
                     default:
                         $values[] = '';

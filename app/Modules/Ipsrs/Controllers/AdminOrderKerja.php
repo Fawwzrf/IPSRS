@@ -10,6 +10,7 @@ use App\Modules\Ipsrs\Models\LogStatusOrderKerjaModel; // Tambahkan use statemen
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB; // Pastikan DB di-import
+use App\Http\Helpers\Itm; // Tambahkan jika belum ada
 
 class AdminOrderKerja extends MyController
 {
@@ -25,20 +26,24 @@ class AdminOrderKerja extends MyController
     public function index()
     {
         $d = [];
-        
-        // Penting: Panggil save_session_search untuk mengelola session pencarian
         $this->save_session_search($d);
-        
-        // Data untuk dropdown dan filter
         $d['all_teknisi'] = DbModel::allData('mst_pegawai', ['deleted_st' => '0', 'active_st' => '1', 'jabatan_id' => '90']);
-        
+        $data = $this->model->getAll();
+
+        // Refactor: gunakan helper untuk format tanggal/angka
+        foreach ($data as &$row) {
+            $row['tgl_dibuat'] = to_date($row['tgl_dibuat'] ?? '');
+            $row['total_biaya'] = numId($row['total_biaya'] ?? 0);
+        }
+        $d['data'] = $data;
+
         return $this->renderView($this->template . 'index', $d);
     }
 
     public function form_modal($id = null)
     {
         $d = [];
-        
+
         if ($id == null) {
             // Form baru
             // Pastikan semua field yang diperlukan tersedia
@@ -57,7 +62,7 @@ class AdminOrderKerja extends MyController
                         AND status NOT IN ('selesai', 'dibatalkan')
                     )";
             $d['all_jadwal_pm'] = DbModel::rawData('result_array', $sql);
-            
+
             // Ambil permintaan komplain yang belum dibuatkan order kerja
             $sql = "SELECT pk.*, a.asset_nm 
                     FROM permintaan_komplain pk 
@@ -75,7 +80,7 @@ class AdminOrderKerja extends MyController
         } else {
             // Form edit - pastikan data jadwal_pm lengkap jika ada
             $d['main'] = $this->model->getById($id);
-            
+
             if (!empty($d['main']['jadwal_pm_id'])) {
                 $sql = "SELECT jp.*, a.asset_nm, 
                         COALESCE(jp.frekuensi, 'N/A') as frekuensi, 
@@ -87,7 +92,7 @@ class AdminOrderKerja extends MyController
             } else {
                 $d['all_jadwal_pm'] = [];
             }
-            
+
             // Data permintaan jika ada
             if (!empty($d['main']['permintaan_id'])) {
                 $sql = "SELECT pk.*, a.asset_nm 
@@ -98,18 +103,18 @@ class AdminOrderKerja extends MyController
             } else {
                 $d['all_komplain'] = [];
             }
-            
+
             // Data teknisi yang ditugaskan
             $d['assigned_teknisi'] = array_column(
                 DbModel::allData('penugasan_teknisi', ['order_kerja_id' => $id, 'deleted_st' => 0]),
                 'pegawai_id'
             );
         }
-        
+
         // Data umum yang selalu dibutuhkan
         $d['all_teknisi'] = DbModel::allData('mst_pegawai', ['deleted_st' => '0', 'active_st' => '1', 'jabatan_id' => '90']);
         $d['form_act'] = $this->uri . '/save/' . $id;
-        
+
         return $this->renderView($this->template . 'form_modal', $d);
     }
 
@@ -123,7 +128,7 @@ class AdminOrderKerja extends MyController
     {
         try {
             $d = request()->all();
-            
+
             // Hapus field yang tidak perlu disimpan ke database
             $fieldsToRemove = ['_token', '_is_ajax', 'n', 'action'];
             foreach ($fieldsToRemove as $field) {
@@ -131,10 +136,10 @@ class AdminOrderKerja extends MyController
                     unset($d[$field]);
                 }
             }
-            
+
             // Log input data yang sudah dibersihkan
             \Log::info('AdminOrderKerja::save input setelah dibersihkan', array_keys($d));
-            
+
             // Cek apakah ini aksi simpan log kerja
             if (isset($d['action']) && $d['action'] == 'save_log_kerja') {
                 $logKerjaModel = new LogKerjaModel();
@@ -157,23 +162,17 @@ class AdminOrderKerja extends MyController
                     $d['teknisi'] = $d['pegawai_ids'];
                     unset($d['pegawai_ids']);
                 }
-                
+
                 // Format tanggal dengan benar
-                if (isset($d['tgl_dibuat']) && strpos($d['tgl_dibuat'], '-') !== false) {
-                    $parts = explode('-', $d['tgl_dibuat']);
-                    if (count($parts) === 3 && strlen($parts[2]) === 4) {
-                        // Ubah dari DD-MM-YYYY ke YYYY-MM-DD
-                        $d['tgl_dibuat'] = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
-                    }
+
+                if (isset($d['tgl_dibuat'])) {
+                    $d['tgl_dibuat'] = to_date($d['tgl_dibuat'], '-', '-', '-'); // Pastikan helper mendukung format ke Y-m-d
                 }
-                
-                if (isset($d['tgl_target_selesai']) && strpos($d['tgl_target_selesai'], '-') !== false) {
-                    $parts = explode('-', $d['tgl_target_selesai']);
-                    if (count($parts) === 3 && strlen($parts[2]) === 4) {
-                        $d['tgl_target_selesai'] = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
-                    }
+
+                if (isset($d['tgl_target_selesai'])) {
+                    $d['tgl_target_selesai'] = to_date($d['tgl_target_selesai'], '-', '-', '-'); // Pastikan helper mendukung format ke Y-m-d
                 }
-                
+
                 // Ambil deskripsi dari jadwal_pm atau permintaan jika tersedia
                 if (empty($d['catatan']) && empty($d['deskripsi'])) {
                     if (!empty($d['jadwal_pm_id'])) {
@@ -183,8 +182,7 @@ class AdminOrderKerja extends MyController
                             $d['catatan'] = 'Pemeliharaan: ' . $jadwal['jenis'];
                             $d['jenis'] = 'pemeliharaan';
                         }
-                    } 
-                    else if (!empty($d['permintaan_id'])) {
+                    } else if (!empty($d['permintaan_id'])) {
                         $permintaan = DbModel::getData('permintaan_komplain', ['permintaan_id' => $d['permintaan_id']]);
                         if ($permintaan) {
                             // PERBAIKAN: Gunakan catatan, bukan deskripsi
@@ -192,7 +190,7 @@ class AdminOrderKerja extends MyController
                             $d['jenis'] = 'perbaikan';
                         }
                     }
-                    
+
                     // Jika masih tidak ada catatan, buat default
                     if (empty($d['catatan'])) {
                         $d['catatan'] = 'Order kerja baru dibuat tanggal ' . date('d-m-Y');
@@ -202,20 +200,20 @@ class AdminOrderKerja extends MyController
                     $d['catatan'] = $d['deskripsi'];
                     unset($d['deskripsi']);
                 }
-                
+
                 $result = $this->model->saveData($id, $d);
-                
+
                 if ($result['status']) {
                     $response_code = ($result['mode'] == 'insert') ? '01' : '02';
-                    
+
                     // Untuk keamanan, jangan kirim semua data request ke respons
                     $response_data = [
                         'order_kerja_id' => $result['order_kerja_id'] ?? $id,
-                        'message' => ($result['mode'] == 'insert') ? 
-                            'Order kerja berhasil dibuat.' : 
+                        'message' => ($result['mode'] == 'insert') ?
+                            'Order kerja berhasil dibuat.' :
                             'Order kerja berhasil diperbarui.'
                     ];
-                    
+
                     return response()->json(_response($response_code, $this->uri, $response_data));
                 } else {
                     return response()->json(_response('11', $this->uri, [
@@ -243,7 +241,7 @@ class AdminOrderKerja extends MyController
     {
         return OrderKerjaModel::loadDatatables();
     }
-    
+
     /**
      * Update status order kerja
      * 
@@ -255,35 +253,35 @@ class AdminOrderKerja extends MyController
         $order_kerja_id = $request->input('order_kerja_id');
         $status_baru = $request->input('status_baru');
         $keterangan = $request->input('keterangan');
-        
+
         try {
             DB::beginTransaction();
-            
+
             // Ambil status lama
             $query = "SELECT status FROM order_kerja WHERE order_kerja_id = ?";
             $result = DB::select($query, [$order_kerja_id]);
-            
+
             if (empty($result)) {
                 return response()->json(['status' => false, 'message' => 'Order kerja tidak ditemukan']);
             }
-            
+
             $status_lama = $result[0]->status;
             $pegawai_id = session('pegawai_id');
-            
+
             // Update status order kerja
             $updateQuery = "UPDATE order_kerja SET 
                             status = ?,
                             updated_at = ?,
                             updated_by = ?
                             WHERE order_kerja_id = ?";
-            
+
             DB::update($updateQuery, [
-                $status_baru, 
-                date('Y-m-d H:i:s'), 
-                session('user_id'), 
+                $status_baru,
+                date('Y-m-d H:i:s'),
+                session('user_id'),
                 $order_kerja_id
             ]);
-            
+
             // Catat perubahan status ke log
             $logStatusModel = new LogStatusOrderKerjaModel();
             $result = $logStatusModel->logPerubahanStatus(
@@ -293,20 +291,20 @@ class AdminOrderKerja extends MyController
                 $pegawai_id,
                 $keterangan
             );
-            
+
             if (!$result['status']) {
                 DB::rollBack();
                 return response()->json($result);
             }
-            
+
             DB::commit();
-            return response()->json(['status' => true, 'message' => 'Status berhasil diperbarui']);
+            return response()->json(_response('02', $this->uri, ['message' => 'Status berhasil diperbarui']));
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['status' => false, 'message' => 'Gagal memperbarui status: ' . $e->getMessage()]);
+            return response()->json(_response('01', $this->uri, ['message' => 'Gagal memperbarui status: ' . $e->getMessage()]));
         }
     }
-    
+
     /**
      * Menampilkan form update status
      * 
@@ -316,11 +314,11 @@ class AdminOrderKerja extends MyController
     public function update_status_form($order_kerja_id)
     {
         $d['order_kerja'] = DbModel::getData('order_kerja', ['order_kerja_id' => $order_kerja_id]);
-        
+
         if (!$d['order_kerja']) {
             return '<div class="alert alert-danger">Data Order Kerja tidak ditemukan.</div>';
         }
-        
+
         return $this->renderView('ipsrs::admin.pekerjaan.order_kerja.update_status_modal', $d);
     }
 }

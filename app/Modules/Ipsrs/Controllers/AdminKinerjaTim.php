@@ -6,6 +6,7 @@ use App\Http\Controllers\MyController;
 use App\Modules\App\Models\DbModel;
 use App\Modules\Ipsrs\Models\KinerjaTimModel;
 
+
 class AdminKinerjaTim extends MyController
 {
     public function __construct()
@@ -33,6 +34,15 @@ class AdminKinerjaTim extends MyController
 
     public function ajax_datatables()
     {
-        return KinerjaTimModel::loadDatatables();
+        $data = KinerjaTimModel::getData();
+        foreach ($data as &$row) {
+            $row['tgl_mulai'] = to_date($row['tgl_mulai'] ?? '');
+            $row['total_biaya'] = numId($row['total_biaya'] ?? 0);
+        }
+        return response()->json([
+            'data' => $data,
+            'status' => true,
+            'message' => 'Data berhasil diambil'
+        ]);
     }
 }
