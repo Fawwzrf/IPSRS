@@ -99,14 +99,11 @@ class PermintaanKomplainModel extends Model
                 if (empty($d['permintaan_id'])) {
                     $d['permintaan_id'] = self::generatePermintaanId();
                 }
-                
+
                 // PENTING: Format tanggal tgl ke format MySQL (YYYY-MM-DD)
                 if (isset($d['tgl']) && !empty($d['tgl'])) {
-                    // Jika format DD-MM-YYYY
-                    if (preg_match('/^\d{2}-\d{2}-\d{4}$/', $d['tgl'])) {
-                        $dateParts = explode('-', $d['tgl']);
-                        $d['tgl'] = $dateParts[2] . '-' . $dateParts[1] . '-' . $dateParts[0];
-                    }
+                    $d['tgl'] = to_date($d['tgl'], '-', 'date');
+                
                 } else {
                     // Default ke tanggal hari ini jika tidak ada
                     $d['tgl'] = date('Y-m-d');
@@ -152,8 +149,36 @@ class PermintaanKomplainModel extends Model
                 $result['message'] = 'Permintaan berhasil disimpan';
                 
             } else {
-                // Kode untuk update
-                // ...
+                $validFields = [
+                    'tgl', 'asset_id', 'pegawai_id',
+                    'deskripsi', 'status', 'foto_url', 'anotasi_url',
+                    'updated_at', 'updated_by', 'active_st'
+                ];
+
+                // Buat array data baru yang hanya berisi field valid
+                $dataToUpdate = [];
+                foreach ($validFields as $field) {
+                    if (isset($d[$field])) {
+                        $dataToUpdate[$field] = $d[$field];
+                    }
+                }
+
+                $dataToUpdate['updated_at'] = date('Y-m-d H:i:s');
+                $dataToUpdate['updated_by'] = session('nama_user') ?? session('nama_pegawai') ?? 'system';
+
+                // Untuk debugging, log data yang akan diupdate
+                \Log::info('PermintaanKomplainModel: Updating filtered data', ['data' => $dataToUpdate]);
+
+                $update = DbModel::updateData('permintaan_komplain', $dataToUpdate, ['permintaan_id' => $id]);
+                if (!$update) {
+                    throw new \Exception("Gagal mengupdate permintaan");
+                }
+
+                DB::commit();
+
+                $result['status'] = true;
+                $result['permintaan_id'] = $id;
+                $result['message'] = 'Permintaan berhasil diupdate';
             }
             
             return $result;

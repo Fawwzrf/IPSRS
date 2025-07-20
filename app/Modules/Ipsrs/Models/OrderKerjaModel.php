@@ -168,21 +168,12 @@ class OrderKerjaModel extends Model
 
                 // Buat array data baru yang hanya berisi field valid
                 $dataToInsert = [];
+
                 foreach ($validFields as $field) {
                     if (isset($d[$field])) {
                         // Format tanggal jika perlu
                         if (in_array($field, ['tgl_dibuat', 'tgl_target_selesai', 'tgl_selesai']) && !empty($d[$field])) {
-                            // Konversi format tanggal DD-MM-YYYY ke YYYY-MM-DD
-                            if (strpos($d[$field], '-') !== false) {
-                                $dateParts = explode('-', $d[$field]);
-                                if (count($dateParts) === 3 && strlen($dateParts[2]) === 4) {
-                                    $dataToInsert[$field] = $dateParts[2] . '-' . $dateParts[1] . '-' . $dateParts[0];
-                                } else {
-                                    $dataToInsert[$field] = $d[$field];
-                                }
-                            } else {
-                                $dataToInsert[$field] = $d[$field];
-                            }
+                            $dataToInsert[$field] = to_date($d[$field], '-', 'date');
                         } else {
                             $dataToInsert[$field] = $d[$field];
                         }
@@ -265,7 +256,87 @@ class OrderKerjaModel extends Model
                 $result['order_kerja_id'] = $order_kerja_id;
                 $result['message'] = 'Order kerja berhasil dibuat';
             } else {
-                // Kode untuk update order kerja disini
+                $validFields = [
+                    'jadwal_pm_id',
+                    'permintaan_id',
+                    'jenis',
+                    'tgl_dibuat',
+                    'tgl_target_selesai',
+                    'tgl_selesai',
+                    'prioritas',
+                    'estimasi_biaya',
+                    'catatan',
+                    'status',
+                    'updated_at',
+                    'updated_by',
+                    'deleted_st',
+                    'active_st'
+                ];
+
+                $dataToUpdate = [];
+                foreach ($validFields as $field) {
+                    if (isset($d[$field])) {
+                        if (in_array($field, ['tgl_dibuat', 'tgl_target_selesai', 'tgl_selesai']) && !empty($d[$field])) {
+                            $dataToUpdate[$field] = to_date($d[$field], '-', 'date');
+                        } else {
+                            $dataToUpdate[$field] = $d[$field];
+                        }
+                    }
+                }
+
+                // Jika ada deskripsi, pindahkan ke catatan
+                if (isset($d['deskripsi']) && !isset($dataToUpdate['catatan'])) {
+                    $dataToUpdate['catatan'] = $d['deskripsi'];
+                }
+
+                $dataToUpdate['updated_at'] = date('Y-m-d H:i:s');
+                $dataToUpdate['updated_by'] = session('nama_user') ?? session('nama_pegawai') ?? 'system';
+
+                $update = DbModel::updateData('order_kerja', $dataToUpdate, ['order_kerja_id' => $id]);
+                if (!$update) {
+                    throw new \Exception("Gagal mengupdate order kerja");
+                }
+
+                // Jika ada teknisi yang dipilih, update penugasan_teknisi
+                if (isset($d['teknisi']) && is_array($d['teknisi'])) {
+                    // Soft delete penugasan lama
+                    DbModel::updateData('penugasan_teknisi', [
+                        'deleted_st' => 1,
+                        'updated_at' => date('Y-m-d H:i:s'),
+                        'updated_by' => session('nama_user') ?? session('nama_pegawai') ?? 'system'
+                    ], [
+                        'order_kerja_id' => $id
+                    ]);
+
+                    // Insert penugasan baru
+                    foreach ($d['teknisi'] as $pegawai_id) {
+                        $penugasan_id = self::generatePenugasanId();
+                        $penugasan = [
+                            'penugasan_id' => $penugasan_id,
+                            'order_kerja_id' => $id,
+                            'pegawai_id' => $pegawai_id,
+                            'status' => 'ditugaskan',
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'created_by' => session('nama_user') ?? session('nama_pegawai') ?? 'system'
+                        ];
+                        $insertPenugasan = DbModel::insertData('penugasan_teknisi', $penugasan);
+                        if (!$insertPenugasan) {
+                            throw new \Exception("Gagal menyimpan penugasan teknisi");
+                        }
+                    }
+
+                    // Update status order kerja menjadi 'ditugaskan'
+                    DbModel::updateData(
+                        'order_kerja',
+                        ['status' => 'ditugaskan'],
+                        ['order_kerja_id' => $id]
+                    );
+                }
+
+                DB::commit();
+                $result['status'] = true;
+                $result['order_kerja_id'] = $id;
+                $result['message'] = 'Order kerja berhasil diupdate';
             }
 
             return $result;
