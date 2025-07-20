@@ -35,7 +35,7 @@
             <div class="mb-3 row">
                 <label class="col-lg-3 col-form-label">Harga Satuan (Rp)</label>
                 <div class="col-lg-5">
-                    <input type="text" name="harga_satuan" id="harga_satuan" class="form-control" value="{{ @$main['harga_satuan'] ?? 0 }}">
+                    <input type="text" name="harga_satuan" id="harga_satuan" class="form-control" value="{{ isset(@$main['harga_satuan']) ? numId(@$main['harga_satuan']) : 0 }}">
                 </div>
             </div>
         </fieldset>

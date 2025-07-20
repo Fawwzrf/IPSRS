@@ -7,7 +7,7 @@ use App\Modules\App\Models\DbModel;
 use App\Modules\Ipsrs\Models\LaporanModel;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
-use App\Http\Helpers\Itm; // Tambahkan jika belum ada
+
 
 class AdminLaporan extends MyController
 {
@@ -126,6 +126,58 @@ class AdminLaporan extends MyController
         }
 
         return $this->renderView($this->template . 'biaya_pemeliharaan', $d);
+    }
+
+    /**
+     * Menampilkan laporan Kinerja Tim.
+     */
+    public function kinerjaTim()
+    {
+        $d = [];
+        $this->save_session_search($d);
+
+        // Set default tanggal jika belum ada di session
+        if (empty($d['nav_sess']['search']['data']['tgl_start'])) {
+            $d['nav_sess']['search']['data']['tgl_start'] = date('01-m-Y');
+            $d['nav_sess']['search']['data']['tgl_end'] = date('d-m-Y');
+        }
+
+        // Dropdown teknisi
+        $d['all_teknisi'] = DbModel::allData('mst_pegawai', ['jabatan_id' => '90', 'deleted_st' => 0]);
+
+        // Data laporan
+        $filter = $d['nav_sess']['search']['data'] ?? [];
+        $d['laporan'] = LaporanModel::getLaporanKinerjaTim($filter);
+
+        // Handler jika request AJAX dari _search(e)
+        if (request()->input('_is_ajax')) {
+            // Redirect ke halaman yang sama agar _page(res.uri, "search") bisa reload konten
+            return response()->json([
+                'uri' => url()->current() . '?n=' . request('n')
+            ]);
+        }
+
+        // Ekspor Excel
+        if (request('export') == 'excel') {
+            $headers = [
+                'Order ID', 'Teknisi', 'Aset', 'Respon Admin', 'Penerimaan Teknisi', 'Pengerjaan', 'Total Penyelesaian'
+            ];
+            $data = [];
+            foreach ($d['laporan'] as $row) {
+                $data[] = [
+                    $row['order_kerja_id'] ?? '',
+                    $row['nama_teknisi'] ?? '',
+                    $row['nama_aset'] ?? '',
+                    $row['durasi_respon_admin'] ?? 0,
+                    $row['durasi_penerimaan_teknisi'] ?? 0,
+                    $row['durasi_pengerjaan'] ?? 0,
+                    $row['durasi_total'] ?? 0,
+                ];
+            }
+            return $this->exportToExcel($data, 'Laporan_Kinerja_Tim', $headers);
+        }
+
+        return $this->renderView($this->template . 'kinerja_tim', $d);
     }
 
     /**

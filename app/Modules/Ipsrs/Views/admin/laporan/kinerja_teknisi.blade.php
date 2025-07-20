@@ -43,7 +43,7 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="input-group mt-4">
-                                    <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i>&nbsp;Filter</button>
+                                    <button type="submit" class="btn btn-primary" ><i class="fas fa-search"></i>&nbsp;Filter</button>
                                     <button type="button" class="btn btn-secondary" onclick="_searchReset()"><i class="fas fa-times"></i>&nbsp;Reset</button>
                                 </div>
                             </div>
@@ -67,16 +67,16 @@
                             <tr>
                                 <td>{{ $index + 1 }}</td>
                                 <td>{{ $row['pegawai_nm'] }}</td>
-                                <td>{{ $row['total_tugas'] }}</td>
-                                <td>{{ $row['tugas_selesai'] }}</td>
+                                <td>{{ numId($row['total_tugas']) }}</td>
+                                <td>{{ numId($row['tugas_selesai']) }}</td>
                                 <td>
                                     @if($row['total_tugas'] > 0)
-                                        {{ number_format(($row['tugas_selesai'] / $row['total_tugas']) * 100, 1) }}%
+                                        {{ numId(($row['tugas_selesai'] / $row['total_tugas']) * 100, true) }}%
                                     @else
                                         0%
                                     @endif
                                 </td>
-                                <td>{{ number_format($row['rata_rata_durasi'] ?? 0, 1) }}</td>
+                                <td>{{ numId($row['rata_rata_durasi'] ?? 0, true) }}</td>
                             </tr>
                             @empty
                             <tr>

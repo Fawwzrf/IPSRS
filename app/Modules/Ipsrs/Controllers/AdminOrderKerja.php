@@ -28,7 +28,7 @@ class AdminOrderKerja extends MyController
         $d = [];
         $this->save_session_search($d);
         $d['all_teknisi'] = DbModel::allData('mst_pegawai', ['deleted_st' => '0', 'active_st' => '1', 'jabatan_id' => '90']);
-        $data = $this->model->getAll();
+        $data = DbModel::allData('order_kerja');
 
         // Refactor: gunakan helper untuk format tanggal/angka
         foreach ($data as &$row) {

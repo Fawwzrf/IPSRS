@@ -1,13 +1,12 @@
 <div class="modal-header">
     <h5 class="modal-title">Tambah Log Kerja</h5>
-    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 
-<div class="modal-body">
-    <div id="form-message"></div>
-    
-    <form id="form-log-kerja">
-        @csrf
+<form id="form-log-kerja" action="{{ $form_act }}" method="post">
+    @csrf
+    <div class="modal-body">
+        <div id="form-message"></div>
+        
         <input type="hidden" name="order_kerja_id" value="{{ $order_kerja_id }}">
         <input type="hidden" name="asset_id" value="{{ $asset_id }}">
         <input type="hidden" name="n" value="{{ $n_param ?? '' }}">
@@ -41,91 +40,68 @@
                 </div>
             </div>
         </div>
-    </form>
-</div>
-
-<div class="modal-footer">
-    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-    <button type="button" class="btn btn-primary" onclick="submitLogKerja()">Simpan Log Kerja</button>
-</div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <button type="submit" class="btn btn-primary">Simpan</button>
+    </div>
+</form>
 
 <script>
-function submitLogKerja() {
-    const form = document.getElementById('form-log-kerja');
-    
-    // Validasi form
-    if (!form.checkValidity()) {
-        form.reportValidity();
-        return;
-    }
-    
-    // Disable button untuk mencegah double submit
-    const submitBtn = document.querySelector('.modal-footer .btn-primary');
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
-    
-    // Buat FormData dari form
-    const formData = new FormData(form);
-    const orderKerjaId = formData.get('order_kerja_id');
-    
-    // Ambil nilai-nilai untuk dikirim via URL parameter
-    const diagnosa = formData.get('diagnosa');
-    const tindakan = formData.get('tindakan');
-    const hasil = formData.get('hasil');
-    const durasi = formData.get('durasi_menit');
-    const assetId = formData.get('asset_id');
-    const nParam = formData.get('n');
-    
-    // Untuk debugging
-    console.log("Form data:", {
-        orderKerjaId, diagnosa, tindakan, hasil, durasi, assetId, nParam
-    });
-    
-    // Kirim data dengan fetch API (GET method)
-    fetch(`/ipsrs/teknisitugas/save_laporan/${orderKerjaId}?asset_id=${assetId}&diagnosa=${encodeURIComponent(diagnosa)}&tindakan=${encodeURIComponent(tindakan)}&hasil=${hasil}&durasi_menit=${durasi}&n=${nParam}`)
-        .then(response => response.json())
-        .then(data => {
-            console.log("Response:", data);
-            
-            // Handle success
-            if (data.status === true) {
-                // Tampilkan pesan sukses
-                if (typeof _toast === 'function') {
-                    _toast('success', data.message || 'Log kerja berhasil disimpan');
-                } else {
-                    alert(data.message || 'Log kerja berhasil disimpan');
-                }
-                
-                // Tutup modal
-                $('.modal').modal('hide');
-                
-                // Redirect setelah simpan
-                if (data.data && data.data.redirect_url) {
-                    window.location.href = data.data.redirect_url;
-                } else {
-                    window.location.reload();
-                }
-            } else {
-                // Tampilkan pesan error
-                const errorMsg = data.message || 'Terjadi kesalahan';
-                if (typeof _toast === 'function') {
-                    _toast('error', errorMsg);
-                } else {
-                    document.getElementById('form-message').innerHTML = 
-                        `<div class="alert alert-danger">${errorMsg}</div>`;
-                }
+document.addEventListener("DOMContentLoaded", function() {
+    document.getElementById('form-log-kerja').onsubmit = function(e) {
+        e.preventDefault();
+        
+        // Disable button untuk mencegah double submit
+        const submitBtn = document.querySelector('.modal-footer .btn-primary');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+        
+        _save(this, {
+            onSuccess: function(res) {
+                _toast('success', res.message || 'Log kerja berhasil disimpan');
+                _modalHide();
+                _reload();
+            },
+            onError: function(res) {
+                _toast('error', res.message || 'Gagal menyimpan log kerja');
                 
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Simpan Log Kerja';
+                submitBtn.innerHTML = 'Simpan';
             }
-        })
-        .catch(error => {
-            console.error("Error:", error);
-            document.getElementById('form-message').innerHTML = 
-                `<div class="alert alert-danger">Terjadi kesalahan: ${error.message}</div>`;
-            
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = 'Simpan Log Kerja';
         });
-}
+    };
+});
+
+// Contoh handler submit AJAX
+$(document).on('submit', '#form-log-kerja', function(e) {
+    e.preventDefault();
+    var $form = $(this);
+    var formData = new FormData(this);
+
+    $.ajax({
+        url: $form.attr('action'),
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(res) {
+            if (res.status) {
+                _toast('success', res.message || 'Berhasil');
+                _modalHide();
+                if (res.data && res.data.redirect_url) {
+                    window.location.href = res.data.redirect_url;
+                } else if (res.uri) {
+                    _page(res.uri);
+                }
+            } else {
+                _toast('error', res.message || 'Gagal');
+            }
+        },
+        error: function(xhr) {
+            _toast('error', 'Terjadi kesalahan server');
+        }
+    });
+    return false;
+});
 </script>

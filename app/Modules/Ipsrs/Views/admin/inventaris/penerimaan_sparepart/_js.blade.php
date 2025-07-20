@@ -171,8 +171,4 @@
         
         return false;
     });
-
-    function ifNull(data) {
-        return data ? data : '-';
-    }
 </script>

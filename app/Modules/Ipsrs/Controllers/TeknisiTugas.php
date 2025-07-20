@@ -415,8 +415,8 @@ class TeknisiTugas extends MyController
                 'order_kerja_id' => $order_kerja_id,
                 'order_kerja' => $order_kerja,
                 'asset_id' => $order_kerja['asset_id'] ?? null,
-                'n_param' => request('n')
-                // Hapus form_act karena kita menggunakan JavaScript untuk submit
+                'n_param' => request('n'),
+                'form_act' => url('ipsrs/teknisitugas/save_log_kerja/' . $order_kerja_id)
             ];
 
             // Jika asset_id tidak ada di order_kerja, coba ambil dari permintaan atau jadwal_pm
@@ -430,7 +430,6 @@ class TeknisiTugas extends MyController
                 }
             }
 
-            // Render form dalam modal
             return view($this->template . 'form_log_kerja_modal', $d);
         } catch (\Exception $e) {
             \Log::error('Error in form_log_kerja: ' . $e->getMessage());

@@ -78,9 +78,9 @@
                                 <td>{{ $index + 1 }}</td>
                                 <td>{{ $row['asset_nm'] }}</td>
                                 <td>{{ $row['lokasi_nm'] }}</td>
-                                <td>{{ $row['jumlah_ok'] }}</td>
-                                <td>{{ $row['jumlah_perbaikan'] }}</td>
-                                <td>{{ $row['jumlah_pemeliharaan'] }}</td>
+                                <td>{{ numId($row['jumlah_ok']) }}</td>
+                                <td>{{ numId($row['jumlah_perbaikan']) }}</td>
+                                <td>{{ numId($row['jumlah_pemeliharaan']) }}</td>
                                 <td>{{ @to_date($row['terakhir_ditangani']) }}</td>
                             </tr>
                             @empty

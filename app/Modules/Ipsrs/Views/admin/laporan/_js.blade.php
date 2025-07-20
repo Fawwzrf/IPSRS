@@ -42,6 +42,14 @@
                 { "data": "durasi_total", "className": "text-center fw-bold bg-blue-lt", "render": function(data) { return data > 0 ? data : '-'; } },
             ]
         });
+
+
+
+        // Handler form search
+        $('#form-search').on('submit', function(e) {
+            e.preventDefault();
+            $('#datatable').DataTable().ajax.reload();
+        });
     });
 
     // Fungsi untuk mencari data (handle form submit)
