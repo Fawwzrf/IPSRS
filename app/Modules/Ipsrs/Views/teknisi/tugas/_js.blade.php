@@ -2,15 +2,15 @@
     // Fungsi untuk membuka modal scan - letakkan di bagian atas file
     function openScanModal(orderKerjaId, nParam) {
         console.log('openScanModal called with:', orderKerjaId, nParam); // Debug log
-        
+
         // Buat URL dengan parameter yang benar
         let url = _base_url + 'ipsrs/teknisitugas/form_scan_modal/' + orderKerjaId;
         if (nParam) {
             url += '?n=' + nParam;
         }
-        
+
         console.log('Modal URL:', url); // Debug log
-        
+
         // Cara 1: Gunakan AJAX langsung untuk memuat konten modal
         $.ajax({
             url: url,
@@ -20,7 +20,7 @@
                 if ($('#scan-modal').length) {
                     $('#scan-modal').remove();
                 }
-                
+
                 $('body').append('<div class="modal fade" id="scan-modal" tabindex="-1" role="dialog">' +
                     '<div class="modal-dialog modal-lg" role="document">' +
                     '<div class="modal-content">' +
@@ -32,7 +32,7 @@
                     '</div>' +
                     '</div>' +
                     '</div>');
-                
+
                 // Tampilkan modal
                 $('#scan-modal').modal('show');
             },
@@ -55,7 +55,8 @@
             var modal = $(e.target);
             var repeater = modal.find('#sparepart-repeater');
             // Inisialisasi hanya jika belum pernah dan plugin tersedia
-            if (repeater.length > 0 && typeof repeater.data('repeater-init') === 'undefined' && typeof repeater.repeater === 'function') {
+            if (repeater.length > 0 && typeof repeater.data('repeater-init') === 'undefined' &&
+                typeof repeater.repeater === 'function') {
                 repeater.repeater({
                     initEmpty: false,
                     show: function() {
@@ -77,7 +78,7 @@
             }
         });
 
-        
+
     });
 
     // Fungsi helper untuk menangani respon sukses
@@ -112,7 +113,6 @@
     // Handler untuk tombol aksi (Terima, Batal Terima, Terima Kembali)
     $(document).on('click', '.btn-task-action', function(e) {
         e.preventDefault();
-        if (!confirm('Apakah Anda yakin ingin melakukan tindakan ini?')) return;
 
         const $btn = $(this);
         const url = $btn.data('url');
@@ -147,6 +147,7 @@
     });
 
     // Handler untuk form AJAX (Form Tolak Tugas)
+    // ...existing code...
     $(document).on('submit', '#form-ajax', function(e) {
         e.preventDefault();
         const $form = $(this);
@@ -163,103 +164,40 @@
 
         $.post($form.attr('action'), formData, function(res) {
             if (res.code === '02') {
-                handleSuccess(res.message, res.redirect_url);
-            } else {
-                _toast('error', res.message || 'Gagal memproses permintaan.');
-                $btn.prop('disabled', false);
-            }
-        }, 'json').fail(xhr => handleFailure(xhr, $btn));
-    });
-
-    // Ganti atau tambahkan handler form ajax untuk "terima tugas"
-    $(document).off('click', '.btn-terima-tugas').on('click', '.btn-terima-tugas', function(e) {
-        e.preventDefault();
-        const btn = $(this);
-        const url = btn.data('url');
-        const penugasanId = btn.data('penugasan-id');
-        const n_param = new URLSearchParams(window.location.search).get('n') || '';
-
-        // Disable button dan tampilkan loading
-        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Memproses...');
-
-        $.ajax({
-            url: url,
-            type: 'POST',
-            data: {
-                _token: _token,
-                penugasan_id: penugasanId,
-                n: n_param
-            },
-            dataType: 'json',
-            success: function(res) {
-                // Cek apakah response memiliki status atau bisa dianggap sukses
-                const isSuccess = res.status === true || res.code === '01' || res.code === '02';
-
-                // Tampilkan toast dengan warna yang sesuai
-                _toast(isSuccess ? 'success' : 'error', res.message || (isSuccess ?
-                    'Data berhasil diubah' : 'Terjadi kesalahan'));
-
-                // Tutup modal jika sukses
-                if (isSuccess) {
-                    _modalHide();
-
-                    // Redirect jika ada URL redirect
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil',
+                    text: res.message
+                }).then(() => {
                     if (res.redirect_url) {
                         window.location.href = res.redirect_url;
                     } else {
-                        // Reload halaman jika tidak ada redirect
                         window.location.reload();
                     }
-                } else {
-                    // Kembalikan tombol ke keadaan semula jika gagal
-                    btn.prop('disabled', false).html('<i class="fas fa-check"></i> Terima Tugas');
-                }
-            },
-            error: function(xhr) {
-                // Handle error response
-                let errorMessage = 'Terjadi kesalahan sistem';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
-                }
-
-                _toast('error', errorMessage);
-                btn.prop('disabled', false).html('<i class="fas fa-check"></i> Terima Tugas');
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal',
+                    text: res.message || 'Gagal memproses permintaan.'
+                });
+                $btn.prop('disabled', false);
             }
+        }, 'json').fail(function(xhr) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON
+                    .message : 'Terjadi kesalahan pada server.'
+            });
+            $btn.prop('disabled', false);
         });
     });
+    // ...existing code...
+
+    // Ganti atau tambahkan handler form ajax untuk "terima tugas"
 
     // Fungsi untuk batalkan penerimaan tugas
-    function batalTerima(penugasanId) {
-        const n_param = new URLSearchParams(window.location.search).get('n') || '';
-
-        $.ajax({
-            url: `${_base_url}ipsrs/teknisitugas/batal_terima`,
-            type: 'POST',
-            data: {
-                _token: _token,
-                penugasan_id: penugasanId,
-                n: n_param
-            },
-            dataType: 'json',
-            success: function(res) {
-                _toast(res.code === '01' || res.code === '02' ? 'success' : 'error', res.message);
-                _modalHide();
-
-                if (res.redirect_url) {
-                    window.location.href = res.redirect_url;
-                } else {
-                    window.location.reload();
-                }
-            },
-            error: function(xhr) {
-                let errorMessage = 'Terjadi kesalahan sistem';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
-                }
-                _toast('error', errorMessage);
-            }
-        });
-    }
 
     // Tambahkan fungsi-fungsi utilitas jika belum ada
     function _toast(type, message) {
@@ -284,56 +222,6 @@
         }
     }
 
-    // Tambahkan handler untuk form tolak tugas
-    $(document).off('submit', '#form-ajax').on('submit', '#form-ajax', function(e) {
-        e.preventDefault();
-
-        const form = $(this);
-        const submitBtn = form.find('button[type="submit"]');
-        const originalBtnText = submitBtn.html();
-
-        // Validasi form
-        if (!form[0].checkValidity()) {
-            form[0].reportValidity();
-            return false;
-        }
-
-        // Disable button dan tampilkan loading
-        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Memproses...');
-
-        $.ajax({
-            url: form.attr('action'),
-            type: form.attr('method'),
-            data: form.serialize(),
-            dataType: 'json',
-            success: function(res) {
-                const isSuccess = res.status === true || res.code === '01' || res.code === '02';
-
-                _toast(isSuccess ? 'success' : 'error', res.message || (isSuccess ? 'Berhasil' :
-                    'Terjadi kesalahan'));
-
-                if (isSuccess) {
-                    _modalHide();
-
-                    if (res.redirect_url) {
-                        window.location.href = res.redirect_url;
-                    } else {
-                        window.location.reload();
-                    }
-                } else {
-                    submitBtn.prop('disabled', false).html(originalBtnText);
-                }
-            },
-            error: function(xhr) {
-                let errorMessage = 'Terjadi kesalahan sistem';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
-                }
-                _toast('error', errorMessage);
-                submitBtn.prop('disabled', false).html(originalBtnText);
-            }
-        });
-    });
 
     // Tambahkan fungsi untuk menampilkan modal tolak tugas
     function showTolakModal(penugasanId) {
@@ -364,178 +252,158 @@
         console.log("Document ready - binding tolak tugas button");
 
         // Gunakan delegasi event untuk menangani tombol dalam modal
-        $(document).on('click', '.btn-tolak-tugas', function(e) {
+    });
+
+    // Hapus handler lama untuk .btn-terima-tugas, .btn-ambil-kembali, .btn-tolak-tugas, dan batalTerima
+    // Pastikan hanya handler SweetAlert2 yang aktif
+
+    // Handler tombol aksi dengan SweetAlert2
+    $(document).off('click', '.btn-terima-tugas, .btn-ambil-kembali').on('click',
+        '.btn-terima-tugas, .btn-ambil-kembali',
+        function(e) {
             e.preventDefault();
-            console.log("Tolak button clicked"); // Debug log
+            const btn = $(this);
+            const url = btn.data('url');
+            const penugasanId = btn.data('penugasan-id');
+            const n_param = new URLSearchParams(window.location.search).get('n') || '';
 
-            const penugasanId = $(this).data('penugasan-id');
-            const n = $(this).data('n') || '';
+            let actionText = btn.hasClass('btn-terima-tugas') ? 'Terima Tugas ini?' : 'Ambil Kembali Tugas ini?';
 
-            // URL untuk modal form tolak
-            const modalUrl = _base_url + 'ipsrs/teknisitugas/form_tolak_modal/' + penugasanId + '?n=' +
-                n;
-
-            // Buka modal secara manual jika _modal tidak berfungsi
-            $.ajax({
-                url: modalUrl + '&_is_ajax=true',
-                type: 'GET',
-                headers: {
-                    'X-CSRF-TOKEN': _token
-                },
-                success: function(response) {
-                    // Tutup modal yang ada jika ada
-                    $('#my-modal-1').modal('hide');
-
-                    // Tambahkan modal baru ke body
-                    if ($('#tolak-modal').length) {
-                        $('#tolak-modal').remove();
-                    }
-
-                    $('body').append(
-                        '<div class="modal fade" id="tolak-modal" tabindex="-1" role="dialog">' +
-                        '<div class="modal-dialog modal-md" role="document">' +
-                        '<div class="modal-content">' +
-                        '<div class="modal-header">' +
-                        '<h5 class="modal-title">Tolak Tugas</h5>' +
-                        '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
-                        '</div>' +
-                        response +
-                        '</div>' +
-                        '</div>' +
-                        '</div>');
-
-                    // Tampilkan modal
-                    $('#tolak-modal').modal('show');
-
-                    // Inisialisasi plugin form jika diperlukan
-                    initializeFormPlugins();
-                },
-                error: function(xhr) {
-                    console.error("Error loading modal:", xhr);
-                    _toast('error', 'Gagal memuat form tolak tugas');
+            Swal.fire({
+                title: 'Konfirmasi',
+                text: actionText,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, lanjutkan',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Memproses...');
+                    $.ajax({
+                        url: url,
+                        type: 'POST',
+                        data: {
+                            _token: _token,
+                            penugasan_id: penugasanId,
+                            n: n_param
+                        },
+                        dataType: 'json',
+                        success: function(res) {
+                            Swal.fire({
+                                icon: res.code === '02' ? 'success' : 'error',
+                                title: res.code === '02' ? 'Berhasil' : 'Gagal',
+                                text: res.message || (res.code === '02' ?
+                                    'Data berhasil diubah' : 'Terjadi kesalahan')
+                            }).then(() => {
+                                if (res.code === '02' && res.redirect_url) {
+                                    window.location.href = res.redirect_url;
+                                } else {
+                                    btn.prop('disabled', false).html(btn.hasClass(
+                                            'btn-terima-tugas') ?
+                                        '<i class="fas fa-check"></i> Terima Tugas' :
+                                        '<i class="fas fa-undo"></i> Ambil Kembali Tugas'
+                                        );
+                                }
+                            });
+                        },
+                        error: function(xhr) {
+                            Swal.fire('Error', xhr.responseJSON?.message ||
+                                'Terjadi kesalahan sistem', 'error');
+                            btn.prop('disabled', false).html(btn.hasClass('btn-terima-tugas') ?
+                                '<i class="fas fa-check"></i> Terima Tugas' :
+                                '<i class="fas fa-undo"></i> Ambil Kembali Tugas');
+                        }
+                    });
                 }
             });
         });
-    });
 
-    // Handler untuk submit form tolak tugas
-    $(document).on('submit', '#form-ajax', function(e) {
-        e.preventDefault();
-        console.log("Form tolak submitted"); // Debug log
-
-        const form = $(this);
-        const submitBtn = form.find('button[type="submit"]');
-        const originalBtnText = submitBtn.html();
-
-        // Validasi form
-        if (!form[0].checkValidity()) {
-            form[0].reportValidity();
-            return false;
-        }
-
-        // Disable button dan tampilkan loading
-        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Memproses...');
-
-        $.ajax({
-            url: form.attr('action'),
-            type: form.attr('method'),
-            data: form.serialize(),
-            dataType: 'json',
-            success: function(res) {
-                console.log("Form response:", res); // Debug log
-
-                const isSuccess = res.status === true || res.code === '01' || res.code === '02';
-
-                _toast(isSuccess ? 'success' : 'error', res.message || (isSuccess ? 'Berhasil' :
-                    'Terjadi kesalahan'));
-
-                if (isSuccess) {
-                    // Tutup semua modal
-                    $('.modal').modal('hide');
-
-                    // Redirect atau reload
-                    if (res.redirect_url) {
-                        window.location.href = res.redirect_url;
-                    } else {
-                        window.location.reload();
+    // Handler tombol batalkan penerimaan tugas dengan SweetAlert2
+    function batalTerima(penugasanId) {
+        const n_param = new URLSearchParams(window.location.search).get('n') || '';
+        Swal.fire({
+            title: 'Konfirmasi',
+            text: 'Batalkan penerimaan tugas ini?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Batalkan',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: `${_base_url}ipsrs/teknisitugas/batal_terima`,
+                    type: 'POST',
+                    data: {
+                        _token: _token,
+                        penugasan_id: penugasanId,
+                        n: n_param
+                    },
+                    dataType: 'json',
+                    success: function(res) {
+                        Swal.fire({
+                            icon: res.code === '02' ? 'success' : 'error',
+                            title: res.code === '02' ? 'Berhasil' : 'Gagal',
+                            text: res.message
+                        }).then(() => {
+                            if (res.code === '02' && res.redirect_url) {
+                                window.location.href = res.redirect_url;
+                            }
+                        });
+                    },
+                    error: function(xhr) {
+                        Swal.fire('Error', xhr.responseJSON?.message || 'Terjadi kesalahan sistem',
+                            'error');
                     }
-                } else {
-                    submitBtn.prop('disabled', false).html(originalBtnText);
-                }
-            },
-            error: function(xhr) {
-                console.error("Error submitting form:", xhr); // Debug log
+                });
+            }
+        });
+    }
 
-                let errorMessage = 'Terjadi kesalahan sistem';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
-                }
-                _toast('error', errorMessage);
-                submitBtn.prop('disabled', false).html(originalBtnText);
+    // Handler tombol tolak tugas dengan SweetAlert2 sebelum tampilkan modal
+    $(document).off('click', '.btn-tolak-tugas').on('click', '.btn-tolak-tugas', function(e) {
+        e.preventDefault();
+        const penugasanId = $(this).data('penugasan-id');
+        const n = $(this).data('n') || '';
+        Swal.fire({
+            title: 'Konfirmasi',
+            text: 'Tolak tugas ini?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Tolak',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Buka modal form tolak tugas
+                const modalUrl = _base_url + 'ipsrs/teknisitugas/form_tolak_modal/' + penugasanId +
+                    '?n=' + n + '&_is_ajax=true';
+                $.ajax({
+                    url: modalUrl,
+                    type: 'GET',
+                    headers: {
+                        'X-CSRF-TOKEN': _token
+                    },
+                    success: function(response) {
+                        $('#my-modal-1').modal('hide');
+                        if ($('#tolak-modal').length) $('#tolak-modal').remove();
+                        $('body').append(
+                            '<div class="modal fade" id="tolak-modal" tabindex="-1" role="dialog">' +
+                            '<div class="modal-dialog modal-md" role="document">' +
+                            '<div class="modal-content">' +
+                            '<div class="modal-header">' +
+                            '<h5 class="modal-title">Tolak Tugas</h5>' +
+                            '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                            '</div>' +
+                            response +
+                            '</div>' +
+                            '</div>' +
+                            '</div>');
+                        $('#tolak-modal').modal('show');
+                    },
+                    error: function(xhr) {
+                        Swal.fire('Error', 'Gagal memuat form tolak tugas', 'error');
+                    }
+                });
             }
         });
     });
-
-    // Handler untuk tombol "Ambil Kembali"
-    $(document).off('click', '.btn-ambil-kembali').on('click', '.btn-ambil-kembali', function(e) {
-        e.preventDefault();
-        const btn = $(this);
-        const url = btn.data('url');
-        const penugasanId = btn.data('penugasan-id');
-        const n_param = new URLSearchParams(window.location.search).get('n') || '';
-
-        if (confirm('Apakah Anda yakin ingin mengambil kembali tugas ini?')) {
-            // Disable button dan tampilkan loading
-            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Memproses...');
-
-            $.ajax({
-                url: url,
-                type: 'POST',
-                data: {
-                    _token: _token,
-                    penugasan_id: penugasanId,
-                    n: n_param
-                },
-                dataType: 'json',
-                success: function(res) {
-                    // Cek apakah response memiliki status atau bisa dianggap sukses
-                    const isSuccess = res.status === true || res.code === '01' || res.code === '02';
-
-                    // Tampilkan toast dengan warna yang sesuai
-                    _toast(isSuccess ? 'success' : 'error', res.message || (isSuccess ?
-                        'Data berhasil diubah' : 'Terjadi kesalahan'));
-
-                    // Tutup modal jika sukses
-                    if (isSuccess) {
-                        _modalHide();
-
-                        // Redirect jika ada URL redirect
-                        if (res.redirect_url) {
-                            window.location.href = res.redirect_url;
-                        } else {
-                            // Reload halaman jika tidak ada redirect
-                            window.location.reload();
-                        }
-                    } else {
-                        // Kembalikan tombol ke keadaan semula jika gagal
-                        btn.prop('disabled', false).html(
-                            '<i class="fas fa-undo"></i> Ambil Kembali Tugas');
-                    }
-                },
-                error: function(xhr) {
-                    // Handle error response
-                    let errorMessage = 'Terjadi kesalahan sistem';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    }
-
-                    _toast('error', errorMessage);
-                    btn.prop('disabled', false).html(
-                        '<i class="fas fa-undo"></i> Ambil Kembali Tugas');
-                }
-            });
-        }
-    });
-
-
 </script>

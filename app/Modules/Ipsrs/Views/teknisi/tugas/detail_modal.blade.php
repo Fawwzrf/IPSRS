@@ -68,7 +68,7 @@
         {{-- Tombol untuk tugas yang sedang dikerjakan --}}
     @elseif($tugas['status'] == 'sedang_dikerjakan')
         <button type="button" class="btn btn-danger"
-            onclick="if(confirm('Apakah Anda yakin ingin membatalkan penerimaan tugas ini?')) { batalTerima('{{ $tugas['penugasan_id'] }}') }">
+            onclick="batalTerima('{{ $tugas['penugasan_id'] }}')">
             <i class="fas fa-undo"></i> Batalkan Penerimaan
         </button>
 

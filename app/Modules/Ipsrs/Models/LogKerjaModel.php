@@ -58,26 +58,26 @@ class LogKerjaModel extends Model
             }
 
             if (!empty($data['sparepart'])) {
-                foreach ($data['sparepart'] as $item) {
-                    if (!empty($item['id']) && !empty($item['jumlah']) && $item['jumlah'] > 0) {
-                        $sparepartMaster = DbModel::getData('mst_sparepart', ['sparepart_id' => $item['id']]);
-
-                        // Cek stok cukup
-                        if ($sparepartMaster['stok'] < $item['jumlah']) {
-                            throw new \Exception('Stok untuk ' . $sparepartMaster['sparepart_nm'] . ' tidak mencukupi.');
-                        }
-
-                        $penggunaanData = [
-                            'penggunaan_id' => DbModel::getId('penggunaan_sparepart', 2, 12),
-                            'log_kerja_id' => $log_kerja_id, // ID dari log kerja yang baru dibuat
-                            'sparepart_id' => $item['id'],
-                            'jumlah' => $item['jumlah'],
-                            'harga_satuan' => $sparepartMaster['harga'] ?? 0
+                foreach ($data['sparepart'] as $sp) {
+                    $sparepart = DbModel::getData('mst_sparepart', ['sparepart_id' => $sp['sparepart_id']]);
+                    if (!$sparepart || $sparepart['stok'] < $sp['jumlah']) {
+                        \DB::rollBack();
+                        return [
+                            'status' => false,
+                            'message' => 'Stok sparepart ' . ($sparepart['sparepart_nm'] ?? '') . ' tidak mencukupi.'
                         ];
-                        DbModel::insertData('penggunaan_sparepart', $penggunaanData);
-
-                        \DB::table('mst_sparepart')->where('sparepart_id', $item['id'])->decrement('stok', $item['jumlah']);
                     }
+
+                    $penggunaanData = [
+                        'penggunaan_id' => DbModel::getId('penggunaan_sparepart', 2, 12),
+                        'log_kerja_id' => $log_kerja_id, // ID dari log kerja yang baru dibuat
+                        'sparepart_id' => $sp['sparepart_id'],
+                        'jumlah' => $sp['jumlah'],
+                        'harga_satuan' => $sparepart['harga'] ?? 0
+                    ];
+                    DbModel::insertData('penggunaan_sparepart', $penggunaanData);
+
+                    \DB::table('mst_sparepart')->where('sparepart_id', $sp['sparepart_id'])->decrement('stok', $sp['jumlah']);
                 }
             }
 
@@ -98,7 +98,11 @@ class LogKerjaModel extends Model
             $status_sebelumnya = $order_current['status'] ?? null;
 
             // Update status order_kerja
-            DbModel::updateData('order_kerja', ['status' => $status_baru], ['order_kerja_id' => $order_kerja_id]);
+            DbModel::updateData('order_kerja', [
+                'status' => $status_baru,
+                'updated_at' => now(),
+                'updated_by' => $pegawai_id
+            ], ['order_kerja_id' => $order_kerja_id]);
 
             // Catat perubahan status
             $log_status_data = [
