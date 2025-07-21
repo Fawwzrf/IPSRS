@@ -67,6 +67,7 @@
                             <tr>
                                 <th>No</th>
                                 <th>Order ID</th>
+                                <th>Jenis</th> <!-- Tambahkan kolom Jenis -->
                                 <th>Teknisi</th>
                                 <th>Aset</th>
                                 <th>Respon Admin (mnt)</th>
@@ -80,6 +81,7 @@
                             <tr>
                                 <td>{{ $index + 1 }}</td>
                                 <td>{{ $row['order_kerja_id'] }}</td>
+                                <td>{{ ucfirst($row['jenis']) }}</td> <!-- Tampilkan jenis -->
                                 <td>{{ $row['nama_teknisi'] }}</td>
                                 <td>{{ $row['nama_aset'] }}</td>
                                 <td>{{ numId($row['durasi_respon_admin']) }}</td>
@@ -89,7 +91,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="8" class="text-center text-muted">Tidak ada data untuk ditampilkan.</td>
+                                <td colspan="9" class="text-center text-muted">Tidak ada data untuk ditampilkan.</td>
                             </tr>
                             @endforelse
                         </tbody>
