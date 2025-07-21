@@ -87,8 +87,8 @@
 
 <!-- Script untuk kamera dan barcode scanner menggunakan Instascan -->
 <script>
-// Hack untuk menghindari error babel-polyfill
-window._babelPolyfill = false;
+    // Hack untuk menghindari error babel-polyfill
+    window._babelPolyfill = false;
 </script>
 <script type="text/javascript" src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
 <script>
@@ -140,9 +140,18 @@ window._babelPolyfill = false;
                     content + '</div>');
 
                 // Auto submit form setelah scan berhasil
-                if (confirm("Barcode terdeteksi: " + content + "\nVerifikasi sekarang?")) {
-                    $('#form-scan-barcode').submit();
-                }
+                Swal.fire({
+                    title: 'Barcode terdeteksi',
+                    text: content + '\nVerifikasi sekarang?',
+                    icon: 'success',
+                    showCancelButton: true,
+                    confirmButtonText: 'Verifikasi',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $('#form-scan-barcode').submit();
+                    }
+                });
             });
 
             // Dapatkan daftar kamera
@@ -236,51 +245,53 @@ window._babelPolyfill = false;
         // Perbarui handler submit
         $('#form-scan-barcode').on('submit', function(e) {
             e.preventDefault();
-            
+
             var form = $(this);
             var submitBtn = form.find('button[type="submit"]');
             var originalText = submitBtn.html();
-            
-            submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Verifikasi...');
-            
-            // Debug untuk memastikan handler berjalan
-            console.log('Form submit handler running');
-            
-            // Gunakan AJAX untuk mengirim form
+
+            submitBtn.prop('disabled', true).html(
+                '<i class="fas fa-spinner fa-spin"></i> Verifikasi...');
+
             $.ajax({
                 url: form.attr('action'),
                 type: 'POST',
                 data: form.serialize(),
-                dataType: 'json', // Penting! Menentukan bahwa kita mengharapkan response JSON
+                dataType: 'json',
                 success: function(res) {
-                    console.log('AJAX success response:', res);
-                    
                     if (res.status === true || res.code === '01' || res.code === '02') {
-                        // Tampilkan pesan sukses
-                        alert(res.message || 'Barcode terverifikasi!');
-                        
-                        // Hentikan scanner jika aktif
-                        if (typeof scanner !== 'undefined' && scanner) {
-                            scanner.stop();
-                        }
-                        
-                        // Tutup modal scan
-                        $('#scan-modal').modal('hide');
-                        
-                        // Redirect ke URL yang diberikan server setelah modal tertutup
-                        setTimeout(function() {
-                            console.log('Redirecting to:', res.redirect_url);
-                            window.location.href = res.redirect_url;
-                        }, 500);
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: res.message || 'Barcode terverifikasi!'
+                        }).then(() => {
+                            // Hentikan scanner jika aktif
+                            if (typeof scanner !== 'undefined' && scanner) {
+                                scanner.stop();
+                            }
+                            // Tutup modal scan
+                            $('#scan-modal').modal('hide');
+                            // Redirect ke URL yang diberikan server setelah modal tertutup
+                            setTimeout(function() {
+                                window.location.href = res.redirect_url;
+                            }, 500);
+                        });
                     } else {
-                        // Tampilkan pesan error
-                        alert(res.message || 'Barcode tidak valid');
-                        submitBtn.prop('disabled', false).html(originalText);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal',
+                            text: res.message || 'Barcode tidak valid!'
+                        });
                     }
                 },
-                error: function(xhr, status, error) {
-                    console.error('AJAX error:', xhr.responseText);
-                    alert('Terjadi kesalahan: ' + (xhr.responseJSON?.message || error));
+                error: function(xhr) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Terjadi kesalahan saat memverifikasi barcode.'
+                    });
+                },
+                complete: function() {
                     submitBtn.prop('disabled', false).html(originalText);
                 }
             });
