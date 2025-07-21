@@ -135,4 +135,26 @@ class DashboardModel extends Model
             return [];
         }
     }
+
+    public function getAvgTotalPenyelesaian()
+    {
+        try {
+            $sql = "SELECT AVG(
+                    TIMESTAMPDIFF(MINUTE, 
+                        IF(ok.jenis = 'Pemeliharaan', jp.tgl_terakhir, pk.created_at), 
+                        pt.tgl_selesai
+                    )
+                ) as avg_total_penyelesaian
+                FROM penugasan_teknisi pt
+                JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
+                LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+                LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+                WHERE pt.deleted_st = 0 AND ok.deleted_st = 0";
+            $result = DbModel::rawData('row_array', $sql);
+            return $result['avg_total_penyelesaian'] ?? 0;
+        } catch (\Exception $e) {
+            \Log::error('Error in getAvgTotalPenyelesaian: ' . $e->getMessage());
+            return 0;
+        }
+    }
 }

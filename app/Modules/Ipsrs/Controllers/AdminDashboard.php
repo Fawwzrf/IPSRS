@@ -35,6 +35,9 @@ class AdminDashboard extends MyController
             // Mengambil data untuk tabel pekerjaan darurat
             $d['urgent_jobs'] = $this->model->getUrgentJobs();
 
+            // Mengambil data untuk rata-rata total penyelesaian
+            $d['avg_total_penyelesaian'] = $this->model->getAvgTotalPenyelesaian();
+
             // Pastikan data chart valid
             if (!isset($d['chart_komplain_harian']) || !is_array($d['chart_komplain_harian'])) {
                 $d['chart_komplain_harian'] = [];
@@ -54,6 +57,7 @@ class AdminDashboard extends MyController
             $d['count_jadwal_belum_ok'] = 0;
             $d['chart_komplain_harian'] = [];
             $d['urgent_jobs'] = [];
+            $d['avg_total_penyelesaian'] = 0;
             $d['load_apexcharts'] = true;
         }
 
