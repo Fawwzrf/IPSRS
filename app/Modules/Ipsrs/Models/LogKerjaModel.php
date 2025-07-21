@@ -24,6 +24,7 @@ class LogKerjaModel extends Model
             'tindakan' => $data['tindakan'],
             'hasil' => $data['hasil'],
             'durasi_menit' => $data['durasi_menit'] ?? 0,
+            'total_biaya' => $data['total_biaya'] ?? 0,
         ];
 
         try {
@@ -103,7 +104,7 @@ class LogKerjaModel extends Model
             $log_status_data = [
                 'log_status_id' => DbModel::getId('log_status_order_kerja', 2, 12),
                 'order_kerja_id' => $order_kerja_id,
-                'status_sebelumnya' => $status_sebelumnya,
+                'status_lama' => $status_sebelumnya,
                 'status_baru' => $status_baru,
                 'oleh_pegawai_id' => $pegawai_id,
                 'catatan' => 'Update dari log kerja: ' . $data['hasil']

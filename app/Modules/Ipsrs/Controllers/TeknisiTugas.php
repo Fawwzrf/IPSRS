@@ -430,6 +430,9 @@ class TeknisiTugas extends MyController
                 }
             }
 
+            // Tambahkan all_sparepart ke data yang dikirim ke view
+            $d['all_sparepart'] = DbModel::allData('mst_sparepart', ['deleted_st' => 0, 'active_st' => 1]);
+
             return view($this->template . 'form_log_kerja_modal', $d);
         } catch (\Exception $e) {
             \Log::error('Error in form_log_kerja: ' . $e->getMessage());
@@ -462,6 +465,19 @@ class TeknisiTugas extends MyController
             }
 
             // Data log kerja
+            $sparepart_id = $request->input('sparepart_id'); // array
+            $jumlah = $request->input('jumlah'); // array
+
+            $sparepart = [];
+            foreach ($sparepart_id as $i => $id) {
+                if ($id) {
+                    $sparepart[] = [
+                        'id' => $id,
+                        'jumlah' => $jumlah[$i] ?? 1
+                    ];
+                }
+            }
+
             $logData = [
                 'order_kerja_id' => $order_kerja_id,
                 'asset_id' => $request->input('asset_id'),
@@ -470,7 +486,7 @@ class TeknisiTugas extends MyController
                 'hasil' => $request->input('hasil'),
                 'durasi_menit' => $request->input('durasi_menit') ?: 0,
                 'total_biaya' => str_replace(['.', ','], ['', '.'], $request->input('total_biaya')) ?: 0,
-                'sparepart' => $request->input('sparepart'),
+                'sparepart' => $sparepart,
                 'fotos' => $request->file('fotos')
             ];
 
@@ -490,6 +506,13 @@ class TeknisiTugas extends MyController
 
                         if ($penugasan) {
                             $this->model->updateStatusPenugasan($penugasan['penugasan_id'], 'selesai');
+                            // Tambahkan update tgl_selesai
+                            DbModel::updateData('penugasan_teknisi', [
+                                'status' => 'selesai',
+                                'tgl_selesai' => now(),
+                                'updated_at' => now(),
+                                'updated_by' => session('user_name')
+                            ], ['order_kerja_id' => $order_kerja_id, 'pegawai_id' => session('pegawai_id')]);
                         }
                     }
                 } catch (Exception $e) {
@@ -510,7 +533,16 @@ class TeknisiTugas extends MyController
                     $redirectUrl = url('master/asset/detail/' . $request->input('asset_id'));
                 }
 
-                // Simpan pesan sukses ke dalam session
+                // Jika hasil dipilih "Perlu Tidak Lanjut" atau "Menunggu Sparepart", update status order kerja
+                $hasil = $request->input('hasil');
+                if ($hasil === 'menunggu_sparepart') {
+                    // Update status order kerja menjadi "menunggu_sparepart"
+                    DbModel::updateData(
+                        'order_kerja',
+                        ['status' => 'menunggu_sparepart', 'updated_at' => date('Y-m-d H:i:s')],
+                        ['order_kerja_id' => $order_kerja_id]
+                    );
+                }
                 session()->flash('success', 'Laporan kerja berhasil disimpan dan tugas telah diselesaikan!');
 
                 return response()->json(_response('02', $this->uri, [
@@ -543,7 +575,7 @@ class TeknisiTugas extends MyController
                 'order_kerja_id' => $order_kerja_id,
                 'request' => request()->all()
             ]);
-            
+
             if (!$order_kerja_id) {
                 return response()->json(_response('11', $this->uri, [
                     'message' => 'Order kerja ID tidak ditemukan.'
@@ -566,20 +598,15 @@ class TeknisiTugas extends MyController
                 'tindakan' => $tindakan,
                 'hasil' => $hasil,
                 'durasi_menit' => $durasi_menit,
-                'teknisi_pegawai_id' => session('pegawai_id') ?? null,
+                'pegawai_id' => session('pegawai_id') ?? null,
                 'tgl_log' => date('Y-m-d H:i:s'),
                 'created_at' => date('Y-m-d H:i:s'),
                 'created_by' => session('nama_pegawai') ?? session('nama_user') ?? 'system'
             ];
-            
+
             \Log::info('Data log kerja untuk disimpan', $data);
-            
-            // Demo - anggap berhasil untuk testing - ganti ini dengan kode penyimpanan nyata
-            $log_kerja_id = uniqid('LK');
-            // Simpan ke database - ganti dengan model/query sebenarnya
-            // Misalnya: $success = DbModel::insert('log_kerja', $data);
             $success = true;
-            
+
             if ($success) {
                 // Update status order kerja dan penugasan teknisi
                 try {
@@ -587,14 +614,15 @@ class TeknisiTugas extends MyController
                         'order_kerja_id' => $order_kerja_id,
                         'status' => 'sedang_dikerjakan'
                     ]);
-                    
+
                     if ($penugasan) {
                         $this->model->updateStatusPenugasan($penugasan['penugasan_id'], 'selesai');
                     }
-                    
+
                     // Update status order_kerja
-                    DbModel::updateData('order_kerja', 
-                        ['status' => 'selesai', 'updated_at' => date('Y-m-d H:i:s')], 
+                    DbModel::updateData(
+                        'order_kerja',
+                        ['status' => 'selesai', 'updated_at' => date('Y-m-d H:i:s')],
                         ['order_kerja_id' => $order_kerja_id]
                     );
                 } catch (Exception $e) {
@@ -650,12 +678,13 @@ class TeknisiTugas extends MyController
             }
 
             // Ambil riwayat log kerja aset
-            $log_kerja = DbModel::rawData('result_array', 
+            $log_kerja = DbModel::rawData(
+                'result_array',
                 "SELECT lk.*, p.pegawai_nm as teknisi_nama
                 FROM log_kerja lk
                 LEFT JOIN mst_pegawai p ON lk.teknisi_pegawai_id = p.pegawai_id
                 WHERE lk.asset_id = ?
-                ORDER BY lk.tgl_log DESC", 
+                ORDER BY lk.tgl_log DESC",
                 [$asset_id]
             );
 
@@ -664,7 +693,8 @@ class TeknisiTugas extends MyController
             }
 
             // Ambil order kerja terkait aset
-            $order_kerja = DbModel::rawData('result_array', 
+            $order_kerja = DbModel::rawData(
+                'result_array',
                 "SELECT ok.*, p.pegawai_nm as teknisi_nama, 
                         COALESCE(pk.deskripsi, j.deskripsi) as deskripsi
                 FROM order_kerja ok
@@ -673,7 +703,7 @@ class TeknisiTugas extends MyController
                 LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                 LEFT JOIN jadwal_pm j ON ok.jadwal_pm_id = j.jadwal_pm_id
                 WHERE pk.asset_id = ? OR j.asset_id = ?
-                ORDER BY ok.tgl_dibuat DESC", 
+                ORDER BY ok.tgl_dibuat DESC",
                 [$asset_id, $asset_id]
             );
 
@@ -708,45 +738,20 @@ class TeknisiTugas extends MyController
     public function detail_aset($asset_id)
     {
         try {
-            // Ambil data aset
-            $asset = DbModel::getData('asset', ['asset_id' => $asset_id]);
-            
+            $asset = DbModel::getData('asset', ['asset_id' => $asset_id, 'deleted_st' => 0]);
             if (!$asset) {
                 return redirect('ipsrs/teknisitugas')->with('error', 'Aset tidak ditemukan');
             }
-            
+
             $d = [];
             $d['asset'] = $asset;
             $d['order_kerja_id'] = request('order_kerja_id');
             $d['n_param'] = request('n');
-            
-            // Log untuk debugging
-            \Log::info('Loading asset detail', ['asset_id' => $asset_id]);
-            
-            // PERBAIKAN 1: Query untuk log kerja (riwayat pekerjaan)
+
+            // Ambil semua order kerja terkait aset
             try {
-                $log_kerja = DbModel::rawData('result_array', 
-                    "SELECT lk.*, p.pegawai_nm as teknisi_nama
-                    FROM log_kerja lk
-                    LEFT JOIN mst_pegawai p ON lk.teknisi_pegawai_id = p.pegawai_id
-                    WHERE lk.order_kerja_id IN (
-                        SELECT ok.order_kerja_id 
-                        FROM order_kerja ok
-                        LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-                        LEFT JOIN jadwal_pm j ON ok.jadwal_pm_id = j.jadwal_pm_id
-                        WHERE pk.asset_id = ? OR j.asset_id = ?
-                    )
-                    ORDER BY lk.tgl_mulai DESC", 
-                    [$asset_id, $asset_id]
-                );
-            } catch (\Exception $e) {
-                \Log::error('Error fetching log_kerja: ' . $e->getMessage());
-                $log_kerja = [];
-            }
-            
-            // PERBAIKAN 2: Query untuk order kerja
-            try {
-                $order_kerja = DbModel::rawData('result_array', 
+                $order_kerja = DbModel::rawData(
+                    'result_array',
                     "SELECT ok.*, p.pegawai_nm as teknisi_nama, 
                             COALESCE(pk.deskripsi, j.deskripsi) as deskripsi
                     FROM order_kerja ok
@@ -754,50 +759,83 @@ class TeknisiTugas extends MyController
                     LEFT JOIN mst_pegawai p ON pt.pegawai_id = p.pegawai_id
                     LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                     LEFT JOIN jadwal_pm j ON ok.jadwal_pm_id = j.jadwal_pm_id
-                    WHERE pk.asset_id = ? OR j.asset_id = ?
-                    ORDER BY ok.tgl_dibuat DESC", 
+                    WHERE ok.deleted_st = 0
+                      AND ( (pk.asset_id = ? AND (pk.deleted_st = 0 OR pk.deleted_st IS NULL)) 
+                          OR (j.asset_id = ? AND (j.deleted_st = 0 OR j.deleted_st IS NULL)) )
+                      AND (pt.deleted_st = 0 OR pt.deleted_st IS NULL)
+                    ORDER BY ok.tgl_dibuat DESC",
                     [$asset_id, $asset_id]
                 );
             } catch (\Exception $e) {
                 \Log::error('Error fetching order_kerja: ' . $e->getMessage());
                 $order_kerja = [];
             }
-            
-            // Gabungkan data log kerja dan order kerja sebagai riwayat
+
             $log_kerja_list = [];
-            
-            if (is_array($log_kerja)) {
-                foreach ($log_kerja as $log) {
-                    $log['jenis'] = 'log_kerja';
-                    $log_kerja_list[] = $log;
-                }
-            }
-            
+
             if (is_array($order_kerja)) {
                 foreach ($order_kerja as $order) {
-                    $order['jenis'] = 'order_kerja';
-                    $log_kerja_list[] = $order;
+                    $item = $order;
+
+                    // Ambil penugasan teknisi terkait order kerja ini
+                    $penugasan = DbModel::getData('penugasan_teknisi', [
+                        'order_kerja_id' => $order['order_kerja_id'],
+                        'deleted_st' => 0
+                    ]);
+
+                    // Waktu Dimulai dan Selesai dari penugasan teknisi
+                    $item['tgl_mulai'] = $penugasan['tgl_mulai'] ?? $order['tgl_mulai'] ?? $order['tgl_dibuat'] ?? null;
+                    $item['tgl_selesai'] = $penugasan['tgl_selesai'] ?? null;
+
+                    // Jenis pekerjaan
+                    if (!empty($order['jadwal_pm_id'])) {
+                        $item['jenis'] = 'Jadwal PM';
+                    } elseif (!empty($order['permintaan_id'])) {
+                        $item['jenis'] = 'Perbaikan';
+                    } else {
+                        $item['jenis'] = '-';
+                    }
+
+                    // Ambil log kerja terkait order kerja ini
+                    $log = DbModel::getData('log_kerja', ['order_kerja_id' => $order['order_kerja_id'], 'deleted_st' => 0]);
+                    $item['sparepart'] = [];
+                    if ($log) {
+                        $sparepart = DbModel::rawData(
+                            'result_array',
+                            "SELECT ps.*, s.sparepart_nm FROM penggunaan_sparepart ps
+                             JOIN mst_sparepart s ON ps.sparepart_id = s.sparepart_id
+                             WHERE ps.log_kerja_id = ?",
+                            [$log['log_kerja_id']]
+                        );
+                        $item['sparepart'] = $sparepart ?: [];
+                        $item['total_biaya_sparepart'] = array_sum(array_map(function ($sp) {
+                            return ($sp['jumlah'] ?? 0) * ($sp['harga_satuan'] ?? 0);
+                        }, $item['sparepart']));
+                        $item['total_biaya_lain'] = $log['total_biaya'] ?? 0;
+                        $item['tindakan'] = $log['tindakan'] ?? '-';
+                        $item['diagnosa'] = $log['diagnosa'] ?? '-';
+                        $item['status'] = $log['status'] ?? $order['status'] ?? '-';
+                    } else {
+                        $item['total_biaya_sparepart'] = 0;
+                        $item['total_biaya_lain'] = 0;
+                        $item['tindakan'] = '-';
+                        $item['diagnosa'] = '-';
+                        $item['status'] = $order['status'] ?? '-';
+                    }
+
+                    $log_kerja_list[] = $item;
                 }
             }
-            
-            // Sort berdasarkan tanggal terbaru
-            usort($log_kerja_list, function($a, $b) {
-                $date_a = isset($a['tgl_mulai']) ? strtotime($a['tgl_mulai']) : 
-                         (isset($a['tgl_dibuat']) ? strtotime($a['tgl_dibuat']) : 0);
-                $date_b = isset($b['tgl_mulai']) ? strtotime($b['tgl_mulai']) : 
-                         (isset($b['tgl_dibuat']) ? strtotime($b['tgl_dibuat']) : 0);
+
+            // Urutkan berdasarkan tanggal mulai terbaru
+            usort($log_kerja_list, function ($a, $b) {
+                $date_a = isset($a['tgl_mulai']) ? strtotime($a['tgl_mulai']) : 0;
+                $date_b = isset($b['tgl_mulai']) ? strtotime($b['tgl_mulai']) : 0;
                 return $date_b - $date_a; // descending order
             });
-            
+
             $d['log_kerja_list'] = $log_kerja_list;
-            
-            // Log untuk debugging
-            \Log::info('Log kerja records', [
-                'log_kerja_count' => is_array($log_kerja) ? count($log_kerja) : 0,
-                'order_kerja_count' => is_array($order_kerja) ? count($order_kerja) : 0,
-                'total_records' => count($log_kerja_list)
-            ]);
-            
+
             return $this->renderView($this->template . 'detail_aset', $d);
         } catch (\Exception $e) {
             \Log::error('Error in detail_aset: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);

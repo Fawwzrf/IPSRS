@@ -11,20 +11,20 @@ use Illuminate\Support\Facades\Log;
 class TeknisiModel extends Model
 {
     protected static $nav_sess;
-    
+
     public function __construct()
     {
         parent::__construct();
         self::initSession();
     }
-    
+
     protected static function initSession()
     {
         if (is_null(self::$nav_sess)) {
             self::$nav_sess = session(request('n'));
         }
     }
-    
+
     /**
      * Menghitung jumlah tugas dengan status tertentu menggunakan Raw Query.
      * 
@@ -113,45 +113,70 @@ class TeknisiModel extends Model
     /**
      * Update status penugasan teknisi
      */
-    public function updateStatusPenugasan($penugasan_id, $status, $alasan = null)
+    public static function updateStatusPenugasan($penugasan_id, $status, $alasan = null)
     {
         try {
+            // Update status penugasan teknisi
             $update_data = [
                 'status' => $status,
+                'catatan_penolakan' => $alasan,
                 'updated_at' => now(),
                 'updated_by' => session('user_name')
             ];
-
-            // Atur tgl_mulai jika status = sedang_dikerjakan
-            if ($status == 'sedang_dikerjakan') {
-                $update_data['tgl_mulai'] = now();
-            } 
-            // Atur tgl_selesai jika status = selesai
-            elseif ($status == 'selesai') {
-                $update_data['tgl_selesai'] = now();
-            } 
-            // Simpan alasan jika status = dibatalkan
-            elseif ($status == 'dibatalkan' && $alasan) {
-                $update_data['catatan_penolakan'] = $alasan;
-            }
-            // Reset catatan_penolakan jika mengambil kembali tugas yang ditolak
-            elseif ($status == 'ditugaskan') {
-                // Reset catatan penolakan
-                $update_data['catatan_penolakan'] = null;
-            }
-
-            // Update status penugasan
             DbModel::updateData('penugasan_teknisi', $update_data, ['penugasan_id' => $penugasan_id]);
-            
-            return [
-                'success' => true,
-                'msg' => 'Status berhasil diperbarui'
-            ];
-        } catch (Exception $e) {
-            return [
-                'success' => false,
-                'msg' => 'Error: ' . $e->getMessage()
-            ];
+
+            // Ambil order_kerja_id terkait
+            $penugasan = DbModel::getData('penugasan_teknisi', ['penugasan_id' => $penugasan_id]);
+            $order_kerja_id = $penugasan['order_kerja_id'] ?? null;
+
+            // Jika status sedang_dikerjakan, update order kerja ke diproses
+            if ($order_kerja_id && $status === 'sedang_dikerjakan') {
+                DbModel::updateData('order_kerja', [
+                    'status' => 'diproses',
+                    'updated_at' => now(),
+                    'updated_by' => session('user_name')
+                ], ['order_kerja_id' => $order_kerja_id]);
+            }
+
+            // Jika semua penugasan dibatalkan, update order kerja ke dibatalkan
+            if ($order_kerja_id) {
+                $count_aktif = DbModel::rawData('row_array',
+                    "SELECT COUNT(*) as total FROM penugasan_teknisi WHERE order_kerja_id = ? AND status != 'dibatalkan' AND deleted_st = 0",
+                    [$order_kerja_id]
+                )['total'] ?? 0;
+
+                if ($count_aktif == 0) {
+                    DbModel::updateData('order_kerja', [
+                        'status' => 'dibatalkan',
+                        'catatan' => $alasan,
+                        'updated_at' => now(),
+                        'updated_by' => session('user_name')
+                    ], ['order_kerja_id' => $order_kerja_id]);
+                } else {
+                    // Jika semua penugasan statusnya "ditugaskan", order kerja juga jadi "ditugaskan"
+                    $count_ditugaskan = DbModel::rawData('row_array',
+                        "SELECT COUNT(*) as total FROM penugasan_teknisi WHERE order_kerja_id = ? AND status = 'ditugaskan' AND deleted_st = 0",
+                        [$order_kerja_id]
+                    )['total'] ?? 0;
+
+                    $count_total = DbModel::rawData('row_array',
+                        "SELECT COUNT(*) as total FROM penugasan_teknisi WHERE order_kerja_id = ? AND deleted_st = 0",
+                        [$order_kerja_id]
+                    )['total'] ?? 0;
+
+                    if ($count_ditugaskan == $count_total) {
+                        DbModel::updateData('order_kerja', [
+                            'status' => 'ditugaskan',
+                            'updated_at' => now(),
+                            'updated_by' => session('user_name')
+                        ], ['order_kerja_id' => $order_kerja_id]);
+                    }
+                }
+            }
+            return ['success' => true];
+        } catch (\Exception $e) {
+            \Log::error('Error updateStatusPenugasan: ' . $e->getMessage());
+            return ['success' => false, 'msg' => $e->getMessage()];
         }
     }
 
@@ -208,11 +233,11 @@ class TeknisiModel extends Model
         $today = date('Y-m-d');
         $next_month = date('Y-m-d', strtotime('+30 days'));
 
-        $sql = "SELECT jp.jadwal_pm_id, jp.tgl_jadwal, a.asset_nm, l.lokasi_nm, jp.deskripsi
+        $sql = "SELECT jp.jadwal_pm_id, jp.tgl_berikutnya, a.asset_nm, l.lokasi_nm, jp.deskripsi
                 FROM jadwal_pm jp
                 JOIN asset a ON jp.asset_id = a.asset_id
                 LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
-                WHERE jp.tgl_jadwal BETWEEN ? AND ?
+                WHERE jp.tgl_berikutnya BETWEEN ? AND ?
                 AND jp.status = 'aktif'
                 AND a.lokasi_id IN (
                     SELECT DISTINCT a2.lokasi_id 
@@ -223,7 +248,7 @@ class TeknisiModel extends Model
                     LEFT JOIN asset a2 ON pk.asset_id = a2.asset_id OR jp2.asset_id = a2.asset_id
                     WHERE pt.pegawai_id = ? AND pt.deleted_st = 0
                 )
-                ORDER BY jp.tgl_jadwal ASC
+                ORDER BY jp.tgl_berikutnya ASC
                 LIMIT ?";
 
         $result = DbModel::rawData('result_array', $sql, [$today, $next_month, $teknisi_id, $limit]);
@@ -353,20 +378,19 @@ class TeknisiModel extends Model
             // Jadwal pemeliharaan mendatang
             $today = date('Y-m-d');
             $next_month = date('Y-m-d', strtotime('+30 days'));
-            $sql = "SELECT jp.jadwal_pm_id, jp.tgl_jadwal, a.asset_nm, l.lokasi_nm, 
+            $sql = "SELECT jp.jadwal_pm_id, jp.tgl_berikutnya, a.asset_nm, l.lokasi_nm, 
                     COALESCE(jp.deskripsi, 'Pemeliharaan Rutin') as deskripsi
                     FROM jadwal_pm jp
                     JOIN asset a ON jp.asset_id = a.asset_id
                     LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
-                    WHERE jp.tgl_jadwal BETWEEN ? AND ? AND jp.status = 'aktif'
-                    AND (jp.teknisi_pegawai_id = ? OR a.lokasi_id IN (
-                        SELECT DISTINCT a2.lokasi_id FROM asset a2
-                        JOIN permintaan_komplain pk ON a2.asset_id = pk.asset_id
-                        JOIN order_kerja ok ON pk.permintaan_id = ok.permintaan_id
-                        JOIN penugasan_teknisi pt ON ok.order_kerja_id = pt.order_kerja_id
+                    WHERE jp.tgl_berikutnya BETWEEN ? AND ? AND jp.status = 'aktif'
+                    AND jp.jadwal_pm_id IN (
+                        SELECT pt.jadwal_pm_id
+                        FROM penugasan_teknisi pt
                         WHERE pt.pegawai_id = ?
+                    )
                     ))
-                    ORDER BY jp.tgl_jadwal ASC LIMIT 5";
+                    ORDER BY jp.tgl_berikutnya ASC LIMIT 5";
             $data['jadwal_mendatang'] = DbModel::rawData('result_array', $sql, [$today, $next_month, $teknisi_id, $teknisi_id]) ?: [];
 
             // Data untuk chart kinerja
@@ -416,10 +440,10 @@ class TeknisiModel extends Model
             'selesai' => [0, 0, 0, 0],
             'baru' => [0, 0, 0, 0]
         ];
-        
+
         // Mendapatkan tanggal awal bulan ini
         $first_day_of_month = date('Y-m-01');
-        
+
         // Untuk tugas selesai per minggu dalam bulan ini
         $sql = "SELECT 
                     FLOOR(DATEDIFF(tgl_selesai, '$first_day_of_month') / 7) as week_idx,
@@ -431,31 +455,31 @@ class TeknisiModel extends Model
                     AND MONTH(tgl_selesai) = MONTH(CURRENT_DATE()) 
                     AND YEAR(tgl_selesai) = YEAR(CURRENT_DATE())
                 GROUP BY week_idx";
-    
+
         $data_selesai = DbModel::rawData('result_array', $sql, [$teknisi_id]) ?: [];
-    
+
         foreach ($data_selesai as $row) {
             $week_idx = min(max(intval($row['week_idx']), 0), 3);
             $result['selesai'][$week_idx] = intval($row['total']);
         }
-        
+
         // Untuk tugas baru per minggu dalam bulan ini
         $sql = "SELECT 
-                    FLOOR(DATEDIFF(tgl_penugasan, '$first_day_of_month') / 7) as week_idx,
+                    FLOOR(DATEDIFF(tgl_mulai, '$first_day_of_month') / 7) as week_idx,
                     COUNT(*) as total
                 FROM penugasan_teknisi
                 WHERE pegawai_id = ?
-                    AND MONTH(tgl_penugasan) = MONTH(CURRENT_DATE()) 
-                    AND YEAR(tgl_penugasan) = YEAR(CURRENT_DATE())
+                    AND MONTH(tgl_mulai) = MONTH(CURRENT_DATE()) 
+                    AND YEAR(tgl_mulai) = YEAR(CURRENT_DATE())
                 GROUP BY week_idx";
-    
+
         $data_baru = DbModel::rawData('result_array', $sql, [$teknisi_id]) ?: [];
-    
+
         foreach ($data_baru as $row) {
             $week_idx = min(max(intval($row['week_idx']), 0), 3);
             $result['baru'][$week_idx] = intval($row['total']);
         }
-    
+
         return $result;
     }
 
@@ -475,7 +499,7 @@ class TeknisiModel extends Model
                    LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                    LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                    WHERE pt.penugasan_id = ? AND pt.deleted_st = 0";
-        
+
             $result = DbModel::rawData('row_array', $sql, [$penugasan_id]);
             return $result ?: null;
         } catch (Exception $e) {
@@ -495,36 +519,38 @@ class TeknisiModel extends Model
     {
         try {
             // Cari asset_id berdasarkan barcode
-            $assetResult = DbModel::rawData('row_array', 
-                "SELECT asset_id, asset_nm FROM asset WHERE barcode = ? AND deleted_st = 0", 
+            $assetResult = DbModel::rawData(
+                'row_array',
+                "SELECT asset_id, asset_nm FROM asset WHERE barcode = ? AND deleted_st = 0",
                 [$barcode]
             );
-            
+
             if (!$assetResult) {
                 return [
                     'success' => false,
                     'msg' => 'Barcode tidak terdaftar dalam sistem.'
                 ];
             }
-            
+
             // Ambil asset_id dari order kerja (baik dari permintaan maupun jadwal PM)
-            $orderAssetResult = DbModel::rawData('row_array', 
+            $orderAssetResult = DbModel::rawData(
+                'row_array',
                 "SELECT 
                     COALESCE(pk.asset_id, jp.asset_id) as asset_id 
                  FROM order_kerja ok
                  LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                  LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
-                 WHERE ok.order_kerja_id = ?", 
+                 WHERE ok.order_kerja_id = ?",
                 [$order_kerja_id]
             );
-            
+
             if (!$orderAssetResult || !$orderAssetResult['asset_id']) {
                 return [
                     'success' => false,
                     'msg' => 'Tidak dapat menemukan aset terkait order kerja ini.'
                 ];
             }
-            
+
             // Verifikasi apakah asset_id dari barcode sama dengan asset_id dari order kerja
             if ($assetResult['asset_id'] == $orderAssetResult['asset_id']) {
                 return [
@@ -534,7 +560,7 @@ class TeknisiModel extends Model
                     'msg' => 'Barcode terverifikasi dengan benar.'
                 ];
             }
-            
+
             return [
                 'success' => false,
                 'msg' => 'Barcode yang di-scan tidak sesuai dengan aset yang tercatat pada order kerja ini.'

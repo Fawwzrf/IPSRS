@@ -50,6 +50,9 @@
                         <a href="#tabs-dikerjakan" class="nav-link" data-bs-toggle="tab">
                             <i class="fas fa-tools me-1 d-md-none"></i>
                             <span>Dikerjakan</span>
+                            @if(count($list_tugas_dikerjakan) > 0)
+                                <span class="badge bg-danger ms-1">{{ count($list_tugas_dikerjakan) }}</span>
+                            @endif
                         </a>
                     </li>
                     <li class="nav-item">

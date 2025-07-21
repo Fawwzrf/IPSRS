@@ -37,9 +37,6 @@ class OrderKerjaModel extends Model
         // Filter berdasarkan status
         if (@self::$nav_sess['search']['data']['status'] != '') {
             $where .= " AND ok.status = '" . @self::$nav_sess['search']['data']['status'] . "' ";
-        } else {
-            // Filter default: status bukan dibatalkan jika tidak ada filter status
-            $where .= " AND ok.status != 'dibatalkan' ";
         }
 
         // Filter berdasarkan pencarian
@@ -394,12 +391,11 @@ class OrderKerjaModel extends Model
                   WHERE 
                     jp.deleted_st = 0 
                     AND jp.active_st = 1
-                    AND jp.status != 'dibatalkan'  /* Filter status dibatalkan */
                     AND jp.jadwal_pm_id NOT IN (
                         SELECT DISTINCT jadwal_pm_id FROM order_kerja 
                         WHERE jadwal_pm_id IS NOT NULL 
                         AND deleted_st = 0
-                        AND status NOT IN ('selesai', 'dibatalkan')
+                        AND status NOT IN ('selesai')
                     )
                 ) x
                 ORDER BY x.tgl_berikutnya ASC";

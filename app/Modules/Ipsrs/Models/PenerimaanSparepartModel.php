@@ -75,7 +75,7 @@ class PenerimaanSparepartModel extends Model
     public function saveData($id, $data)
     {
         $sparepart_id = $data['sparepart_id'];
-        $jumlah_diterima = (int)$data['jumlah']; // Dihapus pembagian 2 yang menyebabkan bug
+        $jumlah_diterima = (int)$data['jumlah'];
         $harga_penerimaan = (float)($data['harga_satuan'] ?? 0);
         
         try {
@@ -94,7 +94,7 @@ class PenerimaanSparepartModel extends Model
             $harga_lama = (float)$sparepartMaster->harga;
             
             // Perhitungan Stok & Harga Baru
-            $stok_baru = $stok_lama + $jumlah_diterima;
+            $stok_baru = $stok_lama + $jumlah_diterima ;
             $nilai_total_lama = $stok_lama * $harga_lama;
             $nilai_penerimaan_baru = $jumlah_diterima * $harga_penerimaan;
             $harga_rata_rata_baru = ($stok_baru > 0) ? ($nilai_total_lama + $nilai_penerimaan_baru) / $stok_baru : $harga_penerimaan;

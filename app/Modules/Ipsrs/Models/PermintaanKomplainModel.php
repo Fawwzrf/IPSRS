@@ -103,9 +103,7 @@ class PermintaanKomplainModel extends Model
                 // PENTING: Format tanggal tgl ke format MySQL (YYYY-MM-DD)
                 if (isset($d['tgl']) && !empty($d['tgl'])) {
                     $d['tgl'] = to_date($d['tgl'], '-', 'date');
-                
                 } else {
-                    // Default ke tanggal hari ini jika tidak ada
                     $d['tgl'] = date('Y-m-d');
                 }
                 
@@ -149,6 +147,13 @@ class PermintaanKomplainModel extends Model
                 $result['message'] = 'Permintaan berhasil disimpan';
                 
             } else {
+
+                if (isset($d['tgl']) && !empty($d['tgl'])) {
+                    $d['tgl'] = to_date($d['tgl'], '-', 'date');
+                } else {
+                    $d['tgl'] = date('Y-m-d');
+                }
+
                 $validFields = [
                     'tgl', 'asset_id', 'pegawai_id',
                     'deskripsi', 'status', 'foto_url', 'anotasi_url',

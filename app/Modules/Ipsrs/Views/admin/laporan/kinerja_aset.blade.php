@@ -68,7 +68,7 @@
                                 <th>Lokasi</th>
                                 <th>Jumlah OK</th>
                                 <th>Jumlah Perbaikan</th>
-                                <th>Jumlah PM</th>
+                                <th>Jumlah Pemeliharaan</th>
                                 <th>Terakhir Ditangani</th>
                             </tr>
                         </thead>

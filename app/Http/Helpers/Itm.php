@@ -247,6 +247,10 @@ if (!function_exists('to_date')) {
   function to_date($date = null, $sp = null, $tp = null, $sp2 = null)
   {
     if ($date != '' && $date != null) {
+      // Tambahan: jika sudah format Y-m-d, langsung return
+      if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && ($tp == 'date' || $tp == null)) {
+        return $date;
+      }
       if ($tp == 'date') {
         $arr_date = explode(' ', $date);
         $date = $arr_date[0];

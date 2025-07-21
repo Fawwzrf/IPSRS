@@ -41,7 +41,7 @@ class LogStatusOrderKerjaModel
                 // Kolom asli tabel
                 'log_status_id' => $log_status_id,
                 'order_kerja_id' => $order_kerja_id,
-                'status_sebelumnya' => $status_lama,
+                'status_lama' => $status_lama,
                 'status_baru' => $status_baru,
                 'tgl_perubahan' => $currentTime,
                 'oleh_pegawai_id' => $oleh_pegawai_id,
@@ -95,7 +95,7 @@ class LogStatusOrderKerjaModel
         if (@$nav_sess['search']['data']['term'] != '') {
             $term = strtolower($nav_sess['search']['data']['term']);
             $where .= " AND (
-                LOWER(ls.status_sebelumnya) LIKE '%$term%' OR 
+                LOWER(ls.status_lama) LIKE '%$term%' OR 
                 LOWER(ls.status_baru) LIKE '%$term%' OR
                 LOWER(ls.catatan) LIKE '%$term%' OR
                 LOWER(p.pegawai_nm) LIKE '%$term%'
@@ -106,7 +106,7 @@ class LogStatusOrderKerjaModel
                 SELECT 
                     ls.log_status_id,
                     ls.order_kerja_id,
-                    ls.status_sebelumnya,
+                    ls.status_lama,
                     ls.status_baru,
                     ls.tgl_perubahan,
                     ls.catatan,
@@ -117,7 +117,7 @@ class LogStatusOrderKerjaModel
                 WHERE $where AND ls.deleted_st = 0
             ) x ";
 
-        $search = ['order_kerja_id', 'status_sebelumnya', 'status_baru', 'pegawai_nm', 'catatan'];
+        $search = ['order_kerja_id', 'status_lama', 'status_baru', 'pegawai_nm', 'catatan'];
         $where = null;
         $isWhere = null;
 

@@ -67,16 +67,16 @@
                             <tr>
                                 <td>{{ $index + 1 }}</td>
                                 <td>{{ $row['pegawai_nm'] }}</td>
-                                <td>{{ numId($row['total_tugas']) }}</td>
-                                <td>{{ numId($row['tugas_selesai']) }}</td>
+                                <td>{{ $row['total_tugas'] }}</td>
+                                <td>{{ $row['tugas_selesai'] }}</td>
                                 <td>
                                     @if($row['total_tugas'] > 0)
-                                        {{ numId(($row['tugas_selesai'] / $row['total_tugas']) * 100, true) }}%
+                                        {{ ($row['tugas_selesai'] / $row['total_tugas']) * 100, true }}%
                                     @else
                                         0%
                                     @endif
                                 </td>
-                                <td>{{ numId($row['rata_rata_durasi'] ?? 0, true) }}</td>
+                                <td>{{ $row['rata_rata_durasi'] ?? 0, true }}</td>
                             </tr>
                             @empty
                             <tr>

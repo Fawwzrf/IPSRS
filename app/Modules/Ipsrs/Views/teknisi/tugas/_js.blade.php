@@ -41,60 +41,40 @@
                 alert('Gagal memuat form scan barcode. Silakan coba lagi.');
             }
         });
-        
-        /* 
-        // Cara 2: Jika cara 1 tidak berhasil, coba ini sebagai alternatif
-        // Buka di jendela popup kecil (fallback)
-        const popupWidth = 600;
-        const popupHeight = 400;
-        const left = (window.innerWidth - popupWidth) / 2;
-        const top = (window.innerHeight - popupHeight) / 2;
-        
-        window.open(url, 'ScanBarcodeWindow', 
-            `width=${popupWidth},height=${popupHeight},top=${top},left=${left},resizable=yes,scrollbars=yes`);
-        */
+
     }
 
     // Wrap initialization code in a function that checks if elements exist first
-    function initializeFormPlugins() {
-        const formElement = $('#form-log-kerja');
-        if (formElement.length === 0) return; // Exit if the form doesn't exist
 
-        const modalElement = formElement.closest('.modal');
-
-        modalElement.find('.autonumeric').autoNumeric('init', {
-            aSep: '.',
-            aDec: ',',
-            mDec: '0'
-        });
-
-        modalElement.find('#sparepart-repeater').repeater({
-            initEmpty: true,
-            show: function() {
-                $(this).slideDown();
-                $(this).find('.repeater-select').select2({
-                    theme: 'bootstrap-5',
-                    dropdownParent: modalElement
-                });
-            },
-            hide: function(deleteElement) {
-                $(this).slideUp(deleteElement);
-            }
-        });
-
-        modalElement.find('.repeater-select').select2({
-            theme: 'bootstrap-5',
-            dropdownParent: modalElement
-        });
-    }
 
     // Call the initialization function when document is ready
     $(document).ready(function() {
-        initializeFormPlugins();
 
         // Re-initialize when modals are shown (in case of dynamic content)
-        $(document).on('shown.bs.modal', function() {
-            initializeFormPlugins();
+        $(document).on('shown.bs.modal', function(e) {
+            var modal = $(e.target);
+            var repeater = modal.find('#sparepart-repeater');
+            // Inisialisasi hanya jika belum pernah dan plugin tersedia
+            if (repeater.length > 0 && typeof repeater.data('repeater-init') === 'undefined' && typeof repeater.repeater === 'function') {
+                repeater.repeater({
+                    initEmpty: false,
+                    show: function() {
+                        $(this).slideDown();
+                        $(this).find('.repeater-select').select2({
+                            theme: 'bootstrap-5',
+                            dropdownParent: modal
+                        });
+                    },
+                    hide: function(deleteElement) {
+                        $(this).slideUp(deleteElement);
+                    }
+                });
+                repeater.data('repeater-init', true); // Mark as initialized
+                repeater.find('.repeater-select').select2({
+                    theme: 'bootstrap-5',
+                    dropdownParent: modal
+                });
+            }
         });
 
         
@@ -558,36 +538,4 @@
     });
 
 
-    // Inisialisasi komponen form
-    $(document).ready(function() {
-        // Inisialisasi repeater untuk sparepart
-        if ($.fn.repeater) {
-            $('#sparepart-repeater').repeater({
-                initEmpty: false,
-                show: function() {
-                    $(this).slideDown();
-                    // Reinisialisasi select jika menggunakan select2
-                    $(this).find('.repeater-select').each(function() {
-                        if ($.fn.select2) {
-                            $(this).select2();
-                        }
-                    });
-                },
-                hide: function(deleteElement) {
-                    if (confirm('Apakah Anda yakin ingin menghapus item ini?')) {
-                        $(this).slideUp(deleteElement);
-                    }
-                }
-            });
-        }
-        
-        // Inisialisasi autonumeric untuk input biaya
-        if ($.fn.autoNumeric) {
-            $('.autonumeric').autoNumeric('init', {
-                aSep: '.',
-                aDec: ',',
-                mDec: '0'
-            });
-        }
-    });
 </script>

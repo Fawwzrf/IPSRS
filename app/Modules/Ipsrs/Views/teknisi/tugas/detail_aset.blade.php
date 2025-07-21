@@ -124,10 +124,14 @@
                                     <table class="table table-vcenter card-table table-striped">
                                         <thead>
                                             <tr>
-                                                <th>Tanggal</th>
+                                                <th>Waktu Dimulai</th>
+                                                <th>Waktu Selesai</th>
                                                 <th>Jenis</th>
                                                 <th>Teknisi</th>
                                                 <th>Deskripsi</th>
+                                                <th>Tindakan</th>
+                                                <th>Sparepart Digunakan</th>
+                                                <th>Total Biaya</th>
                                                 <th>Status</th>
                                             </tr>
                                         </thead>
@@ -136,38 +140,52 @@
                                                 @foreach ($log_kerja_list as $item)
                                                     <tr>
                                                         <td>
-                                                            @if (isset($item['jenis']) && $item['jenis'] == 'log_kerja')
-                                                                {{ isset($item['tgl_mulai']) ? to_date($item['tgl_mulai'], '-', 'datetime') : '-' }}
+                                                            @if($item['tgl_mulai'])
+                                                                {{ date('H:i', strtotime($item['tgl_mulai'])) }} - {{ date('d-m-Y', strtotime($item['tgl_mulai'])) }}
+                                                            @elseif($item['tgl_dibuat'])
+                                                                {{ date('H:i', strtotime($item['tgl_dibuat'])) }} - {{ date('d-m-Y', strtotime($item['tgl_dibuat'])) }}
                                                             @else
-                                                                {{ isset($item['tgl_dibuat']) ? to_date($item['tgl_dibuat'], '-', 'datetime') : '-' }}
+                                                                -
                                                             @endif
                                                         </td>
                                                         <td>
-                                                            @if (isset($item['jenis']) && $item['jenis'] == 'log_kerja')
-                                                                <span class="badge bg-blue">Pengerjaan</span>
+                                                            @if($item['tgl_selesai'])
+                                                                {{ date('H:i', strtotime($item['tgl_selesai'])) }} - {{ date('d-m-Y', strtotime($item['tgl_selesai'])) }}
                                                             @else
-                                                                <span class="badge bg-green">Order Kerja</span>
+                                                                -
+                                                            @endif
+                                                        </td>
+                                                        <td>
+                                                            @if(isset($item['jenis']))
+                                                                {{ $item['jenis'] == 'jadwal_pm' ? 'Jadwal PM' : ($item['jenis'] == 'order_kerja' ? 'Perbaikan' : ucfirst($item['jenis'])) }}
+                                                            @else
+                                                                -
                                                             @endif
                                                         </td>
                                                         <td>{{ $item['teknisi_nama'] ?? '-' }}</td>
+                                                        <td>{{ $item['deskripsi'] ?? $item['diagnosa'] ?? '-' }}</td>
+                                                        <td>{{ $item['tindakan'] ?? '-' }}</td>
                                                         <td>
-                                                            @if (isset($item['jenis']) && $item['jenis'] == 'log_kerja')
-                                                                {{ $item['diagnosa'] ?? '-' }}
+                                                            @if(!empty($item['sparepart']))
+                                                                <ul class="mb-0 ps-3">
+                                                                    @foreach($item['sparepart'] as $sp)
+                                                                        <li>{{ $sp['sparepart_nm'] ?? '-' }} ({{ $sp['jumlah'] ?? 0 }})</li>
+                                                                    @endforeach
+                                                                </ul>
                                                             @else
-                                                                {{ $item['deskripsi'] ?? '-' }}
+                                                                -
                                                             @endif
                                                         </td>
                                                         <td>
-                                                            @if (isset($item['jenis']) && $item['jenis'] == 'log_kerja')
-                                                                @if ($item['hasil'] == 'berhasil')
-                                                                    <span class="badge bg-success">Berhasil</span>
-                                                                @elseif($item['hasil'] == 'perlu_tindak_lanjut')
-                                                                    <span class="badge bg-warning">Perlu Tindak
-                                                                        Lanjut</span>
-                                                                @else
-                                                                    <span class="badge bg-danger">Tidak Berhasil</span>
-                                                                @endif
-                                                            @else
+                                                            @php
+                                                                $biaya_sparepart = $item['total_biaya_sparepart'] ?? 0;
+                                                                $biaya_lain = $item['total_biaya_lain'] ?? 0;
+                                                                $total_biaya = $biaya_sparepart + $biaya_lain;
+                                                            @endphp
+                                                            {{ number_format($total_biaya, 0, ',', '.') }}
+                                                        </td>
+                                                        <td>
+                                                            @if(isset($item['status']))
                                                                 @if ($item['status'] == 'selesai')
                                                                     <span class="badge bg-success">Selesai</span>
                                                                 @elseif($item['status'] == 'baru')
@@ -177,16 +195,17 @@
                                                                 @elseif($item['status'] == 'diproses')
                                                                     <span class="badge bg-warning">Diproses</span>
                                                                 @else
-                                                                    <span
-                                                                        class="badge bg-secondary">{{ $item['status'] }}</span>
+                                                                    <span class="badge bg-secondary">{{ $item['status'] }}</span>
                                                                 @endif
+                                                            @else
+                                                                -
                                                             @endif
                                                         </td>
                                                     </tr>
                                                 @endforeach
                                             @else
                                                 <tr>
-                                                    <td colspan="5" class="text-center">Tidak ada data riwayat</td>
+                                                    <td colspan="9" class="text-center">Tidak ada data riwayat</td>
                                                 </tr>
                                             @endif
                                         </tbody>

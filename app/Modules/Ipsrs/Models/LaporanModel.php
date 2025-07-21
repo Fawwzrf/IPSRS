@@ -9,7 +9,12 @@ class LaporanModel extends Model
 {
     public function getLaporanKinerjaAset($filter)
     {
-        $where = ["a.deleted_st = 0"];
+        $where = [
+            "a.deleted_st = 0",
+            "(pk.deleted_st IS NULL OR pk.deleted_st = 0)",
+            "(jp.deleted_st IS NULL OR jp.deleted_st = 0)",
+            "(ok.deleted_st IS NULL OR ok.deleted_st = 0)"
+        ];
         $bindings = [];
 
         if (!empty($filter['kategori_asset_id'])) {
@@ -43,7 +48,13 @@ class LaporanModel extends Model
 
     public function getLaporanKinerjaTeknisi($filter)
     {
-        $where = ["p.jabatan_id = '90'"];
+        $where = [
+            "p.jabatan_id = '90'",
+            "p.deleted_st = 0",
+            "(pt.deleted_st IS NULL OR pt.deleted_st = 0)",
+            "(ok.deleted_st IS NULL OR ok.deleted_st = 0)",
+            "(lk.deleted_st IS NULL OR lk.deleted_st = 0)"
+        ];
         $bindings = [];
 
         if (!empty($filter['pegawai_id'])) {
@@ -71,7 +82,11 @@ class LaporanModel extends Model
 
     public function getLaporanBiaya($filter)
     {
-        $where = ["ok.deleted_st = 0"];
+        $where = [
+            "ok.deleted_st = 0",
+            "(lk.deleted_st IS NULL OR lk.deleted_st = 0)",
+            "((a1.deleted_st IS NULL OR a1.deleted_st = 0) OR (a2.deleted_st IS NULL OR a2.deleted_st = 0))"
+        ];
         $bindings = [];
 
         if (!empty($filter['tgl_start']) && !empty($filter['tgl_end'])) {
@@ -83,27 +98,28 @@ class LaporanModel extends Model
         $whereClause = implode(' AND ', $where);
 
         $sql = "SELECT 
-                    ok.order_kerja_id,
-                    ok.tgl_dibuat,
-                    a.asset_nm,
-                    ok.jenis,
-                    (SELECT SUM(ps.jumlah * ps.harga_satuan) FROM penggunaan_sparepart ps WHERE ps.log_kerja_id = lk.log_kerja_id) as total_biaya_sparepart,
-                    lk.total_biaya as biaya_lain,
-                    COALESCE((SELECT SUM(ps.jumlah * ps.harga_satuan) FROM penggunaan_sparepart ps WHERE ps.log_kerja_id = lk.log_kerja_id), 0) + COALESCE(lk.total_biaya, 0) as total_biaya_ok
-                FROM order_kerja ok
-                LEFT JOIN log_kerja lk ON ok.order_kerja_id = lk.order_kerja_id
-                LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-                LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
-                LEFT JOIN asset a ON pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id
-                WHERE {$whereClause}
-                ORDER BY ok.tgl_dibuat DESC";
+            ok.order_kerja_id,
+            ok.tgl_dibuat,
+            COALESCE(a1.asset_nm, a2.asset_nm) as asset_nm,
+            ok.jenis,
+            (SELECT SUM(ps.jumlah * ps.harga_satuan) FROM penggunaan_sparepart ps WHERE ps.log_kerja_id = lk.log_kerja_id) as total_biaya_sparepart,
+            lk.total_biaya as biaya_lain,
+            COALESCE((SELECT SUM(ps.jumlah * ps.harga_satuan) FROM penggunaan_sparepart ps WHERE ps.log_kerja_id = lk.log_kerja_id), 0) + COALESCE(lk.total_biaya, 0) as total_biaya_ok
+        FROM order_kerja ok
+        LEFT JOIN log_kerja lk ON ok.order_kerja_id = lk.order_kerja_id
+        LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+        LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+        LEFT JOIN asset a1 ON pk.asset_id = a1.asset_id
+        LEFT JOIN asset a2 ON jp.asset_id = a2.asset_id
+        WHERE {$whereClause}
+        ORDER BY ok.tgl_dibuat DESC";
 
         return DbModel::rawData('result_array', $sql, $bindings);
     }
 
     public static function getLaporanKinerjaTim($filter = [])
     {
-        $where = "pt.deleted_st = 0";
+        $where = "pt.deleted_st = 0 AND ok.deleted_st = 0 AND (a1.deleted_st IS NULL OR a1.deleted_st = 0) AND (a2.deleted_st IS NULL OR a2.deleted_st = 0)";
         $bindings = [];
 
         // Filter tanggal
@@ -120,25 +136,25 @@ class LaporanModel extends Model
         }
 
         $sql = "SELECT 
-                ok.order_kerja_id,
-                p.pegawai_nm as nama_teknisi,
-                COALESCE(a1.asset_nm, a2.asset_nm) as nama_aset,
-                pk.created_at as waktu_komplain_masuk,
-                ok.tgl_dibuat as waktu_ok_dibuat,
-                pt.tgl_mulai as waktu_tugas_diterima,
-                pt.tgl_selesai as waktu_tugas_selesai,
-                TIMESTAMPDIFF(MINUTE, pk.created_at, ok.tgl_dibuat) as durasi_respon_admin,
-                TIMESTAMPDIFF(MINUTE, ok.tgl_dibuat, pt.tgl_mulai) as durasi_penerimaan_teknisi,
-                TIMESTAMPDIFF(MINUTE, pt.tgl_mulai, pt.tgl_selesai) as durasi_pengerjaan,
-                TIMESTAMPDIFF(MINUTE, pk.created_at, pt.tgl_selesai) as durasi_total
-            FROM penugasan_teknisi pt
-            JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
-            JOIN mst_pegawai p ON pt.pegawai_id = p.pegawai_id
-            LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-            LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
-            LEFT JOIN asset a1 ON pk.asset_id = a1.asset_id
-            LEFT JOIN asset a2 ON jp.asset_id = a2.asset_id
-            WHERE $where";
+            ok.order_kerja_id,
+            p.pegawai_nm as nama_teknisi,
+            COALESCE(a1.asset_nm, a2.asset_nm) as nama_aset,
+            pk.created_at as waktu_komplain_masuk,
+            ok.tgl_dibuat as waktu_ok_dibuat,
+            pt.tgl_mulai as waktu_tugas_diterima,
+            pt.tgl_selesai as waktu_tugas_selesai,
+            TIMESTAMPDIFF(MINUTE, pk.created_at, ok.created_at) as durasi_respon_admin,
+            TIMESTAMPDIFF(MINUTE, ok.created_at, pt.tgl_mulai) as durasi_penerimaan_teknisi,
+            TIMESTAMPDIFF(MINUTE, pt.tgl_mulai, pt.tgl_selesai) as durasi_pengerjaan,
+            TIMESTAMPDIFF(MINUTE, pk.created_at, pt.tgl_selesai) as durasi_total
+        FROM penugasan_teknisi pt
+        JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
+        JOIN mst_pegawai p ON pt.pegawai_id = p.pegawai_id
+        LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+        LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+        LEFT JOIN asset a1 ON pk.asset_id = a1.asset_id
+        LEFT JOIN asset a2 ON jp.asset_id = a2.asset_id
+        WHERE $where";
 
         return DbModel::rawData('result_array', $sql, $bindings);
     }

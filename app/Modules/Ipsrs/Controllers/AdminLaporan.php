@@ -232,7 +232,7 @@ class AdminLaporan extends MyController
                         $values[] = $row['tugas_selesai'] ?? 0;
                         break;
                     case 'Rata-rata Durasi (Menit)':
-                        $values[] = numId($row['rata_rata_durasi'] ?? 0, true);
+                        $values[] = $row['rata_rata_durasi'] ?? 0;
                         break;
                     case 'Tanggal OK':
                         $values[] = to_date($row['tgl_dibuat'] ?? '') ?? '';

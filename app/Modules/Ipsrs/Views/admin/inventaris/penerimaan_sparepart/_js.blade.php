@@ -115,60 +115,7 @@
                 }
             });
             
-            // Inisialisasi AutoNumeric untuk format harga
-            modal.find('input[name="harga_satuan"]').autoNumeric('init', {
-                aSep: '.',
-                aDec: ',',
-                mDec: '0',
-                vMax: '999999999999'
-            });
+            
         }
-    });
-
-    // Handler untuk form submit - perbaikan untuk mencegah submit ganda
-    $(document).off('click', 'button[onclick="_save(event)"]').on('click', 'button[onclick="_save(event)"]', function(e) {
-        e.preventDefault();
-        var form = $(this).closest('form');
-        
-        // Validasi form
-        if (!form[0].checkValidity()) {
-            form[0].reportValidity();
-            return false;
-        }
-        
-        // Disable button untuk mencegah klik dobel
-        var btn = $(this);
-        btn.prop('disabled', true);
-        
-        // Submit form menggunakan AJAX
-        $.ajax({
-            url: form.attr('action'),
-            type: 'POST',
-            data: form.serialize(),
-            dataType: 'json',
-            success: function(response) {
-                if (response.status === 'success' || response.code === '01' || response.code === '02') {
-                    _toast('success', 'Data berhasil disimpan.');
-                    _modalHide();
-                    
-                    // Reload tabel
-                    if (tabel) tabel.ajax.reload();
-                } else {
-                    _toast('error', response.message || 'Gagal menyimpan data.');
-                }
-            },
-            error: function(xhr) {
-                var msg = 'Terjadi kesalahan sistem';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    msg = xhr.responseJSON.message;
-                }
-                _toast('error', msg);
-            },
-            complete: function() {
-                btn.prop('disabled', false);
-            }
-        });
-        
-        return false;
     });
 </script>
