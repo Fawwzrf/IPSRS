@@ -472,7 +472,7 @@ class TeknisiTugas extends MyController
             foreach ($sparepart_id as $i => $id) {
                 if ($id) {
                     $sparepart[] = [
-                        'id' => $id,
+                        'sparepart_id' => $id,
                         'jumlah' => $jumlah[$i] ?? 1
                     ];
                 }

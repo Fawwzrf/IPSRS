@@ -78,10 +78,10 @@
         </div>
 
         <div class="mb-3">
-            <label class="form-label">Total Biaya (Rp)</label>
+            <label class="form-label">Biaya tambahan (Rp)</label>
             <input type="number" name="total_biaya" class="form-control" min="0" step="100" value="0"
                 required>
-            <div class="form-text text-muted">Masukkan total biaya pekerjaan (jika ada).</div>
+            <div class="form-text text-muted">Masukkan biaya tambahan (jika ada).</div>
         </div>
     </div>
     <div class="modal-footer">
