@@ -1,5 +1,5 @@
 @include('ipsrs::admin.laporan._js')
-<div class="page-wrapper">
+<div class="page-wrapper laporan-kinerja-aset">
     <div class="page-header d-print-none mt-2">
         <div class="container-xl">
             <div class="row align-items-center">
@@ -28,7 +28,7 @@
         <div class="container-xl">
             <div class="card">
                 <div class="card-body">
-                    <form action="{{ url($uri . '?n=' . request('n')) }}" method="POST" class="mb-0" id="search" autocomplete="off" onsubmit="_search(event)">
+                    <form action="{{ url($uri . '?n=' . request('n')) }}"  method="POST" class="mb-0 filter-form" id="search" autocomplete="off" onsubmit="_search(event)">
                         @csrf
                         <input type="hidden" name="search_act" value="save">
                         <div class="row g-2">
@@ -52,15 +52,15 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="input-group mt-4">
-                                    <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i>&nbsp;Filter</button>
-                                    <button type="button" class="btn btn-secondary" onclick="_searchReset()"><i class="fas fa-times"></i>&nbsp;Reset</button>
+                                    <button type="button" class="btn btn-primary btn-filter"><i class="fas fa-search"></i>&nbsp;Filter</button>
+                                    <button type="button" class="btn btn-secondary btn-reset"><i class="fas fa-times"></i>&nbsp;Reset</button>
                                 </div>
                             </div>
                         </div>
                     </form>
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-vcenter card-table table-striped">
+                    <table id="datatable-main" class="table table-vcenter card-table table-striped">
                         <thead>
                             <tr>
                                 <th>No</th>
@@ -72,29 +72,13 @@
                                 <th>Terakhir Ditangani</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @forelse($laporan as $index => $row)
-                            <tr>
-                                <td>{{ $index + 1 }}</td>
-                                <td>{{ $row['asset_nm'] }}</td>
-                                <td>{{ $row['lokasi_nm'] }}</td>
-                                <td>{{ numId($row['jumlah_ok']) }}</td>
-                                <td>{{ numId($row['jumlah_perbaikan']) }}</td>
-                                <td>{{ numId($row['jumlah_pemeliharaan']) }}</td>
-                                <td>{{ @to_date($row['terakhir_ditangani']) }}</td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="7" class="text-center text-muted">Tidak ada data untuk ditampilkan.</td>
-                            </tr>
-                            @endforelse
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
                 <div class="card-footer d-print-none">
-                    <div class="d-flex align-items-center">
-                        <p class="m-0 text-muted">Menampilkan {{ count($laporan) }} data</p>
-                    </div>
+                    <p class="m-0 text-muted">
+                        Menampilkan <span id="count-data">0</span> data
+                    </p>
                 </div>
             </div>
         </div>

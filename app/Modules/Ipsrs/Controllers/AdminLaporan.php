@@ -23,7 +23,7 @@ class AdminLaporan extends MyController
     /**
      * Menampilkan laporan Kinerja Aset.
      */
-    public function kinerjaAset()
+    public function kinerjaAset(Request $request)
     {
         $d = [];
         $this->save_session_search($d);
@@ -32,14 +32,6 @@ class AdminLaporan extends MyController
         $d['all_kategori_asset'] = DbModel::allData('mst_kategori_asset', ['deleted_st' => 0]);
         $d['all_lokasi'] = DbModel::allData('mst_lokasi', ['deleted_st' => 0]);
 
-        // Ambil data laporan berdasarkan filter
-        $d['laporan'] = $this->model->getLaporanKinerjaAset($d['nav_sess']['search']['data'] ?? []);
-
-        // Refactor: gunakan helper untuk format tanggal/angka pada data laporan
-        foreach ($d['laporan'] as &$row) {
-            $row['tgl_mulai'] = to_date($row['tgl_mulai'] ?? '');
-            $row['total_biaya'] = numId($row['total_biaya'] ?? 0);
-        }
 
         // Untuk ekspor ke Excel jika diminta
         if (request('export') == 'excel') {
@@ -62,22 +54,30 @@ class AdminLaporan extends MyController
             return $this->exportToExcel($data, 'Laporan_Kinerja_Aset', $headers);
         }
 
+        if ($request->ajax()) {
+            // Proses datatables
+            $filter = $request->all();
+            $start = intval($request->start ?? 0);
+            $length = intval($request->length ?? 10);
+            $order = $request->order ?? [];
+            $search = $request->search['value'] ?? '';
+            $result = $this->model->getDatatablesKinerjaAset($filter, $start, $length, $order, $search);
+            return response()->json($result);
+        }
+
         return $this->renderView($this->template . 'kinerja_aset', $d);
     }
 
     /**
      * Menampilkan laporan Kinerja Teknisi.
      */
-    public function kinerjaTeknisi()
+    public function kinerjaTeknisi(Request $request)
     {
         $d = [];
         $this->save_session_search($d);
         
         // Ambil data untuk filter
         $d['all_teknisi'] = DbModel::allData('mst_pegawai', ['jabatan_id' => '90', 'deleted_st' => 0]);
-
-        // Ambil data laporan berdasarkan filter
-        $d['laporan'] = $this->model->getLaporanKinerjaTeknisi($d['nav_sess']['search']['data'] ?? []);
 
         // Untuk ekspor ke Excel jika diminta
         if (request('export') == 'excel') {
@@ -91,26 +91,44 @@ class AdminLaporan extends MyController
             }
         }
 
+        if ($request->ajax()) {
+            // Proses datatables
+            $filter = $request->all();
+            $start = intval($request->start ?? 0);
+            $length = intval($request->length ?? 10);
+            $order = $request->order ?? [];
+            $search = $request->search['value'] ?? '';
+            $result = $this->model->getDatatablesKinerjaTeknisi($filter, $start, $length, $order, $search);
+            return response()->json($result);
+        }
+
         return $this->renderView($this->template . 'kinerja_teknisi', $d);
     }
 
     /**
      * Menampilkan laporan Biaya Pemeliharaan & Perbaikan.
      */
-    public function biayaPemeliharaan()
+    public function biayaPemeliharaan(Request $request)
     {
         $d = [];
         $this->save_session_search($d);
-        
+
         // Set default date range jika tidak ada
         if (empty($d['nav_sess']['search']['data']['tgl_start'])) {
             $d['nav_sess']['search']['data']['tgl_start'] = date('d-m-Y', strtotime('-30 days'));
             $d['nav_sess']['search']['data']['tgl_end'] = date('d-m-Y');
         }
 
-        // Ambil data laporan berdasarkan filter
-        $d['laporan'] = $this->model->getLaporanBiaya($d['nav_sess']['search']['data'] ?? []);
-        $d['total_biaya'] = array_sum(array_column($d['laporan'], 'total_biaya_ok'));
+        // Pastikan $d['laporan'] selalu terdefinisi agar tidak undefined
+        if (!isset($d['laporan']) || !is_array($d['laporan'])) {
+            $d['laporan'] = [];
+        }
+
+        // Hitung total biaya keseluruhan sesuai filter
+        $filter = $request->all();
+        $total_biaya = $this->model->getTotalBiayaPemeliharaan($filter);
+
+        $d['total_biaya'] = $total_biaya;
 
         // Untuk ekspor ke Excel jika diminta
         if (request('export') == 'excel') {
@@ -125,13 +143,24 @@ class AdminLaporan extends MyController
             }
         }
 
+        if ($request->ajax()) {
+            // Proses datatables
+            $filter = $request->all();
+            $start = intval($request->start ?? 0);
+            $length = intval($request->length ?? 10);
+            $order = $request->order ?? [];
+            $search = $request->search['value'] ?? '';
+            $result = $this->model->getDatatablesBiayaPemeliharaan($filter, $start, $length, $order, $search);
+            return response()->json($result);
+        }
+
         return $this->renderView($this->template . 'biaya_pemeliharaan', $d);
     }
 
     /**
      * Menampilkan laporan Kinerja Tim.
      */
-    public function kinerjaTim()
+    public function kinerjaTim(Request $request)
     {
         $d = [];
         $this->save_session_search($d);
@@ -144,18 +173,6 @@ class AdminLaporan extends MyController
 
         // Dropdown teknisi
         $d['all_teknisi'] = DbModel::allData('mst_pegawai', ['jabatan_id' => '90', 'deleted_st' => 0]);
-
-        // Data laporan
-        $filter = $d['nav_sess']['search']['data'] ?? [];
-        $d['laporan'] = LaporanModel::getLaporanKinerjaTim($filter);
-
-        // Handler jika request AJAX dari _search(e)
-        if (request()->input('_is_ajax')) {
-            // Redirect ke halaman yang sama agar _page(res.uri, "search") bisa reload konten
-            return response()->json([
-                'uri' => url()->current() . '?n=' . request('n')
-            ]);
-        }
 
         // Ekspor Excel
         if (request('export') == 'excel') {
@@ -175,6 +192,17 @@ class AdminLaporan extends MyController
                 ];
             }
             return $this->exportToExcel($data, 'Laporan_Kinerja_Tim', $headers);
+        }
+
+        if ($request->ajax()) {
+            // Proses datatables
+            $filter = $request->all();
+            $start = intval($request->start ?? 0);
+            $length = intval($request->length ?? 10);
+            $order = $request->order ?? [];
+            $search = $request->search['value'] ?? '';
+            $result = $this->model->getDatatablesKinerjaTim($filter, $start, $length, $order, $search);
+            return response()->json($result);
         }
 
         return $this->renderView($this->template . 'kinerja_tim', $d);
@@ -270,5 +298,38 @@ class AdminLaporan extends MyController
         ];
         
         return response($content, 200, $headers);
+    }
+    public function ajax_datatables(Request $request)
+    {
+        $filter = $request->all();
+        $start = intval($request->start ?? 0);
+        $length = intval($request->length ?? 10);
+        $order = $request->order ?? [];
+        $search = $request->search['value'] ?? '';
+
+        // Tentukan laporan berdasarkan parameter 'laporan'
+        $laporan = $request->input('laporan');
+        switch ($laporan) {
+            case 'kinerja_aset':
+                $result = $this->model->getDatatablesKinerjaAset($filter, $start, $length, $order, $search);
+                break;
+            case 'kinerja_teknisi':
+                $result = $this->model->getDatatablesKinerjaTeknisi($filter, $start, $length, $order, $search);
+                break;
+            case 'biaya_pemeliharaan':
+                $result = $this->model->getDatatablesBiayaPemeliharaan($filter, $start, $length, $order, $search);
+                break;
+            case 'kinerja_tim':
+                $result = $this->model->getDatatablesKinerjaTim($filter, $start, $length, $order, $search);
+                break;
+            default:
+                $result = [
+                    'draw' => intval($request->draw),
+                    'recordsTotal' => 0,
+                    'recordsFiltered' => 0,
+                    'data' => []
+                ];
+        }
+        return response()->json($result);
     }
 }

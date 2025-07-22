@@ -1,80 +1,98 @@
 <script type="text/javascript">
-    var tabel = null;
-    $(document).ready(function() {
-        // Inisialisasi Select2 untuk dropdown filter
-        $('.chosen-select').select2({
-            theme: "bootstrap-5"
-        });
-
-        // Inisialisasi DateRangePicker
-        $('.datepicker-notauto').daterangepicker({
-            singleDatePicker: true,
-            showDropdowns: true,
-            locale: {
-                format: 'DD-MM-YYYY'
-            }
-        });
-
-        // Inisialisasi DataTable
-        tabel = $('#datatable-main').DataTable({
-            "language": { url: _base_url + 'dist/libs/DataTables/id.json' },
-            "processing": true,
-            "serverSide": true,
-            "ordering": true,
-            "order": [[6, 'desc']],
-            "ajax": {
-                "url": "<?= $uri . '/ajax_datatables?n=' . request('n') ?>",
-                "type": "POST"
-            },
-            "bFilter": false,
-            "dom": 'rt<"d-flex justify-content-between"li p>',
-            "columns": [
-                { "data": null, "orderable": false, "className": "text-center", 
-                  "render": function (data, type, row, meta) { 
-                      return meta.row + meta.settings._iDisplayStart + 1; 
-                  }
-                },
-                { "data": "order_kerja_id", "className": "text-center" },
-                { "data": "nama_teknisi" },
-                { "data": "durasi_respon_admin", "className": "text-center", "render": function(data) { return data > 0 ? data : '-'; } },
-                { "data": "durasi_penerimaan_teknisi", "className": "text-center", "render": function(data) { return data > 0 ? data : '-'; } },
-                { "data": "durasi_pengerjaan", "className": "text-center", "render": function(data) { return data > 0 ? data : '-'; } },
-                { "data": "durasi_total", "className": "text-center fw-bold bg-blue-lt", "render": function(data) { return data > 0 ? data : '-'; } },
-            ]
-        });
-
-
-
-        // Handler form search
-        $('#form-search').on('submit', function(e) {
-            e.preventDefault();
-            $('#datatable').DataTable().ajax.reload();
-        });
+var tabel = null;
+$(document).ready(function() {
+    $('.chosen-select').select2({ theme: "bootstrap-5" });
+    $('.datepicker-notauto').daterangepicker({
+        singleDatePicker: true,
+        showDropdowns: true,
+        locale: { format: 'DD-MM-YYYY' }
     });
 
-    // Fungsi untuk mencari data (handle form submit)
-    function _search(e) {
-        if (e) e.preventDefault();
-        
-        // Ambil form yang disubmit
-        const form = e.target;
-        if (!form) return false;
-        
-        // Submit form secara normal
-        form.submit();
-        return false;
-    }
+    // Tentukan kolom DataTable sesuai halaman
+    var columns = [];
+    var ajaxUrl = '';
+    if ($('#datatable-main').length) {
+        if ($('.page-wrapper').hasClass('laporan-kinerja-aset')) {
+            // Pastikan window.n selalu ada, jika tidak gunakan string acak atau session id
+            var nVal = window.n || "{{ request('n') }}" ;
+            ajaxUrl = _base_url + 'ipsrs/adminlaporan/kinerjaaset/ajax?n=' + nVal;
+            columns = [
+                { data: null, orderable: false, className: "text-center",
+                  render: function (data, type, row, meta) { return meta.row + meta.settings._iDisplayStart + 1; }
+                },
+                { data: "asset_nm" },
+                { data: "lokasi_nm" },
+                { data: "jumlah_ok", className: "text-center" },
+                { data: "jumlah_perbaikan", className: "text-center" },
+                { data: "jumlah_pemeliharaan", className: "text-center" },
+                { data: "terakhir_ditangani", className: "text-center" }
+            ];
+        } else if ($('.page-wrapper').hasClass('laporan-kinerja-tim')) {
+            ajaxUrl = _base_url + 'ipsrs/adminlaporan/kinerjatim/ajax?n=' + (window.n || "{{ request('n') }}" );
+            columns = [
+                { data: null, orderable: false, className: "text-center",
+                  render: function (data, type, row, meta) { return meta.row + meta.settings._iDisplayStart + 1; }
+                },
+                { data: "order_kerja_id" },
+                { data: "jenis" },
+                { data: "nama_teknisi" },
+                { data: "nama_aset" },
+                { data: "durasi_respon_admin", className: "text-center" },
+                { data: "durasi_penerimaan_teknisi", className: "text-center" },
+                { data: "durasi_pengerjaan", className: "text-center" },
+                { data: "durasi_total", className: "text-center" }
+            ];
+        } else if ($('.page-wrapper').hasClass('laporan-kinerja-teknisi')) {
+            ajaxUrl = _base_url + 'ipsrs/adminlaporan/kinerjateknisi/ajax?n=' + (window.n || "{{ request('n') }}" );
+            columns = [
+                { data: null, orderable: false, className: "text-center",
+                  render: function (data, type, row, meta) { return meta.row + meta.settings._iDisplayStart + 1; }
+                },
+                { data: "nama_teknisi" },
+                { data: "total_tugas" },
+                { data: "tugas_selesai" },
+                { data: "persentase_selesai" },
+                { data: "rata_rata_durasi" }
+            ];
+        } else if ($('.page-wrapper').hasClass('laporan-biaya-pemeliharaan')) {
+            ajaxUrl = _base_url + 'ipsrs/adminlaporan/biayapemeliharaan/ajax?n=' + (window.n || "{{ request('n') }}");
+            columns = [
+                { data: null, orderable: false, className: "text-center",
+                  render: function (data, type, row, meta) { return meta.row + meta.settings._iDisplayStart + 1; }
+                },
+                { data: "tgl_dibuat" },
+                { data: "order_kerja_id" },
+                { data: "asset_nm" },
+                { data: "jenis" },
+                { data: "total_biaya_sparepart", className: "text-end" },
+                { data: "biaya_lain", className: "text-end" },
+                { data: "total_biaya_ok", className: "text-end" },
+            ];
+        }
 
-    // Fungsi untuk mereset pencarian
-    function _searchReset() {
-        // Reset semua field form
-        $('select.chosen-select').val('').trigger('change');
-        $('input[type="text"]').val('');
-        
-        // Submit form dengan nilai kosong
-        $('#search').submit();
+        // Inisialisasi DataTable jika kolom sudah ditentukan
+        if (columns.length > 0) {
+            tabel = $('#datatable-main').DataTable({
+                language: { url: _base_url + 'dist/libs/DataTables/id.json' },
+                processing: true,
+                serverSide: true,
+                ordering: true,
+                responsive: true,
+                ajax: {
+                    url: ajaxUrl,
+                    type: "POST",
+                    data: function(d) {
+                        // Ambil data filter dari form jika ada
+                        $('.filter-form').find('input,select').each(function() {
+                            d[$(this).attr('name')] = $(this).val();
+                        });
+                    }
+                },
+                columns: columns
+            });
+        }
     }
-
+    
     // Print handler dengan styling
     function printReport() {
         const headContent = $('head').html();
@@ -115,4 +133,34 @@
             printWindow.close();
         }, 250);
     }
+
+    $('.btn-filter').on('click', function(e) {
+        e.preventDefault();
+        if (typeof tabel !== 'undefined' && tabel) {
+            tabel.ajax.reload();
+        } else {
+            _search(e); // fallback jika bukan datatables
+        }
+    });
+
+    $('.btn-reset').on('click', function(e) {
+        e.preventDefault();
+        $('.filter-form').find('input,select').val('');
+        $('.filter-form').find('select').trigger('change');
+        if (typeof tabel !== 'undefined' && tabel) {
+            tabel.ajax.reload();
+        } else {
+            _searchReset();
+        }
+    });
+});
+</script>
+<script>
+$(document).ready(function() {
+    if (tabel) {
+    tabel.on('draw', function() {
+        $('#count-data').text(tabel.data().count());
+    });
+}
+});
 </script>
