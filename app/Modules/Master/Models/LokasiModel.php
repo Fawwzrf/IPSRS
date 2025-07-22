@@ -22,6 +22,37 @@ class LokasiModel extends Model
         }
     }
 
+    public static function generateLokasiId($tipe, $parentId = null)
+    {
+        $prefix = $parentId ? $parentId . '.' : '';
+        // Query untuk mencari ID terakhir berdasarkan parent dan tipe
+        $query = "SELECT MAX(lokasi_id) as last_id FROM mst_lokasi WHERE tipe_lokasi = ? AND deleted_st = 0";
+        $params = [$tipe];
+
+        if ($parentId) {
+            $query .= " AND parent_lokasi_id = ?";
+            $params[] = $parentId;
+        } else {
+            // Jika tidak ada parent (untuk tipe Gedung)
+            $query .= " AND parent_lokasi_id IS NULL";
+        }
+
+        $lastData = DbModel::rawData('row_array', $query, $params);
+        $lastId = $lastData['last_id'] ?? '';
+
+        if (empty($lastId)) {
+            // Jika ini adalah data pertama untuk parent/tipe ini, mulai dari 01
+            return $prefix . '01';
+        } else {
+            // Ambil bagian numerik terakhir dari ID, tambahkan 1, format ulang
+            $parts = explode('.', $lastId);
+            $lastNumber = (int)end($parts);
+            $newNumber = $lastNumber + 1;
+            // str_pad untuk memastikan formatnya selalu 2 digit (01, 02, ... 10)
+            return $prefix . str_pad($newNumber, 2, '0', STR_PAD_LEFT);
+        }
+    }
+
     static function loadDatatables()
     {
         self::initSession();

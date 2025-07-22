@@ -137,8 +137,7 @@ class Lokasi extends MyController
         try {
             if ($id == null) {
 
-                $d['lokasi_id'] = $this->_generateLokasiId($d['tipe_lokasi'], $d['parent_lokasi_id']);
-
+                $d['lokasi_id'] = LokasiModel::generateLokasiId($d['tipe_lokasi'], $d['parent_lokasi_id']);
 
                 $result = DbModel::insertData('mst_lokasi', $d);
                 if ($result) {
