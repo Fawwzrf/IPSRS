@@ -45,6 +45,7 @@
                         var uri_update_status = '<?= $uri . '/update_status_form/' ?>' + data;
                         var uri_riwayat_status =
                             '<?= url('ipsrs/logstatusorderkerja/form_modal') ?>/' + data;
+                        var uri_hasil_teknisi = '<?= $uri . '/hasil_teknisi_modal/' ?>' + data;
 
                         return '' +
                             '<div class="btn-list btn-sm flex-nowrap">' +
@@ -66,6 +67,11 @@
                             uri_riwayat_status +
                             '\', title: \'Riwayat Status Order Kerja\', size: \'modal-lg\'})">' +
                             '             <i class="fas fa-history text-info me-2"></i> Riwayat Status' +
+                            '         </a>' +
+                            '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick="_modal(event, {uri: \'' +
+                            uri_hasil_teknisi +
+                            '\', title: \'Hasil Teknisi\', size: \'modal-lg\'})">' +
+                            '             <i class="fas fa-user-cog text-success me-2"></i> Hasil Teknisi' +
                             '         </a>' +
                             '         <div class="dropdown-divider"></div>' +
                             '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick="_delete(\'' +

@@ -73,9 +73,9 @@
                 <label class="col-lg-3 col-form-label required">Prioritas</label>
                 <div class="col-lg-9">
                    <select class="form-select chosen-select" name="prioritas" required>
-                        <option value="normal" @if(@$main['prioritas'] == 'normal') selected @endif>Normal</option>
-                        <option value="mendesak" @if(@$main['prioritas'] == 'mendesak') selected @endif>Mendesak</option>
-                        <option value="darurat" @if(@$main['prioritas'] == 'darurat') selected @endif>Darurat</option>
+                        <option value="normal" @if(strtolower(@$main['prioritas']) == 'normal') selected @endif>Normal</option>
+                        <option value="mendesak" @if(strtolower(@$main['prioritas']) == 'mendesak') selected @endif>Mendesak</option>
+                        <option value="darurat" @if(strtolower(@$main['prioritas']) == 'darurat') selected @endif>Darurat</option>
                    </select>
                 </div>
             </div>
@@ -98,10 +98,10 @@
                 <label class="col-lg-3 col-form-label required">Status</label>
                 <div class="col-lg-9">
                    <select class="form-select chosen-select" name="status" required>
-                        <option value="baru" @if(@$main == '' || @$main['status'] == 'baru') selected @endif>Baru</option>
-                        <option value="diproses" @if(@$main['status'] == 'diproses') selected @endif>Diproses</option>
-                        <option value="selesai" @if(@$main['status'] == 'selesai') selected @endif>Selesai</option>
-                        <option value="ditolak" @if(@$main['status'] == 'ditolak') selected @endif>Ditolak</option>
+                        <option value="baru" @if(@$main == '' || strtolower(@$main['status']) == 'baru') selected @endif>Baru</option>
+                        <option value="diproses" @if(strtolower(@$main['status']) == 'diproses') selected @endif>Diproses</option>
+                        <option value="selesai" @if(strtolower(@$main['status']) == 'selesai') selected @endif>Selesai</option>
+                        <option value="ditolak" @if(strtolower(@$main['status']) == 'ditolak') selected @endif>Ditolak</option>
                    </select>
                 </div>
             </div>

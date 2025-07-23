@@ -23,7 +23,7 @@
                                 <td class="text-center">{{ $key + 1 }}</td>
                                 <td>{{ to_date($item['tgl_perubahan'], '-', 'full_date') }}</td>
                                 <td>
-                                    <span class="badge bg-secondary">{{ ucfirst($item['status_sebelumnya']) }}</span>
+                                    <span class="badge bg-secondary">{{ ucfirst($item['status_lama']) }}</span>
                                 </td>
                                 <td>
                                     @php

@@ -321,4 +321,53 @@ class AdminOrderKerja extends MyController
 
         return $this->renderView('ipsrs::admin.pekerjaan.order_kerja.update_status_modal', $d);
     }
+
+    public function hasil_teknisi_modal($order_kerja_id)
+    {
+        // Ambil semua penugasan teknisi untuk order kerja ini
+        $penugasan = DbModel::rawData(
+            'result_array',
+            "SELECT pt.*, p.pegawai_nm
+             FROM penugasan_teknisi pt
+             LEFT JOIN mst_pegawai p ON pt.pegawai_id = p.pegawai_id
+             WHERE pt.order_kerja_id = ? AND pt.deleted_st = 0",
+            [$order_kerja_id]
+        );
+
+        // Ambil semua log kerja untuk order kerja ini
+        $log_kerja = DbModel::rawData(
+            'result_array',
+            "SELECT lk.*, p.pegawai_nm
+             FROM log_kerja lk
+             LEFT JOIN mst_pegawai p ON lk.teknisi_pegawai_id = p.pegawai_id
+             WHERE lk.order_kerja_id = ? AND lk.deleted_st = 0",
+            [$order_kerja_id]
+        );
+
+        // Ambil foto dan sparepart untuk setiap log kerja
+        foreach ($log_kerja as &$log) {
+            // Foto
+            $log['fotos'] = DbModel::rawData(
+                'result_array',
+                "SELECT foto_url, deskripsi FROM log_kerja_foto WHERE log_kerja_id = ?",
+                [$log['log_kerja_id']]
+            );
+
+            // Sparepart
+            $log['sparepart'] = DbModel::rawData(
+                'result_array',
+                "SELECT ps.jumlah, ms.sparepart_nm
+                 FROM penggunaan_sparepart ps
+                 LEFT JOIN mst_sparepart ms ON ps.sparepart_id = ms.sparepart_id
+                 WHERE ps.log_kerja_id = ? AND ps.deleted_st = 0",
+                [$log['log_kerja_id']]
+            );
+        }
+
+        $d = [
+            'penugasan' => $penugasan,
+            'log_kerja' => $log_kerja,
+        ];
+        return $this->renderView('ipsrs::admin.pekerjaan.order_kerja.hasil_teknisi_modal', $d);
+    }
 }

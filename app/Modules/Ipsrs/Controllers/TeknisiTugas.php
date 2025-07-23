@@ -452,7 +452,6 @@ class TeknisiTugas extends MyController
         try {
             $order_kerja_id = $request->input('order_kerja_id');
 
-            // Tambahkan debug log
             \Log::info('save_log_kerja dipanggil', [
                 'order_kerja_id' => $order_kerja_id,
                 'request_data' => $request->all()
@@ -478,6 +477,8 @@ class TeknisiTugas extends MyController
                 }
             }
 
+            $pegawai_id = session('pegawai_id'); // Pastikan pegawai_id diambil dari session
+
             $logData = [
                 'order_kerja_id' => $order_kerja_id,
                 'asset_id' => $request->input('asset_id'),
@@ -487,10 +488,10 @@ class TeknisiTugas extends MyController
                 'durasi_menit' => $request->input('durasi_menit') ?: 0,
                 'total_biaya' => str_replace(['.', ','], ['', '.'], $request->input('total_biaya')) ?: 0,
                 'sparepart' => $sparepart,
-                'fotos' => $request->file('fotos')
+                'fotos' => $request->file('fotos'),
+                'teknisi_pegawai_id' => $pegawai_id // Pastikan field ini terisi
             ];
 
-            // Gunakan model yang sudah ada untuk menyimpan data
             $logKerjaModel = new LogKerjaModel();
             $result = $logKerjaModel->saveData($order_kerja_id, $logData);
 
@@ -506,37 +507,31 @@ class TeknisiTugas extends MyController
 
                         if ($penugasan) {
                             $this->model->updateStatusPenugasan($penugasan['penugasan_id'], 'selesai');
-                            // Tambahkan update tgl_selesai
+                            // Update tgl_selesai dan pegawai_id
                             DbModel::updateData('penugasan_teknisi', [
                                 'status' => 'selesai',
                                 'tgl_selesai' => now(),
                                 'updated_at' => now(),
-                                'updated_by' => session('user_name')
-                            ], ['order_kerja_id' => $order_kerja_id, 'pegawai_id' => session('pegawai_id')]);
+                                'updated_by' => session('user_name'),
+                                'pegawai_id' => $pegawai_id // Pastikan pegawai_id terisi di penugasan_teknisi
+                            ], ['order_kerja_id' => $order_kerja_id, 'pegawai_id' => $pegawai_id]);
                         }
                     }
                 } catch (Exception $e) {
-                    // Log error tapi tetap lanjutkan proses
                     \Log::error('Error saat update status penugasan: ' . $e->getMessage());
                 }
 
-                // Tentukan URL redirect
                 $redirectUrl = '';
                 $nParam = $request->input('n');
 
-                // Tentukan URL redirect berdasarkan konteks
                 if ($request->has('context') && $request->input('context') === 'teknisi') {
-                    // Jika konteks dari halaman teknisi, redirect ke daftar tugas
                     $redirectUrl = url('ipsrs/teknisitugas') . ($nParam ? '?n=' . $nParam : '');
                 } else {
-                    // Default redirect ke detail asset
                     $redirectUrl = url('master/asset/detail/' . $request->input('asset_id'));
                 }
 
-                // Jika hasil dipilih "Perlu Tidak Lanjut" atau "Menunggu Sparepart", update status order kerja
                 $hasil = $request->input('hasil');
                 if ($hasil === 'menunggu_sparepart') {
-                    // Update status order kerja menjadi "menunggu_sparepart"
                     DbModel::updateData(
                         'order_kerja',
                         ['status' => 'menunggu_sparepart', 'updated_at' => date('Y-m-d H:i:s')],
