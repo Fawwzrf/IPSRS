@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Ipsrs\Controllers; // Sesuaikan dengan namespace Anda
+namespace App\Modules\Ipsrs\Controllers;
 
 use App\Http\Controllers\MyController;
 use App\Modules\App\Models\DbModel;
@@ -14,9 +14,12 @@ class Pelapor extends MyController
     {
         parent::__construct();
         $this->model = new PelaporModel();
-        $this->template = 'ipsrs::pelapor.'; // Path ke view pelapor
+        $this->template = 'ipsrs::pelapor.';
     }
 
+    /**
+     * Menampilkan halaman utama pelapor dan riwayat komplain.
+     */
     public function index()
     {
         $pegawai_id = session('pegawai_id');
@@ -28,57 +31,46 @@ class Pelapor extends MyController
     }
 
     /**
-     * PERBAIKAN: Fungsi ini sekarang mengirim semua data yang dibutuhkan oleh form.
+     * Menampilkan form modal komplain beserta data yang dibutuhkan.
      */
     public function form_komplain_modal()
     {
-        // Mengambil semua lokasi aktif
         $d['all_lokasi'] = DbModel::allData('mst_lokasi', ['deleted_st' => 0, 'active_st' => 1], 'lokasi_nm ASC');
-
-        // Mengambil semua aset aktif untuk difilter oleh JavaScript
         $d['all_asset'] = DbModel::allData('asset', ['deleted_st' => 0, 'active_st' => 1], 'asset_nm ASC');
-
-        // Gunakan rute pelapor yang benar sesuai routing system
         $d['form_act'] = url('ipsrs/pelapor/save');
-
-        // Tambahkan data pegawai_id untuk prefill form
         $d['pegawai_id'] = session('pegawai_id');
 
         return $this->renderView($this->template . 'form_komplain_modal', $d);
     }
 
     /**
-     * Menyimpan permintaan komplain dari pelapor
+     * Menyimpan permintaan komplain dari pelapor.
      */
     public function save()
     {
         try {
-            // Ambil semua input dari form
             $d = _post();
-            
-            // PERBAIKAN: Pastikan tanggal dalam format yang benar (YYYY-MM-DD)
             $d['tgl'] = date('Y-m-d');
-            
-            // Tambahkan data wajib lainnya
-            $d['status'] = 'baru';
+            $d['status'] = PelaporModel::STATUS_BARU;
             $d['created_at'] = date('Y-m-d H:i:s');
             $d['created_by'] = session('nama_pegawai') ?? 'Pelapor';
-            
-            // Upload foto jika ada
+
             if (request()->hasFile('foto_file')) {
                 $upload = upload_file('komplain', 'foto_file');
                 if ($upload['status']) {
                     $d['foto_url'] = $upload['data'];
                 }
             }
-            
-            // Simpan menggunakan model yang sesuai
+
+            // Validasi pegawai_id
+            if (empty($d['pegawai_id'])) {
+                return response()->json(_response('20', null, ['message' => 'Pegawai ID wajib diisi']));
+            }
+
             $save = \App\Modules\Ipsrs\Models\PermintaanKomplainModel::saveData(null, $d);
-            
+
             if ($save['status']) {
-                // PENTING: Pastikan URI berisi rute yang benar untuk redirect
-                $response = _response('01', 'ipsrs/pelapor/index', $save);
-                return response()->json($response);
+                return response()->json(_response('01', 'ipsrs/pelapor/index', $save));
             } else {
                 return response()->json(_response('11', null, $save));
             }
@@ -92,32 +84,27 @@ class Pelapor extends MyController
     }
 
     /**
-     * Mendapatkan data tabel komplain untuk refresh AJAX
+     * Mendapatkan data tabel komplain untuk refresh AJAX.
      */
     public function get_table_data()
     {
-        // Ambil data history komplain untuk pegawai yang login
         $pegawai_id = session('pegawai_id');
-        
-        // Jumlah per halaman
         $limit = 10;
         $page = request()->get('page', 1);
         $offset = ($page - 1) * $limit;
-        
-        // Model untuk ambil data
+
         $model = new PelaporModel();
         $d['history'] = $model->getHistoryByPegawai($pegawai_id, $limit, $offset);
         $total = $model->countHistoryByPegawai($pegawai_id);
-        
-        // Data untuk pagination
+
         $d['pagination'] = [
             'total' => $total,
             'per_page' => $limit,
             'current_page' => $page,
             'last_page' => ceil($total / $limit)
         ];
-        
-        // Render tabel saja, bukan layout lengkap
+
         return $this->renderPartial('table_komplain', $d);
     }
 }
+

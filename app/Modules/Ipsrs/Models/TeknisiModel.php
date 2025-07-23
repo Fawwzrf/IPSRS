@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-
 class TeknisiModel extends Model
 {
     protected static $nav_sess;
@@ -18,6 +17,7 @@ class TeknisiModel extends Model
         self::initSession();
     }
 
+    // Inisialisasi session navigasi
     protected static function initSession()
     {
         if (is_null(self::$nav_sess)) {
@@ -25,13 +25,7 @@ class TeknisiModel extends Model
         }
     }
 
-    /**
-     * Menghitung jumlah tugas dengan status tertentu menggunakan Raw Query.
-     * 
-     * @param string $teknisi_id ID teknisi
-     * @param string $status Status tugas
-     * @return int Jumlah tugas
-     */
+    // Menghitung jumlah tugas dengan status tertentu
     public function getCountTugasByStatus($teknisi_id, $status)
     {
         try {
@@ -47,14 +41,7 @@ class TeknisiModel extends Model
         }
     }
 
-    /**
-     * Mengambil daftar tugas dengan status tertentu menggunakan Raw Query.
-     * 
-     * @param string $teknisi_id ID teknisi
-     * @param string $status Status tugas
-     * @param int|null $limit Batasan jumlah data
-     * @return array Daftar tugas
-     */
+    // Mengambil daftar tugas dengan status tertentu
     public function getListTugasByStatus($teknisi_id, $status, $limit = null)
     {
         try {
@@ -82,6 +69,7 @@ class TeknisiModel extends Model
         }
     }
 
+    // Mengambil detail tugas berdasarkan penugasan_id
     public function getDetailTugas($penugasan_id)
     {
         $sql = "SELECT 
@@ -110,13 +98,10 @@ class TeknisiModel extends Model
         return DbModel::rawData('row_array', $sql, [$penugasan_id]);
     }
 
-    /**
-     * Update status penugasan teknisi
-     */
+    // Update status penugasan teknisi
     public static function updateStatusPenugasan($penugasan_id, $status, $alasan = null)
     {
         try {
-            // Update status penugasan teknisi
             $update_data = [
                 'status' => $status,
                 'catatan_penolakan' => $alasan,
@@ -125,11 +110,9 @@ class TeknisiModel extends Model
             ];
             DbModel::updateData('penugasan_teknisi', $update_data, ['penugasan_id' => $penugasan_id]);
 
-            // Ambil order_kerja_id terkait
             $penugasan = DbModel::getData('penugasan_teknisi', ['penugasan_id' => $penugasan_id]);
             $order_kerja_id = $penugasan['order_kerja_id'] ?? null;
 
-            // Jika status sedang_dikerjakan, update order kerja ke diproses
             if ($order_kerja_id && $status === 'sedang_dikerjakan') {
                 DbModel::updateData('order_kerja', [
                     'status' => 'diproses',
@@ -138,7 +121,6 @@ class TeknisiModel extends Model
                 ], ['order_kerja_id' => $order_kerja_id]);
             }
 
-            // Jika semua penugasan dibatalkan, update order kerja ke dibatalkan
             if ($order_kerja_id) {
                 $count_aktif = DbModel::rawData('row_array',
                     "SELECT COUNT(*) as total FROM penugasan_teknisi WHERE order_kerja_id = ? AND status != 'dibatalkan' AND deleted_st = 0",
@@ -153,7 +135,6 @@ class TeknisiModel extends Model
                         'updated_by' => session('user_name')
                     ], ['order_kerja_id' => $order_kerja_id]);
                 } else {
-                    // Jika semua penugasan statusnya "ditugaskan", order kerja juga jadi "ditugaskan"
                     $count_ditugaskan = DbModel::rawData('row_array',
                         "SELECT COUNT(*) as total FROM penugasan_teknisi WHERE order_kerja_id = ? AND status = 'ditugaskan' AND deleted_st = 0",
                         [$order_kerja_id]
@@ -180,13 +161,11 @@ class TeknisiModel extends Model
         }
     }
 
-    /**
-     * Menghitung jumlah tugas yang selesai dalam bulan ini
-     */
+    // Menghitung jumlah tugas yang selesai dalam bulan ini
     public function getCountCompletedTasksThisMonth($teknisi_id)
     {
-        $start_date = date('Y-m-01 00:00:00'); // Awal bulan ini
-        $end_date = date('Y-m-t 23:59:59');   // Akhir bulan ini
+        $start_date = date('Y-m-01 00:00:00');
+        $end_date = date('Y-m-t 23:59:59');
 
         $sql = "SELECT COUNT(*) as total 
                 FROM penugasan_teknisi 
@@ -208,9 +187,7 @@ class TeknisiModel extends Model
         return $result['total'] ?? 0;
     }
 
-    /**
-     * Menghitung jumlah tugas yang mendesak (prioritas tinggi dan darurat)
-     */
+    // Menghitung jumlah tugas yang mendesak (prioritas tinggi dan darurat)
     public function getCountUrgentTasks($teknisi_id)
     {
         $sql = "SELECT COUNT(*) as total 
@@ -225,9 +202,7 @@ class TeknisiModel extends Model
         return $result['total'] ?? 0;
     }
 
-    /**
-     * Mengambil jadwal pemeliharaan yang akan datang
-     */
+    // Mengambil jadwal pemeliharaan yang akan datang
     public function getUpcomingMaintenanceTasks($teknisi_id, $limit = 5)
     {
         $today = date('Y-m-d');
@@ -252,12 +227,10 @@ class TeknisiModel extends Model
                 LIMIT ?";
 
         $result = DbModel::rawData('result_array', $sql, [$today, $next_month, $teknisi_id, $limit]);
-        return is_array($result) ? $result : []; // Pastikan selalu mengembalikan array
+        return is_array($result) ? $result : [];
     }
 
-    /**
-     * Mendapatkan data untuk grafik performa
-     */
+    // Mendapatkan data untuk grafik performa
     public function getPerformanceChartData($teknisi_id)
     {
         $result = [
@@ -265,13 +238,11 @@ class TeknisiModel extends Model
             'baru' => []
         ];
 
-        // Mendapatkan 4 minggu terakhir
         $today = date('Y-m-d');
         for ($i = 4; $i > 0; $i--) {
             $week_start = date('Y-m-d', strtotime("-{$i} week", strtotime($today)));
             $week_end = date('Y-m-d', strtotime("-" . ($i - 1) . " week -1 day", strtotime($today)));
 
-            // Tugas selesai
             $sql_selesai = "SELECT COUNT(*) as total 
                     FROM penugasan_teknisi 
                     WHERE pegawai_id = ? AND status = 'selesai' 
@@ -280,7 +251,6 @@ class TeknisiModel extends Model
             $data_selesai = DbModel::rawData('row_array', $sql_selesai, [$teknisi_id, $week_start, $week_end]);
             $result['selesai'][] = $data_selesai['total'] ?? 0;
 
-            // Tugas baru
             $sql_baru = "SELECT COUNT(*) as total 
                     FROM penugasan_teknisi 
                     WHERE pegawai_id = ? AND status = 'ditugaskan' 
@@ -290,7 +260,6 @@ class TeknisiModel extends Model
             $result['baru'][] = $data_baru['total'] ?? 0;
         }
 
-        // Pastikan selalu mengembalikan array dengan struktur yang benar
         if (!isset($result) || !is_array($result)) {
             return ['selesai' => [0, 0, 0, 0], 'baru' => [0, 0, 0, 0]];
         }
@@ -298,9 +267,7 @@ class TeknisiModel extends Model
         return $result;
     }
 
-    /**
-     * Mengambil sparepart yang paling sering digunakan oleh teknisi
-     */
+    // Mengambil sparepart yang paling sering digunakan oleh teknisi
     public function getMostUsedSpareparts($teknisi_id, $limit = 5)
     {
         $sql = "SELECT s.sparepart_id, s.sparepart_nm, s.stok, s.stok_min, 
@@ -314,27 +281,20 @@ class TeknisiModel extends Model
                 LIMIT ?";
 
         $result = DbModel::rawData('result_array', $sql, [$teknisi_id, $limit]);
-        return is_array($result) ? $result : []; // Pastikan selalu mengembalikan array
+        return is_array($result) ? $result : [];
     }
 
-    /**
-     * Mendapatkan data untuk dashboard teknisi seperti pendekatan dashboard admin
-     * 
-     * @param string $teknisi_id ID teknisi
-     * @return array Data dashboard
-     */
+    // Mendapatkan data untuk dashboard teknisi
     public function getDashboardData($teknisi_id)
     {
         try {
             $data = [];
 
-            // Tugas baru (ditugaskan)
             $sql = "SELECT COUNT(*) as total FROM penugasan_teknisi 
                     WHERE pegawai_id = ? AND status = 'ditugaskan' AND deleted_st = 0";
             $result = DbModel::rawData('row_array', $sql, [$teknisi_id]);
             $data['tugas_baru_count'] = $result['total'] ?? 0;
 
-            // Tugas aktif (sedang dikerjakan)
             $sql = "SELECT pt.penugasan_id, ok.order_kerja_id, a.asset_nm, l.lokasi_nm, ok.prioritas, 
                     ok.tgl_dibuat, COALESCE(pk.deskripsi, jp.deskripsi, 'Pemeliharaan Rutin') as deskripsi
                     FROM penugasan_teknisi pt
@@ -347,7 +307,6 @@ class TeknisiModel extends Model
                     ORDER BY ok.tgl_dibuat DESC LIMIT 5";
             $data['tugas_aktif_list'] = DbModel::rawData('result_array', $sql, [$teknisi_id]) ?: [];
 
-            // Tugas selesai bulan ini
             $start_date = date('Y-m-01');
             $end_date = date('Y-m-t');
             $sql = "SELECT COUNT(*) as total FROM penugasan_teknisi 
@@ -361,7 +320,6 @@ class TeknisiModel extends Model
             $result = DbModel::rawData('row_array', $sql, [$teknisi_id, $start_date, $end_date, $start_date, $end_date]);
             $data['tugas_selesai_count'] = $result['total'] ?? 0;
 
-            // Tugas mendesak
             $sql = "SELECT COUNT(*) as total FROM penugasan_teknisi pt
                     JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                     WHERE pt.pegawai_id = ? AND pt.status IN ('ditugaskan','sedang_dikerjakan') 
@@ -369,13 +327,11 @@ class TeknisiModel extends Model
             $result = DbModel::rawData('row_array', $sql, [$teknisi_id]);
             $data['tugas_mendesak_count'] = $result['total'] ?? 0;
 
-            // Tugas ditolak
             $sql = "SELECT COUNT(*) as total FROM penugasan_teknisi 
                     WHERE pegawai_id = ? AND status = 'dibatalkan' AND deleted_st = 0";
             $result = DbModel::rawData('row_array', $sql, [$teknisi_id]);
             $data['tugas_ditolak_count'] = $result['total'] ?? 0;
 
-            // Jadwal pemeliharaan mendatang
             $today = date('Y-m-d');
             $next_month = date('Y-m-d', strtotime('+30 days'));
             $sql = "SELECT jp.jadwal_pm_id, jp.tgl_berikutnya, a.asset_nm, l.lokasi_nm, 
@@ -393,10 +349,8 @@ class TeknisiModel extends Model
                     ORDER BY jp.tgl_berikutnya ASC LIMIT 5";
             $data['jadwal_mendatang'] = DbModel::rawData('result_array', $sql, [$today, $next_month, $teknisi_id, $teknisi_id]) ?: [];
 
-            // Data untuk chart kinerja
             $data['chart_kinerja'] = $this->getSimplePerformanceChartData($teknisi_id);
 
-            // Sparepart yang sering digunakan
             $sql = "SELECT s.sparepart_id, s.sparepart_nm, s.stok, COALESCE(s.stok_min, 0) as stok_min,
                     COUNT(ps.penggunaan_id) as jumlah_pakai
                     FROM mst_sparepart s
@@ -431,9 +385,7 @@ class TeknisiModel extends Model
         }
     }
 
-    /**
-     * Mendapatkan data chart kinerja dengan query lebih sederhana
-     */
+    // Mendapatkan data chart kinerja dengan query sederhana
     public function getSimplePerformanceChartData($teknisi_id)
     {
         $result = [
@@ -441,10 +393,8 @@ class TeknisiModel extends Model
             'baru' => [0, 0, 0, 0]
         ];
 
-        // Mendapatkan tanggal awal bulan ini
         $first_day_of_month = date('Y-m-01');
 
-        // Untuk tugas selesai per minggu dalam bulan ini
         $sql = "SELECT 
                     FLOOR(DATEDIFF(tgl_selesai, '$first_day_of_month') / 7) as week_idx,
                     COUNT(*) as total
@@ -463,7 +413,6 @@ class TeknisiModel extends Model
             $result['selesai'][$week_idx] = intval($row['total']);
         }
 
-        // Untuk tugas baru per minggu dalam bulan ini
         $sql = "SELECT 
                     FLOOR(DATEDIFF(tgl_mulai, '$first_day_of_month') / 7) as week_idx,
                     COUNT(*) as total
@@ -483,12 +432,7 @@ class TeknisiModel extends Model
         return $result;
     }
 
-    /**
-     * Mendapatkan data penugasan berdasarkan ID
-     * 
-     * @param string|int $penugasan_id ID Penugasan
-     * @return array|null Data penugasan atau null jika tidak ditemukan
-     */
+    // Mendapatkan data penugasan berdasarkan ID
     public function getPenugasanById($penugasan_id)
     {
         try {
@@ -503,22 +447,14 @@ class TeknisiModel extends Model
             $result = DbModel::rawData('row_array', $sql, [$penugasan_id]);
             return $result ?: null;
         } catch (Exception $e) {
-            // Log error jika diperlukan
             return null;
         }
     }
 
-    /**
-     * Verifikasi barcode aset dengan order kerja
-     * 
-     * @param string|int $order_kerja_id ID Order Kerja
-     * @param string $barcode Barcode yang di-scan
-     * @return array Status verifikasi dan pesan
-     */
+    // Verifikasi barcode aset dengan order kerja
     public function verifyAssetBarcode($order_kerja_id, $barcode)
     {
         try {
-            // Cari asset_id berdasarkan barcode
             $assetResult = DbModel::rawData(
                 'row_array',
                 "SELECT asset_id, asset_nm FROM asset WHERE barcode = ? AND deleted_st = 0",
@@ -532,7 +468,6 @@ class TeknisiModel extends Model
                 ];
             }
 
-            // Ambil asset_id dari order kerja (baik dari permintaan maupun jadwal PM)
             $orderAssetResult = DbModel::rawData(
                 'row_array',
                 "SELECT 
@@ -551,7 +486,6 @@ class TeknisiModel extends Model
                 ];
             }
 
-            // Verifikasi apakah asset_id dari barcode sama dengan asset_id dari order kerja
             if ($assetResult['asset_id'] == $orderAssetResult['asset_id']) {
                 return [
                     'success' => true,
@@ -572,4 +506,92 @@ class TeknisiModel extends Model
             ];
         }
     }
+
+    // Mengambil data order kerja berdasarkan ID
+    public function getOrderKerja($order_kerja_id)
+    {
+        $sql = "SELECT * FROM order_kerja WHERE order_kerja_id = ? AND deleted_st = 0";
+        return DbModel::rawData('row_array', $sql, [$order_kerja_id]);
+    }
+
+    // Mengambil data permintaan komplain berdasarkan ID
+    public function getPermintaanKomplain($permintaan_id)
+    {
+        $sql = "SELECT * FROM permintaan_komplain WHERE permintaan_id = ? AND deleted_st = 0";
+        return DbModel::rawData('row_array', $sql, [$permintaan_id]);
+    }
+
+    // Mengambil data jadwal PM berdasarkan ID
+    public function getJadwalPm($jadwal_pm_id)
+    {
+        $sql = "SELECT * FROM jadwal_pm WHERE jadwal_pm_id = ? AND deleted_st = 0";
+        return DbModel::rawData('row_array', $sql, [$jadwal_pm_id]);
+    }
+
+    // Mengambil data log kerja berdasarkan order kerja
+    public function getLogKerja($order_kerja_id)
+    {
+        $sql = "SELECT * FROM log_kerja WHERE order_kerja_id = ? AND deleted_st = 0";
+        return DbModel::rawData('row_array', $sql, [$order_kerja_id]);
+    }
+
+    // Mengambil semua data sparepart
+    public function getAllSparepart()
+    {
+        $sql = "SELECT * FROM mst_sparepart WHERE deleted_st = 0";
+        return DbModel::rawData('result_array', $sql, []);
+    }
+
+    // Menyelesaikan order kerja
+    public function finishOrderKerja($order_kerja_id, $pegawai_id)
+    {
+        return DbModel::updateData('order_kerja', [
+            'status' => 'selesai',
+            'updated_at' => now(),
+            'updated_by' => $pegawai_id
+        ], ['order_kerja_id' => $order_kerja_id]);
+    }
+
+    // Mengambil data asset berdasarkan ID
+    public function getAsset($asset_id)
+    {
+        $sql = "SELECT * FROM asset WHERE asset_id = ? AND deleted_st = 0";
+        return DbModel::rawData('row_array', $sql, [$asset_id]);
+    }
+
+    // Mengambil daftar log kerja berdasarkan asset
+    public function getLogKerjaList($asset_id)
+    {
+        $sql = "SELECT * FROM log_kerja WHERE asset_id = ? AND deleted_st = 0 ORDER BY tgl_mulai DESC";
+        return DbModel::rawData('result_array', $sql, [$asset_id]);
+    }
+
+    // Mengambil daftar order kerja berdasarkan asset
+    public function getOrderKerjaListByAsset($asset_id)
+    {
+        $sql = "SELECT * FROM order_kerja WHERE (permintaan_id IN (SELECT permintaan_id FROM permintaan_komplain WHERE asset_id = ?) OR jadwal_pm_id IN (SELECT jadwal_pm_id FROM jadwal_pm WHERE asset_id = ?)) AND deleted_st = 0";
+        return DbModel::rawData('result_array', $sql, [$asset_id, $asset_id]);
+    }
+
+    // Mengambil detail asset berdasarkan ID
+    public function getAssetDetail($asset_id)
+    {
+        $sql = "SELECT a.*, l.lokasi_nm FROM asset a LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id WHERE a.asset_id = ? AND a.deleted_st = 0";
+        return DbModel::rawData('row_array', $sql, [$asset_id]);
+    }
+
+    // Mengambil data penugasan berdasarkan order kerja
+    public function getPenugasanByOrderKerja($order_kerja_id)
+    {
+        $sql = "SELECT * FROM penugasan_teknisi WHERE order_kerja_id = ? AND deleted_st = 0";
+        return DbModel::rawData('row_array', $sql, [$order_kerja_id]);
+    }
+
+    // Mengambil data sparepart berdasarkan log kerja
+    public function getSparepartByLogKerja($log_kerja_id)
+    {
+        $sql = "SELECT ps.*, s.sparepart_nm, s.harga_satuan FROM penggunaan_sparepart ps JOIN mst_sparepart s ON ps.sparepart_id = s.sparepart_id WHERE ps.log_kerja_id = ?";
+        return DbModel::rawData('result_array', $sql, [$log_kerja_id]);
+    }
 }
+

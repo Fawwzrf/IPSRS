@@ -7,6 +7,23 @@ use Illuminate\Database\Eloquent\Model;
 
 class PelaporModel extends Model
 {
+    // Konstanta status
+    const STATUS_BARU = 'baru';
+    const STATUS_DIVERIFIKASI = 'diverifikasi';
+    const STATUS_DIPROSES = 'diproses';
+    const STATUS_SELESAI = 'selesai';
+    const STATUS_DITOLAK = 'ditolak';
+    const STATUS_DIBATALKAN = 'dibatalkan';
+
+    protected static $status_list = [
+        self::STATUS_BARU => 'Baru',
+        self::STATUS_DIVERIFIKASI => 'Diverifikasi',
+        self::STATUS_DIPROSES => 'Diproses',
+        self::STATUS_SELESAI => 'Selesai',
+        self::STATUS_DITOLAK => 'Ditolak',
+        self::STATUS_DIBATALKAN => 'Dibatalkan'
+    ];
+
     /**
      * Mengambil riwayat komplain untuk pegawai tertentu.
      */
@@ -43,23 +60,15 @@ class PelaporModel extends Model
     }
 
     /**
-     * Daftar status yang digunakan dalam sistem
-     * Penting untuk konsistensi dengan modul OrderKerja
+     * Mengambil daftar status yang digunakan dalam sistem.
      */
     public static function getStatusList()
     {
-        return [
-            'baru' => 'Baru',
-            'diverifikasi' => 'Diverifikasi',
-            'diproses' => 'Diproses',
-            'selesai' => 'Selesai',
-            'ditolak' => 'Ditolak',
-            'dibatalkan' => 'Dibatalkan'
-        ];
+        return self::$status_list;
     }
 
     /**
-     * Fungsi untuk mendapatkan kelas badge berdasarkan status
+     * Mengambil class badge untuk status tertentu.
      */
     public static function getStatusBadgeClass($status)
     {

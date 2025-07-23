@@ -21,29 +21,22 @@ class TeknisiDashboard extends MyController
     }
 
     /**
-     * Menampilkan dashboard teknisi
-     * 
-     * @return \Illuminate\View\View
+     * Fungsi untuk menampilkan dashboard teknisi
      */
     public function index()
     {
         $d = [];
         $teknisi_id = session('pegawai_id');
 
-        // Validasi ID teknisi
         if (!$teknisi_id) {
             Log::error('TeknisiDashboard: Tidak dapat menemukan ID teknisi dari session');
             return redirect('login')->with('error', 'Session telah berakhir, silakan login kembali');
         }
 
         try {
-            // Dapatkan semua data dashboard dengan satu panggilan
             $dashboard_data = $this->model->getDashboardData($teknisi_id);
-            
-            // Gabungkan data dashboard ke array $d
             $d = array_merge($d, $dashboard_data);
-            
-            // Pastikan data chart kinerja selalu tersedia dalam format yang benar
+
             if (
                 !isset($d['chart_kinerja']) ||
                 !isset($d['chart_kinerja']['selesai']) ||
@@ -57,11 +50,10 @@ class TeknisiDashboard extends MyController
                 ];
             }
 
-            // Tambahkan parameter navigasi untuk penggunaan di view
             $d['n'] = request('n');
 
             return $this->renderView($this->template . 'index', $d);
-            
+
         } catch (\Exception $e) {
             Log::error('TeknisiDashboard error: ' . $e->getMessage());
             return $this->renderView($this->template . 'index', [
@@ -78,18 +70,16 @@ class TeknisiDashboard extends MyController
     }
 
     /**
-     * API endpoint untuk refresh data dashboard (bisa digunakan untuk AJAX)
-     * 
-     * @return \Illuminate\Http\JsonResponse
+     * Fungsi API untuk refresh data dashboard (AJAX)
      */
     public function refreshData()
     {
         $teknisi_id = session('pegawai_id');
-        
+
         if (!$teknisi_id) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
-        
+
         try {
             $dashboard_data = $this->model->getDashboardData($teknisi_id);
             return response()->json($dashboard_data);
@@ -99,3 +89,4 @@ class TeknisiDashboard extends MyController
         }
     }
 }
+
