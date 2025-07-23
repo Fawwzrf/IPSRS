@@ -14,16 +14,15 @@ class KategoriAsset extends MyController
         $this->template = 'master::kategori_asset.';
     }
 
+    // Menampilkan halaman utama kategori aset
     function index()
     {
         $d = [];
-        
-        // Penting: Panggil save_session_search untuk mengelola session pencarian
         $this->save_session_search($d);
-        
         return $this->renderView($this->template . 'index', $d);
     }
 
+    // Menampilkan form modal untuk tambah/edit kategori aset
     function form_modal($id = null)
     {
         $d['main'] = DbModel::getData('mst_kategori_asset', ['kategori_asset_id' => $id]);
@@ -31,11 +30,11 @@ class KategoriAsset extends MyController
         return $this->renderView($this->template . 'form_modal', $d);
     }
 
+    // Menyimpan data kategori aset (tambah/edit)
     function save($id = null)
     {
         $d = _post();
 
-        // Validasi backend
         if ($id == null) {
             if (empty($d['kategori_asset_id'])) {
                 return response()->json(_response('11', $this->uri, ['message' => 'ID Kategori Aset wajib diisi!']));
@@ -49,7 +48,6 @@ class KategoriAsset extends MyController
             return response()->json(_response('11', $this->uri, ['message' => 'Nama Kategori Aset wajib diisi!']));
         }
 
-        // Pengecekan keunikan nama
         $queryCheckUniqueName = "SELECT * FROM mst_kategori_asset WHERE kategori_asset_nm = ? AND deleted_st = 0";
         $params = [$d['kategori_asset_nm']];
         if ($id != null) {
@@ -60,7 +58,6 @@ class KategoriAsset extends MyController
             return response()->json(_response('20', $this->uri, ['message' => 'Nama Kategori Aset sudah digunakan!']));
         }
 
-        // Proses simpan data
         if ($id == null) {
             $result = DbModel::insertData('mst_kategori_asset', $d);
             return response()->json(_response($result ? '01' : '11', $this->uri, $d));
@@ -70,9 +67,9 @@ class KategoriAsset extends MyController
         }
     }
 
+    // Menghapus kategori aset
     public function delete($id)
     {
-        // Fitur tambahan: cek apakah kategori digunakan oleh aset
         $hasAssets = DbModel::getData('asset', ['kategori_asset_id' => $id, 'deleted_st' => 0]);
         if ($hasAssets) {
             return response()->json(_response('13', $this->uri, ['message' => 'Kategori ini masih terhubung dengan aset dan tidak dapat dihapus.']));
@@ -86,6 +83,7 @@ class KategoriAsset extends MyController
         }
     }
 
+    // Mengambil data kategori aset untuk datatables (AJAX)
     public function ajax_datatables()
     {
         return KategoriAssetModel::loadDatatables();

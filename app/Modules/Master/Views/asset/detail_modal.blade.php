@@ -56,7 +56,7 @@
                                 <td>
                                     @if($item['status'] == 'selesai')
                                         {{-- Tombol ini akan membuka modal laporan kerja --}}
-                                        <button class="btn btn-sm btn-outline-info" onclick="_modal(event, {uri: '{{ url('ipsrs/adminlogkerja/form_view_log_modal/' . $item['order_kerja_id']) }}', size: 'modal-xl'})">
+                                        <button class="btn btn-sm btn-outline-info" onclick="_modal(event, {uri: '{{ url('ipsrs/adminorderkerja/hasil_teknisi_modal/' . $item['order_kerja_id']) }}', size: 'modal-xl'})">
                                             Lihat Laporan
                                         </button>
                                     @else

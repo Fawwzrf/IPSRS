@@ -9,12 +9,18 @@ class KategoriAssetModel extends Model
 {
     protected static $nav_sess;
 
+    /**
+     * Konstruktor model, menginisialisasi session.
+     */
     public function __construct()
     {
         parent::__construct();
         self::initSession();
     }
 
+    /**
+     * Inisialisasi session navigasi jika belum ada.
+     */
     protected static function initSession()
     {
         if (is_null(self::$nav_sess)) {
@@ -22,11 +28,14 @@ class KategoriAssetModel extends Model
         }
     }
 
+    /**
+     * Memuat data untuk datatables dengan filter dan pencarian.
+     * @return \Illuminate\Http\JsonResponse
+     */
     static function loadDatatables()
     {
         self::initSession();
         
-        // Gunakan pola yang sama dengan PegawaiModel (acuan)
         $where = "1 = 1 ";
 
         // Filter berdasarkan active_st
@@ -42,7 +51,6 @@ class KategoriAssetModel extends Model
             )";
         }
 
-        // Gunakan subquery dengan alias seperti pada PegawaiModel
         $query = "SELECT * FROM (
                     SELECT 
                         a.kategori_asset_id, 

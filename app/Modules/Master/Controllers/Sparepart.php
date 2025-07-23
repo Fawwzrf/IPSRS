@@ -14,16 +14,15 @@ class Sparepart extends MyController
         $this->template = 'master::sparepart.';
     }
 
+    // Menampilkan halaman utama sparepart
     public function index()
     {
         $d = [];
-        // Penting: Panggil save_session_search untuk mengelola session pencarian
         $this->save_session_search($d);
-        // Tidak perlu set $d['nav_sess'] karena sudah dihandle di parent class
-        
         return $this->renderView($this->template . 'index', $d);
     }
 
+    // Menampilkan form modal untuk tambah/edit sparepart
     public function form_modal($id = null)
     {
         $d['main'] = DbModel::getData('mst_sparepart', ['sparepart_id' => $id]);
@@ -31,11 +30,11 @@ class Sparepart extends MyController
         return $this->renderView($this->template . 'form_modal', $d);
     }
 
+    // Menyimpan data sparepart (insert/update)
     public function save($id = null)
     {
         $d = _post();
 
-        // Validasi backend
         if ($id == null && empty($d['sparepart_id'])) {
             return response()->json(_response('11', $this->uri, ['message' => 'ID Sparepart wajib diisi!']));
         }
@@ -46,15 +45,12 @@ class Sparepart extends MyController
             return response()->json(_response('11', $this->uri, ['message' => 'Satuan wajib diisi!']));
         }
 
-        // Hapus field stok dari array agar tidak bisa diupdate manual
         unset($d['stok']);
 
-        // Format harga jika ada
         if (isset($d['harga']) && !empty($d['harga'])) {
             $d['harga'] = str_replace(['.', ','], ['', '.'], $d['harga']);
         }
 
-        // Validasi unik ID dan No. Seri
         if ($id == null) {
             if (DbModel::validId('mst_sparepart', 'sparepart_id', $d['sparepart_id'])) {
                 return response()->json(_response('20', $this->uri, ['message' => 'ID Sparepart sudah ada!']));
@@ -69,7 +65,6 @@ class Sparepart extends MyController
             }
         }
 
-        // Alur Insert/Update
         if ($id == null) {
             $result = DbModel::insertData('mst_sparepart', $d);
             return response()->json(_response($result ? '01' : '11', $this->uri, $d));
@@ -79,9 +74,9 @@ class Sparepart extends MyController
         }
     }
 
+    // Menghapus data sparepart
     public function delete($id)
     {
-        // Periksa relasi sebelum hapus
         if (DbModel::getData('penggunaan_sparepart', ['sparepart_id' => $id, 'deleted_st' => 0])) {
             return response()->json(_response('13', $this->uri, ['message' => 'Sparepart ini telah digunakan dan tidak dapat dihapus.']));
         }
@@ -94,8 +89,10 @@ class Sparepart extends MyController
         return response()->json(_response($result ? '03' : '13', $this->uri));
     }
 
+    // Memuat data untuk datatables secara AJAX
     public function ajax_datatables()
     {
         return SparepartModel::loadDatatables();
     }
 }
+

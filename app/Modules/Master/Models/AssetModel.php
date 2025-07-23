@@ -8,13 +8,14 @@ use Illuminate\Database\Eloquent\Model;
 class AssetModel extends Model
 {
     protected static $nav_sess;
-    // Konstanta status aset untuk konsistensi
+
+    // Status aset
     const STATUS_AKTIF = 'aktif';
     const STATUS_PERBAIKAN = 'perbaikan';
     const STATUS_NONAKTIF = 'nonaktif';
     const STATUS_DIHAPUS = 'dihapus';
 
-    // Array status yang valid untuk validasi
+    // Status yang valid
     protected static $valid_statuses = [
         self::STATUS_AKTIF,
         self::STATUS_PERBAIKAN,
@@ -22,12 +23,18 @@ class AssetModel extends Model
         self::STATUS_DIHAPUS
     ];
 
+    /**
+     * Konstruktor kelas AssetModel
+     */
     public function __construct()
     {
         parent::__construct();
         self::initSession();
     }
 
+    /**
+     * Inisialisasi session navigasi
+     */
     protected static function initSession()
     {
         if (is_null(self::$nav_sess)) {
@@ -35,35 +42,33 @@ class AssetModel extends Model
         }
     }
 
+    /**
+     * Load data aset untuk datatables dengan filter
+     */
     static function loadDatatables()
     {
         self::initSession();
         
         $where = "1 = 1 ";
 
-        // Filter berdasarkan lokasi (perhatikan format akses session)
         if (@self::$nav_sess['search']['data']['lokasi_id'] != '') {
             $where .= " AND a.lokasi_id = '" . @self::$nav_sess['search']['data']['lokasi_id'] . "' ";
         }
         
-        // Filter berdasarkan kategori
         if (@self::$nav_sess['search']['data']['kategori_asset_id'] != '') {
             $where .= " AND a.kategori_asset_id = '" . @self::$nav_sess['search']['data']['kategori_asset_id'] . "' ";
         }
         
-        // Filter berdasarkan status
         if (@self::$nav_sess['search']['data']['status'] != '') {
             $where .= " AND a.status = '" . @self::$nav_sess['search']['data']['status'] . "' ";
         }
         
-        // Filter berdasarkan pencarian
         if (@self::$nav_sess['search']['data']['term'] != '') {
             $where .= " AND (LOWER(a.asset_nm) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%' 
                       OR LOWER(a.no_seri) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%'
                       OR LOWER(a.merk) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%') ";
         }
 
-        // Pastikan subquery sesuai dengan acuan
         $query = "SELECT * FROM (
                   SELECT 
                     a.*,
@@ -84,6 +89,9 @@ class AssetModel extends Model
         return response()->json($result);
     }
 
+    /**
+     * Ambil detail aset berdasarkan ID
+     */
     public function getAssetDetailById($id)
     {
         $query = "SELECT a.*, k.kategori_asset_nm, l.lokasi_nm
@@ -94,6 +102,9 @@ class AssetModel extends Model
         return DbModel::rawData('row_array', $query, [$id]);
     }
 
+    /**
+     * Ambil histori aset berdasarkan asset_id
+     */
     public function getAssetHistory($asset_id)
     {
         $query = "SELECT 
@@ -116,18 +127,28 @@ class AssetModel extends Model
         return DbModel::rawData('result_array', $query, [$asset_id, $asset_id]);
     }
 
+    /**
+     * Ambil daftar status aset yang valid
+     */
     public static function getValidStatuses()
     {
         return self::$valid_statuses;
     }
 
+    /**
+     * Set status aset menjadi perbaikan
+     */
     public function setRepairStatus($asset_id)
     {
         return $this->updateStatus($asset_id, self::STATUS_PERBAIKAN);
     }
 
+    /**
+     * Set status aset menjadi aktif
+     */
     public function setActiveStatus($asset_id)
     {
         return $this->updateStatus($asset_id, self::STATUS_AKTIF);
     }
 }
+

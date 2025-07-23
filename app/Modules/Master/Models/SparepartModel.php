@@ -9,12 +9,18 @@ class SparepartModel extends Model
 {
     protected static $nav_sess;
 
+    /**
+     * Konstruktor model, inisialisasi session navigasi.
+     */
     public function __construct()
     {
         parent::__construct();
         self::initSession();
     }
 
+    /**
+     * Inisialisasi session navigasi jika belum ada.
+     */
     protected static function initSession()
     {
         if (is_null(self::$nav_sess)) {
@@ -22,6 +28,10 @@ class SparepartModel extends Model
         }
     }
 
+    /**
+     * Memuat data untuk datatables dengan filter dan pencarian.
+     * @return \Illuminate\Http\JsonResponse
+     */
     static function loadDatatables()
     {
         self::initSession();
@@ -44,7 +54,6 @@ class SparepartModel extends Model
             ) ";
         }
 
-        // Gunakan subquery dengan alias seperti pada PegawaiModel
         $query = "SELECT * FROM (
                     SELECT 
                         a.sparepart_id, a.sparepart_nm, a.no_seri, a.merk, a.satuan, 
@@ -62,3 +71,4 @@ class SparepartModel extends Model
         return response()->json($result);
     }
 }
+
