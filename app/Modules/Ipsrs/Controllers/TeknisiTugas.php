@@ -738,7 +738,16 @@ class TeknisiTugas extends MyController
     public function detail_aset($asset_id)
     {
         try {
-            $asset = DbModel::getData('asset', ['asset_id' => $asset_id, 'deleted_st' => 0]);
+            // Perbaiki query agar join ke tabel kategori, lokasi, dan pegawai (PIC)
+            $asset = DbModel::rawData(
+                'row_array',
+                "SELECT a.*, k.kategori_asset_nm, l.lokasi_nm
+                 FROM asset a
+                 LEFT JOIN mst_kategori_asset k ON a.kategori_asset_id = k.kategori_asset_id
+                 LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
+                 WHERE a.asset_id = ? AND a.deleted_st = 0",
+                [$asset_id]
+            );
             if (!$asset) {
                 return redirect('ipsrs/teknisitugas')->with('error', 'Aset tidak ditemukan');
             }

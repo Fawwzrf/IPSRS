@@ -45,7 +45,7 @@
                                             <tbody>
                                                 <tr>
                                                     <td style="width: 30%"><strong>Kode Aset</strong></td>
-                                                    <td>: {{ $asset['asset_code'] ?? ($asset['asset_id'] ?? '-') }}</td>
+                                                    <td>: {{ $asset['asset_id'] ?? '-' }}</td>
                                                 </tr>
                                                 <tr>
                                                     <td><strong>Nama Aset</strong></td>
@@ -53,15 +53,15 @@
                                                 </tr>
                                                 <tr>
                                                     <td><strong>Kategori</strong></td>
-                                                    <td>: {{ $asset['kategori_nm'] ?? '-' }}</td>
+                                                    <td>: {{ $asset['kategori_asset_nm'] ?? '-' }}</td>
                                                 </tr>
                                                 <tr>
                                                     <td><strong>Merk/Type</strong></td>
                                                     <td>: {{ $asset['merk'] ?? '-' }} / {{ $asset['type'] ?? '-' }}</td>
                                                 </tr>
                                                 <tr>
-                                                    <td><strong>Tahun Perolehan</strong></td>
-                                                    <td>: {{ $asset['tahun_perolehan'] ?? '-' }}</td>
+                                                    <td><strong>Tanggal Perolehan</strong></td>
+                                                    <td>: {{ $asset['perolehan_tgl'] ?? '-' }}</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -71,15 +71,11 @@
                                             <tbody>
                                                 <tr>
                                                     <td style="width: 30%"><strong>Serial Number</strong></td>
-                                                    <td>: {{ $asset['serial_number'] ?? '-' }}</td>
+                                                    <td>: {{ $asset['no_seri'] ?? '-' }}</td>
                                                 </tr>
                                                 <tr>
                                                     <td><strong>Lokasi</strong></td>
                                                     <td>: {{ $asset['lokasi_nm'] ?? '-' }}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td><strong>PIC</strong></td>
-                                                    <td>: {{ $asset['pic_nm'] ?? '-' }}</td>
                                                 </tr>
                                                 <tr>
                                                     <td><strong>Status</strong></td>

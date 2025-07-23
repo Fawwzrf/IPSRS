@@ -47,13 +47,15 @@
             <div class="mb-3 row">
                 <label class="col-lg-3 col-form-label">Kategori Aset</label>
                 <div class="col-lg-9">
-                    <select class="form-select chosen-select" name="kategori_asset_id" id="kategori_asset_id">
+                    <select class="form-select chosen-select" name="kategori_asset_id" id="kategori_asset_id" required>
                         <option value="">- Pilih Kategori -</option>
-                        @foreach($all_kategori_asset as $kat)
-                            <option value="{{ $kat['kategori_asset_id'] }}" @if(@$main['kategori_asset_id'] == $kat['kategori_asset_id']) selected @endif>
-                                {{ $kat['kategori_asset_id'] }} - {{ $kat['kategori_asset_nm'] }}
-                            </option>
-                        @endforeach
+                        @if(isset($all_kategori_asset) && is_array($all_kategori_asset))
+                            @foreach($all_kategori_asset as $kat)
+                                <option value="{{ $kat['kategori_asset_id'] }}" @if(@$main['kategori_asset_id'] == $kat['kategori_asset_id']) selected @endif>
+                                    {{ $kat['kategori_asset_id'] }} - {{ $kat['kategori_asset_nm'] }}
+                                </option>
+                            @endforeach
+                        @endif
                     </select>
                 </div>
             </div>

@@ -35,14 +35,12 @@ class Asset extends MyController
 
   function form_modal($id = null)
   {
-    // Load data referensi untuk dropdown
     $d['all_lokasi'] = DbModel::allData('mst_lokasi', ['deleted_st' => '0', 'active_st' => '1', 'tipe_lokasi' => 'Ruangan']);
-    $d['all_kategori_asset'] = DbModel::allData('mst_kategori_asset', ['deleted_st' => '0', 'active_st' => '1']);
+    $d['all_kategori_asset'] = DbModel::allData('mst_kategori_asset', ['deleted_st' => '0', 'active_st' => '1']); // <-- pastikan ini ada
 
-    // Load data aset jika mode edit
     $d['main'] = DbModel::getData('asset', ['asset_id' => $id]);
     $d['form_act'] = $this->uri . '/save/' . $id;
-    
+
     return $this->renderView($this->template . 'form_modal', $d);
   }
 

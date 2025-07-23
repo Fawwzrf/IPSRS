@@ -85,8 +85,8 @@
                     <th width="15%">Nama Aset</th>
                     <th width="10%">Frekuensi</th>
                     <th width="15%">Jenis Pekerjaan</th>
-                    <th width="10%">Tgl Terakhir</th>
-                    <th width="10%">Tgl Berikutnya</th>
+                    <th width="10%">Pemeliharaan Terakhir</th>
+                    <th width="10%">Pemeliharaan Berikutnya</th>
                     <th width="10%">Status</th>
                     <th width="5%">Aktif?</th>
                   </tr>

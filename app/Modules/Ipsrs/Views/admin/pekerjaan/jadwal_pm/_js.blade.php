@@ -82,13 +82,21 @@
                 {
                     "data": "tgl_terakhir",
                     "render": function(data) {
-                        return data ? toDate(data) : '-';
+                        if (!data) return '-';
+                        var d = new Date(data);
+                        var jam = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+                        var tgl = d.getDate().toString().padStart(2, '0') + '-' + (d.getMonth()+1).toString().padStart(2, '0') + '-' + d.getFullYear();
+                        return jam + ' ' + tgl;
                     }
                 },
                 {
                     "data": "tgl_berikutnya",
                     "render": function(data) {
-                        return data ? toDate(data) : '-';
+                        if (!data) return '-';
+                        var d = new Date(data);
+                        var jam = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+                        var tgl = d.getDate().toString().padStart(2, '0') + '-' + (d.getMonth()+1).toString().padStart(2, '0') + '-' + d.getFullYear();
+                        return jam + ' ' + tgl;
                     }
                 },
                 {

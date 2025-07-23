@@ -31,7 +31,18 @@
                     <dd class="col-8">{{ $tugas['deskripsi_pemeliharaan'] ?? '-' }}</dd>
                 </dl>
             @endif
+            @if (!empty($tugas['order_kerja_id']))
+                @php
+                    $orderKerja = \App\Modules\App\Models\DbModel::getData('order_kerja', ['order_kerja_id' => $tugas['order_kerja_id']]);
+                @endphp
+                @if (!empty($orderKerja['catatan']))
+                    <div class="alert alert-info mt-3">
+                        <strong>Catatan Admin:</strong> {{ $orderKerja['catatan'] }}
+                    </div>
+                @endif
+            @endif
         </div>
+        
         <div class="col-md-5">
             <h5 class="mb-3">Denah Lokasi</h5>
             @if (!empty($tugas['anotasi_url']))
