@@ -227,21 +227,31 @@ class LogKerjaModel extends Model
         }
 
         $query = "SELECT * FROM (
-                SELECT 
-                    lk.log_kerja_id,
-                    lk.order_kerja_id,
-                    lk.tgl_mulai,
-                    lk.tgl_selesai,
-                    lk.hasil,
-                    lk.diagnosa,
-                    lk.tindakan,
-                    lk.durasi_menit,
-                    p.pegawai_nm as teknisi_nm,
-                    (SELECT COUNT(*) FROM log_kerja_foto WHERE log_kerja_id = lk.log_kerja_id) as foto_count
-                FROM 
-                    log_kerja lk
-                    LEFT JOIN mst_pegawai p ON lk.teknisi_pegawai_id = p.pegawai_id
-                WHERE $where AND lk.deleted_st = 0
+            SELECT 
+                lk.log_kerja_id,
+                lk.order_kerja_id,
+                -- Ambil tgl_mulai dan tgl_selesai dari penugasan_teknisi
+                (SELECT pt.tgl_mulai FROM penugasan_teknisi pt WHERE pt.order_kerja_id = lk.order_kerja_id AND pt.pegawai_id = lk.teknisi_pegawai_id LIMIT 1) as tgl_mulai,
+                (SELECT pt.tgl_selesai FROM penugasan_teknisi pt WHERE pt.order_kerja_id = lk.order_kerja_id AND pt.pegawai_id = lk.teknisi_pegawai_id LIMIT 1) as tgl_selesai,
+                lk.hasil,
+                lk.diagnosa,
+                lk.tindakan,
+                lk.durasi_menit,
+                p.pegawai_nm as teknisi_nm,
+                CASE 
+                WHEN ok.jadwal_pm_id IS NOT NULL THEN 'Jadwal PM'
+                ELSE 'Perbaikan'
+                END as jenis,
+                (SELECT COUNT(*) FROM log_kerja_foto WHERE log_kerja_id = lk.log_kerja_id) as foto_count,
+                a.asset_nm
+            FROM 
+                log_kerja lk
+                LEFT JOIN mst_pegawai p ON lk.teknisi_pegawai_id = p.pegawai_id
+                LEFT JOIN order_kerja ok ON lk.order_kerja_id = ok.order_kerja_id
+                LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+                LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+                LEFT JOIN asset a ON a.asset_id = COALESCE(pk.asset_id, jp.asset_id)
+            WHERE $where AND lk.deleted_st = 0
             ) x ";
 
         $search = ['order_kerja_id', 'teknisi_nm', 'diagnosa', 'tindakan', 'hasil'];

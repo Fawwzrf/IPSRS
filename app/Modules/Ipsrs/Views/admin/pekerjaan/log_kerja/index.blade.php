@@ -86,8 +86,11 @@
                                     <tr>
                                         <th>No</th>
                                         <th>Order Kerja ID</th>
+                                        <th>Nama Aset</th>
                                         <th>Teknisi</th>
-                                        <th>Tgl Selesai</th>
+                                        <th>Waktu Mulai</th>
+                                        <th>Waktu Selesai</th>
+                                        <th>Jenis</th>
                                         <th>Hasil</th>
                                         <th>Foto Bukti</th>
                                         <th>Aksi</th>

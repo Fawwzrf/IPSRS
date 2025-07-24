@@ -24,14 +24,40 @@
                   }
                 },
                 { "data": "order_kerja_id" },
+                { "data": "asset_nm" }, // Tambahkan ini
                 { "data": "teknisi_nm" },
-                { 
-                    "data": "tgl_selesai", 
-                    "render": function(data) { 
-                        return data ? toDate(data) : '-'; 
+                { // Waktu Mulai
+                    "data": "tgl_mulai",
+                    "render": function(data, type, row) {
+                        if (data) {
+                            var d = new Date(data);
+                            return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' - ' +
+                                   d.toLocaleDateString('id-ID');
+                        }
+                        return '-';
                     }
                 },
-                { 
+                { // Waktu Selesai
+                    "data": "tgl_selesai",
+                    "render": function(data, type, row) {
+                        if (data) {
+                            var d = new Date(data);
+                            return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' - ' +
+                                   d.toLocaleDateString('id-ID');
+                        }
+                        return '-';
+                    }
+                },
+                { // Jenis
+                    "data": "jenis",
+                    "render": function(data, type, row) {
+                        if (!data) return '-';
+                        if (data === 'jadwal_pm') return 'Jadwal PM';
+                        if (data === 'order_kerja') return 'Perbaikan';
+                        return data.charAt(0).toUpperCase() + data.slice(1);
+                    }
+                },
+                { // Hasil
                     "data": "hasil", 
                     "render": function(data) {
                         if (!data) return '<span class="badge bg-secondary">-</span>';
@@ -45,7 +71,7 @@
                                '</span>';
                     }
                 },
-                { 
+                { // Foto Bukti
                     "data": "foto_count", 
                     "className": "text-center",
                     "render": function(data) {
@@ -54,7 +80,7 @@
                             '<span class="badge bg-secondary">Tidak ada</span>';
                     }
                 },
-                { 
+                { // Aksi
                     "data": "log_kerja_id", 
                     "orderable": false,
                     "render": function(data, type, row) {
