@@ -211,10 +211,10 @@ class TeknisiTugas extends MyController
 
         $d['order_kerja'] = $order_kerja;
 
+        // Ambil asset_id untuk keperluan redirect
         $asset_id = null;
         if (!empty($order_kerja['permintaan_id'])) {
             $sumber = $this->model->getPermintaanKomplain($order_kerja['permintaan_id']);
-            $asset_id = $sumber['asset_id'] ?? null;
         } else if (!empty($order_kerja['jadwal_pm_id'])) {
             $sumber = $this->model->getJadwalPm($order_kerja['jadwal_pm_id']);
             $asset_id = $sumber['asset_id'] ?? null;
@@ -223,11 +223,13 @@ class TeknisiTugas extends MyController
 
         $d['log_kerja'] = $this->model->getLogKerja($order_kerja_id);
         $d['all_sparepart'] = $this->model->getAllSparepart();
+
+        // Arahkan form action ke metode save_log_kerja di controller ini
         $d['form_act'] = url('ipsrs/teknisitugas/save_log_kerja/' . $order_kerja_id);
 
+        // Render view modal baru yang sudah kita buat di folder teknisi
         return $this->renderView($this->template . 'form_log_kerja_modal', $d);
     }
-
     // Fungsi untuk mengambil kembali tugas yang ditolak/dibatalkan
     public function ambil_kembali()
     {
@@ -299,10 +301,34 @@ class TeknisiTugas extends MyController
                 ]);
             }
 
-            $asset_id = $this->model->verifyAssetBarcode($order_kerja_id, $barcode);
+            // Dapatkan asset_id yang valid dari database berdasarkan barcode
+            // dan/atau order_kerja_id
+            $asset_id = null;
 
+            // Coba dapatkan asset dari barcode
+            $asset_id = $this->model->getAssetIdByBarcodeOrOrderKerja($barcode, $order_kerja_id);
+
+            // Validasi apakah asset_id ditemukan
             if ($asset_id) {
-                $detail_url = url('ipsrs/teknisitugas/detail_aset/' . $asset_id);
+                // Berhasil mendapatkan asset_id valid
+                $result = [
+                    'success' => true,
+                    'asset_id' => $asset_id,
+                    'msg' => 'Barcode terverifikasi.'
+                ];
+            } else {
+                // Gagal mendapatkan asset_id valid
+                $result = [
+                    'success' => false,
+                    'msg' => 'Barcode tidak valid atau tidak sesuai dengan aset pada order kerja ini.'
+                ];
+            }
+
+            if ($result['success']) {
+                // Ubah URL redirect ke detail_aset di modul Teknisi (bukan di Master)
+                $detail_url = url('ipsrs/teknisitugas/detail_aset/' . $result['asset_id']);
+
+                // Tambahkan parameter yang diperlukan
                 $detail_url .= '?order_kerja_id=' . $order_kerja_id;
                 if ($n_param) {
                     $detail_url .= '&n=' . $n_param;
@@ -319,7 +345,7 @@ class TeknisiTugas extends MyController
             return response()->json([
                 'status' => false,
                 'code' => '12',
-                'message' => 'Barcode tidak valid atau tidak sesuai dengan aset pada order kerja ini.'
+                'message' => $result['msg']
             ]);
         } catch (Exception $e) {
             \Log::error('Error in verify_barcode: ' . $e->getMessage());
@@ -335,11 +361,13 @@ class TeknisiTugas extends MyController
     public function form_log_kerja($order_kerja_id)
     {
         try {
+            // Validasi order kerja
             $order_kerja = $this->model->getOrderKerja($order_kerja_id);
             if (!$order_kerja) {
                 return '<div class="alert alert-danger">Order kerja tidak ditemukan</div>';
             }
 
+            // Persiapkan data untuk form
             $d = [
                 'order_kerja_id' => $order_kerja_id,
                 'order_kerja' => $order_kerja,
@@ -348,6 +376,7 @@ class TeknisiTugas extends MyController
                 'form_act' => url('ipsrs/teknisitugas/save_log_kerja/' . $order_kerja_id)
             ];
 
+            // Jika asset_id tidak ada di order_kerja, coba ambil dari permintaan atau jadwal_pm
             if (empty($d['asset_id'])) {
                 if (!empty($order_kerja['permintaan_id'])) {
                     $permintaan = $this->model->getPermintaanKomplain($order_kerja['permintaan_id']);
@@ -358,6 +387,7 @@ class TeknisiTugas extends MyController
                 }
             }
 
+            // Tambahkan all_sparepart ke data yang dikirim ke view
             $d['all_sparepart'] = $this->model->getAllSparepart();
 
             return view($this->template . 'form_log_kerja_modal', $d);
@@ -372,24 +402,73 @@ class TeknisiTugas extends MyController
     {
         try {
             $order_kerja_id = $request->input('order_kerja_id');
+
+            \Log::info('save_log_kerja dipanggil', [
+                'order_kerja_id' => $order_kerja_id,
+                'request_data' => $request->all()
+            ]);
+
             if (!$order_kerja_id) {
                 return response()->json(_response('11', $this->uri, [
                     'message' => 'Order Kerja ID tidak ditemukan.'
                 ]));
             }
 
+            // Data log kerja
+            $sparepart_id = $request->input('sparepart_id'); // array
+            $jumlah = $request->input('jumlah'); // array
+
+            $sparepart = [];
+            foreach ($sparepart_id as $i => $id) {
+                if ($id) {
+                    $sparepart[] = [
+                        'sparepart_id' => $id,
+                        'jumlah' => $jumlah[$i] ?? 1
+                    ];
+                }
+            }
+
+            $pegawai_id = session('pegawai_id'); // Pastikan pegawai_id diambil dari session
+
+            $logData = [
+                'order_kerja_id' => $order_kerja_id,
+                'asset_id' => $request->input('asset_id'),
+                'diagnosa' => $request->input('diagnosa'),
+                'tindakan' => $request->input('tindakan'),
+                'hasil' => $request->input('hasil'),
+                'durasi_menit' => $request->input('durasi_menit') ?: 0,
+                'total_biaya' => str_replace(['.', ','], ['', '.'], $request->input('total_biaya')) ?: 0,
+                'sparepart' => $sparepart,
+                'fotos' => $request->file('fotos'),
+                'teknisi_pegawai_id' => $pegawai_id // Pastikan field ini terisi
+            ];
+
             $logKerjaModel = new LogKerjaModel();
-            $result = $logKerjaModel->saveData($order_kerja_id, $request->all());
+            $result = $logKerjaModel->saveData($order_kerja_id, $logData);
 
             if ($result['status']) {
-                $this->model->finishOrderKerja($order_kerja_id, session('pegawai_id'));
-                $redirectUrl = url('ipsrs/teknisitugas');
-                $nParam = $request->input('n');
-                if ($nParam) {
-                    $redirectUrl .= '?n=' . $nParam;
+                // Update status penugasan menjadi 'selesai'
+                try {
+                    $this->model->selesaiPenugasanByOrderKerja($order_kerja_id, $pegawai_id);
+                } catch (Exception $e) {
+                    \Log::error('Error saat update status penugasan: ' . $e->getMessage());
                 }
 
+                $redirectUrl = '';
+                $nParam = $request->input('n');
+
+                if ($request->has('context') && $request->input('context') === 'teknisi') {
+                    $redirectUrl = url('ipsrs/teknisitugas') . ($nParam ? '?n=' . $nParam : '');
+                } else {
+                    $redirectUrl = url('master/asset/detail/' . $request->input('asset_id'));
+                }
+
+                $hasil = $request->input('hasil');
+                if ($hasil === 'menunggu_sparepart') {
+                    $this->model->setOrderKerjaMenungguSparepart($order_kerja_id);
+                }
                 session()->flash('success', 'Laporan kerja berhasil disimpan dan tugas telah diselesaikan!');
+
                 return response()->json(_response('02', $this->uri, [
                     'redirect_url' => $redirectUrl,
                     'message' => 'Laporan kerja berhasil disimpan'
@@ -496,25 +575,32 @@ class TeknisiTugas extends MyController
     public function log_aset($asset_id)
     {
         try {
-            $asset = $this->model->getAsset($asset_id);
+            // Ambil data aset
+            $asset = DbModel::getData('asset', ['asset_id' => $asset_id]);
             if (!$asset) {
                 return redirect('ipsrs/teknisitugas')->with('error', 'Data aset tidak ditemukan');
             }
 
+            // Ambil data order kerja
             $order_kerja_id = request('order_kerja_id');
             $order_kerja = $order_kerja_id ? $this->model->getOrderKerja($order_kerja_id) : null;
             $log_kerja = $this->model->getLogKerjaList($asset_id);
             $order_kerja_list = $this->model->getOrderKerjaListByAsset($asset_id);
 
+            // Persiapkan data untuk view
             $d = [];
             $d['asset'] = $asset;
             $d['order_kerja'] = $order_kerja_list;
             $d['log_kerja'] = $log_kerja;
             $d['n_param'] = request('n');
+
+            // URL untuk form log kerja
             $d['form_log_url'] = url('ipsrs/teknisitugas/form_log_kerja/' . $order_kerja_id);
             if (request('n')) {
                 $d['form_log_url'] .= '?n=' . request('n');
             }
+
+            // URL kembali ke daftar tugas
             $d['back_url'] = url('ipsrs/teknisitugas');
             if (request('n')) {
                 $d['back_url'] .= '?n=' . request('n');
@@ -533,6 +619,7 @@ class TeknisiTugas extends MyController
     public function detail_aset($asset_id)
     {
         try {
+            // Perbaiki query agar join ke tabel kategori, lokasi, dan pegawai (PIC)
             $asset = $this->model->getAssetDetail($asset_id);
             if (!$asset) {
                 return redirect('ipsrs/teknisitugas')->with('error', 'Aset tidak ditemukan');
@@ -542,16 +629,32 @@ class TeknisiTugas extends MyController
             $d['asset'] = $asset;
             $d['order_kerja_id'] = request('order_kerja_id');
             $d['n_param'] = request('n');
-            $order_kerja_list = $this->model->getOrderKerjaListByAsset($asset_id);
+
+            // Ambil semua order kerja terkait aset
+            try {
+                $order_kerja = $this->model->getOrderKerjaByAssetId($asset_id);
+            } catch (\Exception $e) {
+                \Log::error('Error fetching order_kerja: ' . $e->getMessage());
+                $order_kerja = [];
+            }
 
             $log_kerja_list = [];
-            if (is_array($order_kerja_list)) {
-                foreach ($order_kerja_list as $order) {
+
+            if (is_array($order_kerja)) {
+                foreach ($order_kerja as $order) {
                     $item = $order;
-                    $penugasan = $this->model->getPenugasanByOrderKerja($order['order_kerja_id']);
+
+                    // Ambil penugasan teknisi terkait order kerja ini
+                    $penugasan = DbModel::getData('penugasan_teknisi', [
+                        'order_kerja_id' => $order['order_kerja_id'],
+                        'deleted_st' => 0
+                    ]);
+
+                    // Waktu Dimulai dan Selesai dari penugasan teknisi
                     $item['tgl_mulai'] = $penugasan['tgl_mulai'] ?? $order['tgl_mulai'] ?? $order['tgl_dibuat'] ?? null;
                     $item['tgl_selesai'] = $penugasan['tgl_selesai'] ?? null;
 
+                    // Jenis pekerjaan
                     if (!empty($order['jadwal_pm_id'])) {
                         $item['jenis'] = 'Jadwal PM';
                     } elseif (!empty($order['permintaan_id'])) {
@@ -560,10 +663,11 @@ class TeknisiTugas extends MyController
                         $item['jenis'] = '-';
                     }
 
-                    $log = $this->model->getLogKerja($order['order_kerja_id']);
+                    // Ambil log kerja terkait order kerja ini
+                    $log = DbModel::getData('log_kerja', ['order_kerja_id' => $order['order_kerja_id'], 'deleted_st' => 0]);
                     $item['sparepart'] = [];
                     if ($log) {
-                        $sparepart = $this->model->getSparepartByLogKerja($log['log_kerja_id']);
+                        $sparepart = $this->model->getSparepartByLogKerjaId($log['log_kerja_id']);
                         $item['sparepart'] = $sparepart ?: [];
                         $item['total_biaya_sparepart'] = array_sum(array_map(function ($sp) {
                             return ($sp['jumlah'] ?? 0) * ($sp['harga_satuan'] ?? 0);
@@ -584,10 +688,11 @@ class TeknisiTugas extends MyController
                 }
             }
 
+            // Urutkan berdasarkan tanggal mulai terbaru
             usort($log_kerja_list, function ($a, $b) {
                 $date_a = isset($a['tgl_mulai']) ? strtotime($a['tgl_mulai']) : 0;
                 $date_b = isset($b['tgl_mulai']) ? strtotime($b['tgl_mulai']) : 0;
-                return $date_b - $date_a;
+                return $date_b - $date_a; // descending order
             });
 
             $d['log_kerja_list'] = $log_kerja_list;
@@ -599,4 +704,3 @@ class TeknisiTugas extends MyController
         }
     }
 }
-

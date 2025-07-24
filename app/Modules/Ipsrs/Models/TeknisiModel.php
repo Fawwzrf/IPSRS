@@ -122,7 +122,8 @@ class TeknisiModel extends Model
             }
 
             if ($order_kerja_id) {
-                $count_aktif = DbModel::rawData('row_array',
+                $count_aktif = DbModel::rawData(
+                    'row_array',
                     "SELECT COUNT(*) as total FROM penugasan_teknisi WHERE order_kerja_id = ? AND status != 'dibatalkan' AND deleted_st = 0",
                     [$order_kerja_id]
                 )['total'] ?? 0;
@@ -135,12 +136,14 @@ class TeknisiModel extends Model
                         'updated_by' => session('user_name')
                     ], ['order_kerja_id' => $order_kerja_id]);
                 } else {
-                    $count_ditugaskan = DbModel::rawData('row_array',
+                    $count_ditugaskan = DbModel::rawData(
+                        'row_array',
                         "SELECT COUNT(*) as total FROM penugasan_teknisi WHERE order_kerja_id = ? AND status = 'ditugaskan' AND deleted_st = 0",
                         [$order_kerja_id]
                     )['total'] ?? 0;
 
-                    $count_total = DbModel::rawData('row_array',
+                    $count_total = DbModel::rawData(
+                        'row_array',
                         "SELECT COUNT(*) as total FROM penugasan_teknisi WHERE order_kerja_id = ? AND deleted_st = 0",
                         [$order_kerja_id]
                     )['total'] ?? 0;
@@ -451,67 +454,36 @@ class TeknisiModel extends Model
         }
     }
 
-    // Verifikasi barcode aset dengan order kerja
-    public function verifyAssetBarcode($order_kerja_id, $barcode)
-    {
-        try {
-            $assetResult = DbModel::rawData(
-                'row_array',
-                "SELECT asset_id, asset_nm FROM asset WHERE barcode = ? AND deleted_st = 0",
-                [$barcode]
-            );
-
-            if (!$assetResult) {
-                return [
-                    'success' => false,
-                    'msg' => 'Barcode tidak terdaftar dalam sistem.'
-                ];
-            }
-
-            $orderAssetResult = DbModel::rawData(
-                'row_array',
-                "SELECT 
-                    COALESCE(pk.asset_id, jp.asset_id) as asset_id 
-                 FROM order_kerja ok
-                 LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-                 LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
-                 WHERE ok.order_kerja_id = ?",
-                [$order_kerja_id]
-            );
-
-            if (!$orderAssetResult || !$orderAssetResult['asset_id']) {
-                return [
-                    'success' => false,
-                    'msg' => 'Tidak dapat menemukan aset terkait order kerja ini.'
-                ];
-            }
-
-            if ($assetResult['asset_id'] == $orderAssetResult['asset_id']) {
-                return [
-                    'success' => true,
-                    'asset_id' => $assetResult['asset_id'],
-                    'asset_nm' => $assetResult['asset_nm'],
-                    'msg' => 'Barcode terverifikasi dengan benar.'
-                ];
-            }
-
-            return [
-                'success' => false,
-                'msg' => 'Barcode yang di-scan tidak sesuai dengan aset yang tercatat pada order kerja ini.'
-            ];
-        } catch (Exception $e) {
-            return [
-                'success' => false,
-                'msg' => 'Error: ' . $e->getMessage()
-            ];
-        }
-    }
-
     // Mengambil data order kerja berdasarkan ID
     public function getOrderKerja($order_kerja_id)
     {
         $sql = "SELECT * FROM order_kerja WHERE order_kerja_id = ? AND deleted_st = 0";
         return DbModel::rawData('row_array', $sql, [$order_kerja_id]);
+    }
+
+    /**
+     * Mendapatkan asset_id dari barcode/no_seri atau dari order_kerja_id
+     */
+    public function getAssetIdByBarcodeOrOrderKerja($barcode, $order_kerja_id)
+    {
+        // Cari berdasarkan barcode/no_seri
+        $asset = DbModel::getData('asset', ['no_seri' => $barcode]);
+        if ($asset) {
+            return $asset['asset_id'];
+        }
+
+        // Alternatif: Cari dari order_kerja
+        $order_kerja = DbModel::getData('order_kerja', ['order_kerja_id' => $order_kerja_id]);
+        if ($order_kerja) {
+            if (!empty($order_kerja['permintaan_id'])) {
+                $permintaan = DbModel::getData('permintaan_komplain', ['permintaan_id' => $order_kerja['permintaan_id']]);
+                return $permintaan['asset_id'] ?? null;
+            } elseif (!empty($order_kerja['jadwal_pm_id'])) {
+                $jadwalPm = DbModel::getData('jadwal_pm', ['jadwal_pm_id' => $order_kerja['jadwal_pm_id']]);
+                return $jadwalPm['asset_id'] ?? null;
+            }
+        }
+        return null;
     }
 
     // Mengambil data permintaan komplain berdasarkan ID
@@ -543,13 +515,44 @@ class TeknisiModel extends Model
     }
 
     // Menyelesaikan order kerja
-    public function finishOrderKerja($order_kerja_id, $pegawai_id)
+    public function selesaiPenugasanByOrderKerja($order_kerja_id, $pegawai_id)
     {
-        return DbModel::updateData('order_kerja', [
-            'status' => 'selesai',
-            'updated_at' => now(),
-            'updated_by' => $pegawai_id
-        ], ['order_kerja_id' => $order_kerja_id]);
+        $order = DbModel::getData('order_kerja', ['order_kerja_id' => $order_kerja_id]);
+        if ($order) {
+            $penugasan = DbModel::getData('penugasan_teknisi', [
+                'order_kerja_id' => $order_kerja_id,
+                'status' => 'sedang_dikerjakan'
+            ]);
+            if ($penugasan) {
+                $this->updateStatusPenugasan($penugasan['penugasan_id'], 'selesai');
+                // Update tgl_selesai dan pegawai_id
+                DbModel::updateData('penugasan_teknisi', [
+                    'status' => 'selesai',
+                    'tgl_selesai' => now(),
+                    'updated_at' => now(),
+                    'updated_by' => session('user_name'),
+                    'pegawai_id' => $pegawai_id
+                ], [
+                    'order_kerja_id' => $order_kerja_id,
+                    'pegawai_id' => $pegawai_id
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Update status order_kerja ke 'menunggu_sparepart'
+     */
+    public function setOrderKerjaMenungguSparepart($order_kerja_id)
+    {
+        return DbModel::updateData(
+            'order_kerja',
+            [
+                'status' => 'menunggu_sparepart',
+                'updated_at' => date('Y-m-d H:i:s')
+            ],
+            ['order_kerja_id' => $order_kerja_id]
+        );
     }
 
     // Mengambil data asset berdasarkan ID
@@ -573,6 +576,27 @@ class TeknisiModel extends Model
         return DbModel::rawData('result_array', $sql, [$asset_id, $asset_id]);
     }
 
+/**
+ * Ambil daftar order_kerja beserta nama teknisi dan deskripsi berdasarkan asset_id
+ */
+public function getOrderKerjaByAssetId($asset_id)
+{
+    $sql = "SELECT ok.*, p.pegawai_nm as teknisi_nama, 
+                   COALESCE(pk.deskripsi, j.deskripsi) as deskripsi
+            FROM order_kerja ok
+            LEFT JOIN penugasan_teknisi pt ON ok.order_kerja_id = pt.order_kerja_id
+            LEFT JOIN mst_pegawai p ON pt.pegawai_id = p.pegawai_id
+            LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+            LEFT JOIN jadwal_pm j ON ok.jadwal_pm_id = j.jadwal_pm_id
+            WHERE ok.deleted_st = 0
+              AND ( (pk.asset_id = ? AND (pk.deleted_st = 0 OR pk.deleted_st IS NULL)) 
+                  OR (j.asset_id = ? AND (j.deleted_st = 0 OR j.deleted_st IS NULL)) )
+              AND (pt.deleted_st = 0 OR pt.deleted_st IS NULL)
+            ORDER BY ok.tgl_dibuat DESC";
+    return \App\Modules\App\Models\DbModel::rawData('result_array', $sql, [$asset_id, $asset_id]);
+}
+// ...existing code...
+
     // Mengambil detail asset berdasarkan ID
     public function getAssetDetail($asset_id)
     {
@@ -588,10 +612,12 @@ class TeknisiModel extends Model
     }
 
     // Mengambil data sparepart berdasarkan log kerja
-    public function getSparepartByLogKerja($log_kerja_id)
+    public function getSparepartByLogKerjaId($log_kerja_id)
     {
-        $sql = "SELECT ps.*, s.sparepart_nm, s.harga_satuan FROM penggunaan_sparepart ps JOIN mst_sparepart s ON ps.sparepart_id = s.sparepart_id WHERE ps.log_kerja_id = ?";
-        return DbModel::rawData('result_array', $sql, [$log_kerja_id]);
+        $sql = "SELECT ps.*, s.sparepart_nm 
+            FROM penggunaan_sparepart ps
+            JOIN mst_sparepart s ON ps.sparepart_id = s.sparepart_id
+            WHERE ps.log_kerja_id = ?";
+        return \App\Modules\App\Models\DbModel::rawData('result_array', $sql, [$log_kerja_id]);
     }
 }
-
