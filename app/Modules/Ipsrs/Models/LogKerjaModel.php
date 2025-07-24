@@ -9,9 +9,12 @@ use Illuminate\Support\Facades\DB;
 
 class LogKerjaModel extends Model
 {
+    protected static $nav_sess = [];
+
     public function saveData($order_kerja_id, $data)
     {
-        $pegawai_id = Auth::id();
+        // Gunakan teknisi_pegawai_id dari input jika ada (admin), jika tidak pakai Auth::id()
+        $pegawai_id = $data['teknisi_pegawai_id'] ?? (\Illuminate\Support\Facades\Auth::id() ?: null);
         $order_kerja = DbModel::getData('order_kerja', ['order_kerja_id' => $order_kerja_id]);
         if (!$order_kerja) return ['status' => false, 'message' => 'Order Kerja tidak ditemukan.'];
 
@@ -195,20 +198,16 @@ class LogKerjaModel extends Model
      */
     static function loadDatatables()
     {
+        // Ambil session filter
         if (is_null(self::$nav_sess)) {
             self::$nav_sess = session(request('n'));
         }
 
         $where = "1 = 1 ";
 
-        // Filter berdasarkan order kerja
-        if (@self::$nav_sess['search']['data']['order_kerja_id'] != '') {
-            $where .= " AND lk.order_kerja_id = '" . @self::$nav_sess['search']['data']['order_kerja_id'] . "' ";
-        }
-
         // Filter berdasarkan teknisi
-        if (@self::$nav_sess['search']['data']['teknisi_pegawai_id'] != '') {
-            $where .= " AND lk.teknisi_pegawai_id = '" . @self::$nav_sess['search']['data']['teknisi_pegawai_id'] . "' ";
+        if (@self::$nav_sess['search']['data']['teknisi_id'] != '') {
+            $where .= " AND lk.teknisi_pegawai_id = '" . @self::$nav_sess['search']['data']['teknisi_id'] . "' ";
         }
 
         // Filter berdasarkan hasil
@@ -218,12 +217,13 @@ class LogKerjaModel extends Model
 
         // Filter berdasarkan pencarian
         if (@self::$nav_sess['search']['data']['term'] != '') {
+            $term = strtolower(self::$nav_sess['search']['data']['term']);
             $where .= " AND (
-            LOWER(lk.diagnosa) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%' OR 
-            LOWER(lk.tindakan) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%' OR
-            LOWER(p.pegawai_nm) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%' OR
-            LOWER(ok.order_kerja_id) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%'
-        ) ";
+                LOWER(lk.diagnosa) LIKE '%$term%' OR 
+                LOWER(lk.tindakan) LIKE '%$term%' OR
+                LOWER(p.pegawai_nm) LIKE '%$term%' OR
+                LOWER(lk.order_kerja_id) LIKE '%$term%'
+            ) ";
         }
 
         $query = "SELECT * FROM (
@@ -241,15 +241,70 @@ class LogKerjaModel extends Model
                 FROM 
                     log_kerja lk
                     LEFT JOIN mst_pegawai p ON lk.teknisi_pegawai_id = p.pegawai_id
-                    LEFT JOIN order_kerja ok ON lk.order_kerja_id = ok.order_kerja_id
                 WHERE $where AND lk.deleted_st = 0
             ) x ";
 
         $search = ['order_kerja_id', 'teknisi_nm', 'diagnosa', 'tindakan', 'hasil'];
-        $where = null;
-        $isWhere = null;
-
-        $result = DbModel::datatablesQuery($query, $search, $where, $isWhere);
+        $result = DbModel::datatablesQuery($query, $search, null, null);
         return response()->json($result);
+    }
+
+    public function getAllOrderKerja()
+    {
+        $sql = "SELECT 
+                ok.order_kerja_id,
+                a.asset_nm,
+                CASE 
+                    WHEN ok.jadwal_pm_id IS NOT NULL THEN 'Jadwal PM' 
+                    ELSE 'Perbaikan' 
+                END as jenis
+            FROM order_kerja ok
+            LEFT JOIN permintaan_komplain p ON p.permintaan_id = ok.permintaan_id
+            LEFT JOIN jadwal_pm jp ON jp.jadwal_pm_id = ok.jadwal_pm_id
+            LEFT JOIN asset a ON a.asset_id = COALESCE(p.asset_id, jp.asset_id)
+            WHERE ok.deleted_st = 0 AND ok.status != 'selesai'
+            ORDER BY ok.order_kerja_id DESC";
+        return DbModel::rawData('result_array', $sql) ?: [];
+    }
+
+    public function getAllTeknisi()
+    {
+        return DbModel::allData('mst_pegawai', [
+            'deleted_st' => 0,
+            'active_st' => 1,
+            'jabatan_id' => '90'
+        ]) ?: [];
+    }
+
+    public function getAllSparepart()
+    {
+        return DbModel::allData('mst_sparepart', [
+            'deleted_st' => 0,
+            'active_st' => 1
+        ]) ?: [];
+    }
+
+    public function getLogById($log_kerja_id)
+    {
+        $sql = "SELECT lk.*, p.pegawai_nm as teknisi_nm
+            FROM log_kerja lk
+            LEFT JOIN mst_pegawai p ON lk.teknisi_pegawai_id = p.pegawai_id
+            WHERE lk.log_kerja_id = ? AND lk.deleted_st = 0";
+        return DbModel::rawData('row_array', $sql, [$log_kerja_id]);
+    }
+
+    public function getPenugasanByOrderKerja($order_kerja_id)
+    {
+        return DbModel::rawData('result_array', "SELECT * FROM penugasan_teknisi WHERE order_kerja_id = ?", [$order_kerja_id]) ?: [];
+    }
+
+    public function getLogByOrderKerja($order_kerja_id)
+    {
+        return DbModel::rawData('result_array', "SELECT * FROM log_kerja WHERE order_kerja_id = ?", [$order_kerja_id]) ?: [];
+    }
+
+    public function getSparepartByLogKerja($log_kerja_id)
+    {
+        return DbModel::rawData('result_array', "SELECT s.sparepart_nm, ps.jumlah FROM penggunaan_sparepart ps JOIN mst_sparepart s ON ps.sparepart_id = s.sparepart_id WHERE ps.log_kerja_id = ?", [$log_kerja_id]) ?: [];
     }
 }

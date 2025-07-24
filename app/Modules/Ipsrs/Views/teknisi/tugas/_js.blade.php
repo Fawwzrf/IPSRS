@@ -49,7 +49,6 @@
 
     // Call the initialization function when document is ready
     $(document).ready(function() {
-
         // Re-initialize when modals are shown (in case of dynamic content)
         $(document).on('shown.bs.modal', function(e) {
             var modal = $(e.target);

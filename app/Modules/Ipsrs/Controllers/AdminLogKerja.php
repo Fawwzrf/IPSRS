@@ -22,81 +22,89 @@ class AdminLogKerja extends MyController
     {
         $d = [];
         $this->save_session_search($d);
-        
-        // Data untuk filter (jika diperlukan)
-        $d['all_teknisi'] = DbModel::allData('mst_pegawai', ['deleted_st' => 0, 'active_st' => 1, 'jabatan_id' => '90']);
-        
+
+        // Data untuk filter
+        $d['all_teknisi'] = DbModel::allData('mst_pegawai', [
+            'deleted_st' => 0,
+            'active_st' => 1,
+            'jabatan_id' => '90'
+        ]);
+        $d['search_act'] = $this->uri . '/search';
+
+        // Ambil session filter
+        $d['nav_sess'] = session(request('n'));
+
         return $this->renderView($this->template . 'index', $d);
     }
 
-    public function form_modal($order_kerja_id = null)
+    public function search()
     {
-        if (!$order_kerja_id) {
-            return '<h5>Error: Order Kerja ID tidak valid.</h5>';
+        // Simpan filter ke session
+        $d = _post();
+        $this->save_session_search($d);
+        return redirect($this->uri);
+    }
+
+    public function form_modal($log_kerja_id = null)
+    {
+        $d = [];
+        $d['main'] = [];
+        $d['log_fotos'] = [];
+        $d['all_order_kerja'] = $this->model->getAllOrderKerja() ?: [];
+        $d['all_teknisi'] = $this->model->getAllTeknisi() ?: [];
+        $d['all_sparepart'] = $this->model->getAllSparepart() ?: [];
+        $d['form_act'] = $this->uri . '/save';
+
+        // Jika edit log kerja
+        if ($log_kerja_id) {
+            $d['main'] = $this->model->getLogById($log_kerja_id);
+            $d['log_fotos'] = $this->model->getPhotosByLogId($log_kerja_id);
+            $d['form_act'] = $this->uri . '/save/' . $log_kerja_id;
         }
-
-        $order_kerja = DbModel::getData('order_kerja', ['order_kerja_id' => $order_kerja_id]);
-        if (!$order_kerja) {
-            return '<h5>Error: Data Order Kerja tidak ditemukan.</h5>';
-        }
-
-        $d['order_kerja'] = $order_kerja;
-
-        // Ambil asset_id untuk keperluan redirect
-        $asset_id = null;
-        if (!empty($order_kerja['permintaan_id'])) {
-            $sumber = DbModel::getData('permintaan_komplain', ['permintaan_id' => $order_kerja['permintaan_id']]);
-            $asset_id = $sumber['asset_id'] ?? null;
-        } else if (!empty($order_kerja['jadwal_pm_id'])) {
-            $sumber = DbModel::getData('jadwal_pm', ['jadwal_pm_id' => $order_kerja['jadwal_pm_id']]);
-            $asset_id = $sumber['asset_id'] ?? null;
-        }
-        
-        // Simpan asset_id ke dalam data view
-        $d['asset_id'] = $asset_id;
-
-        // Dapatkan data log kerja jika sudah ada
-        $d['log_kerja'] = $this->model->getLogByOrderId($order_kerja_id);
-        
-        // Data sparepart untuk dropdown
-        $d['all_sparepart'] = DbModel::allData('mst_sparepart', ['deleted_st' => 0, 'active_st' => 1]);
-
-        // Dapatkan foto-foto dari log kerja jika ada
-        if (!empty($d['log_kerja'])) {
-            $d['log_fotos'] = $this->model->getPhotosByLogId($d['log_kerja']['log_kerja_id']);
-        } else {
-            $d['log_fotos'] = [];
-        }
-
-        // Standarisasi form action
-        $d['form_act'] = $this->uri . '/save/' . $order_kerja_id;
 
         return $this->renderView($this->template . 'form_modal', $d);
     }
 
-    public function save($order_kerja_id = null)
+    public function save($log_kerja_id = null)
     {
         $d = _post();
-        
-        // Validasi data
+
+        // Ambil order_kerja_id dari input (bukan dari parameter)
+        $order_kerja_id = $d['order_kerja_id'] ?? null;
+
+        // Validasi
+        if (empty($order_kerja_id)) {
+            return response()->json(_response('11', $this->uri, ['message' => 'Order Kerja wajib dipilih.']));
+        }
         if (empty($d['tindakan'])) {
             return response()->json(_response('11', $this->uri, ['message' => 'Tindakan yang dilakukan wajib diisi.']));
         }
-        
         if (empty($d['hasil'])) {
             return response()->json(_response('11', $this->uri, ['message' => 'Hasil pekerjaan wajib dipilih.']));
         }
 
+        // Gabungkan sparepart_id[] dan jumlah[] menjadi array
+        $spareparts = [];
+        if (!empty($d['sparepart_id']) && is_array($d['sparepart_id'])) {
+            foreach ($d['sparepart_id'] as $i => $sp_id) {
+                if ($sp_id) {
+                    $spareparts[] = [
+                        'sparepart_id' => $sp_id,
+                        'jumlah' => $d['jumlah'][$i] ?? 1
+                    ];
+                }
+            }
+        }
+        $d['sparepart'] = $spareparts;
+
         try {
+            // Kirim ke model, pastikan data sparepart dan teknisi_pegawai_id juga dikirim
             $result = $this->model->saveData($order_kerja_id, $d);
-            
+
             if ($result['status']) {
-                // Mendapatkan asset_id untuk redirect
-                $asset_id = $d['asset_id'] ?? null;
-                
                 return response()->json(_response('01', $this->uri, [
                     'message' => 'Laporan pekerjaan berhasil disimpan.',
-                    'asset_id' => $asset_id
+                    'asset_id' => $d['asset_id'] ?? null
                 ]));
             } else {
                 throw new \Exception($result['message'] ?? 'Gagal menyimpan laporan.');
@@ -110,5 +118,16 @@ class AdminLogKerja extends MyController
     public function ajax_datatables()
     {
         return $this->model->loadDatatables();
+    }
+
+    public function detail_modal($order_kerja_id)
+    {
+        $penugasan = $this->model->getPenugasanByOrderKerja($order_kerja_id);
+        $log_kerja = $this->model->getLogByOrderKerja($order_kerja_id);
+        foreach ($log_kerja as &$log) {
+            $log['sparepart'] = $this->model->getSparepartByLogKerja($log['log_kerja_id']);
+            $log['fotos'] = $this->model->getPhotosByLogId($log['log_kerja_id']);
+        }
+        return view($this->template . 'hasil_teknisi_modal', compact('penugasan', 'log_kerja'));
     }
 }

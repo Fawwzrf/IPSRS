@@ -47,6 +47,21 @@
             <input type="file" name="fotos[]" class="form-control" multiple accept="image/*">
             <div class="form-text text-muted">Upload foto hasil pekerjaan (bisa lebih dari satu).</div>
         </div>
+        @if (!empty($log_fotos))
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <p><strong>Foto Bukti yang Sudah Diunggah:</strong></p>
+                        <div class="d-flex flex-wrap">
+                            @foreach ($log_fotos as $foto)
+                                <div class="me-2 mb-2">
+                                    <img src="{{ $foto['foto_url'] }}" alt="Foto Bukti" class="img-thumbnail"
+                                        style="height: 100px;">
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
 
         <div class="mb-3">
             <label class="form-label">Sparepart yang Digunakan</label>

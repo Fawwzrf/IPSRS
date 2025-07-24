@@ -75,6 +75,7 @@ $(document).ready(function() {
             tabel = $('#datatable-main').DataTable({
                 language: { url: _base_url + 'dist/libs/DataTables/id.json' },
                 processing: true,
+                autoWidth: false,
                 serverSide: true,
                 ordering: true,
                 responsive: true,
