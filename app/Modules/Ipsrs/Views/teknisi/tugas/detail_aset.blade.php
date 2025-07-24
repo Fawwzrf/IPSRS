@@ -134,38 +134,43 @@
                                         <tbody>
                                             @if (count($log_kerja_list) > 0)
                                                 @foreach ($log_kerja_list as $item)
-                                                    <tr>
+                                                    <tr class="row-detail-riwayat" style="cursor:pointer"
+                                                        data-order-kerja-id="{{ $item['order_kerja_id'] ?? '' }}">
                                                         <td>
-                                                            @if($item['tgl_mulai'])
-                                                                {{ date('H:i', strtotime($item['tgl_mulai'])) }} - {{ date('d-m-Y', strtotime($item['tgl_mulai'])) }}
+                                                            @if ($item['tgl_mulai'])
+                                                                {{ date('H:i', strtotime($item['tgl_mulai'])) }} -
+                                                                {{ date('d-m-Y', strtotime($item['tgl_mulai'])) }}
                                                             @elseif($item['tgl_dibuat'])
-                                                                {{ date('H:i', strtotime($item['tgl_dibuat'])) }} - {{ date('d-m-Y', strtotime($item['tgl_dibuat'])) }}
+                                                                {{ date('H:i', strtotime($item['tgl_dibuat'])) }} -
+                                                                {{ date('d-m-Y', strtotime($item['tgl_dibuat'])) }}
                                                             @else
                                                                 -
                                                             @endif
                                                         </td>
                                                         <td>
-                                                            @if($item['tgl_selesai'])
-                                                                {{ date('H:i', strtotime($item['tgl_selesai'])) }} - {{ date('d-m-Y', strtotime($item['tgl_selesai'])) }}
+                                                            @if ($item['tgl_selesai'])
+                                                                {{ date('H:i', strtotime($item['tgl_selesai'])) }} -
+                                                                {{ date('d-m-Y', strtotime($item['tgl_selesai'])) }}
                                                             @else
                                                                 -
                                                             @endif
                                                         </td>
                                                         <td>
-                                                            @if(isset($item['jenis']))
+                                                            @if (isset($item['jenis']))
                                                                 {{ $item['jenis'] == 'jadwal_pm' ? 'Jadwal PM' : ($item['jenis'] == 'order_kerja' ? 'Perbaikan' : ucfirst($item['jenis'])) }}
                                                             @else
                                                                 -
                                                             @endif
                                                         </td>
                                                         <td>{{ $item['teknisi_nama'] ?? '-' }}</td>
-                                                        <td>{{ $item['deskripsi'] ?? $item['diagnosa'] ?? '-' }}</td>
+                                                        <td>{{ $item['deskripsi'] ?? ($item['diagnosa'] ?? '-') }}</td>
                                                         <td>{{ $item['tindakan'] ?? '-' }}</td>
                                                         <td>
-                                                            @if(!empty($item['sparepart']))
+                                                            @if (!empty($item['sparepart']))
                                                                 <ul class="mb-0 ps-3">
-                                                                    @foreach($item['sparepart'] as $sp)
-                                                                        <li>{{ $sp['sparepart_nm'] ?? '-' }} ({{ $sp['jumlah'] ?? 0 }})</li>
+                                                                    @foreach ($item['sparepart'] as $sp)
+                                                                        <li>{{ $sp['sparepart_nm'] ?? '-' }}
+                                                                            ({{ $sp['jumlah'] ?? 0 }})</li>
                                                                     @endforeach
                                                                 </ul>
                                                             @else
@@ -181,7 +186,7 @@
                                                             {{ number_format($total_biaya, 0, ',', '.') }}
                                                         </td>
                                                         <td>
-                                                            @if(isset($item['status']))
+                                                            @if (isset($item['status']))
                                                                 @if ($item['status'] == 'selesai')
                                                                     <span class="badge bg-success">Selesai</span>
                                                                 @elseif($item['status'] == 'baru')
@@ -191,7 +196,8 @@
                                                                 @elseif($item['status'] == 'diproses')
                                                                     <span class="badge bg-warning">Diproses</span>
                                                                 @else
-                                                                    <span class="badge bg-secondary">{{ $item['status'] }}</span>
+                                                                    <span
+                                                                        class="badge bg-secondary">{{ $item['status'] }}</span>
                                                                 @endif
                                                             @else
                                                                 -
@@ -258,5 +264,21 @@
         @if (session('flash_error') || session('error'))
             _toast('error', '{{ session('flash_error') ?? session('error') }}');
         @endif
+
+        // Handler klik pada baris riwayat
+        // Ambil nilai parameter n dari PHP dan simpan ke JS variable
+        var nParam = @json(request('n'));
+
+        $('.row-detail-riwayat').on('click', function(e) {
+            var orderKerjaId = $(this).data('order-kerja-id');
+            if (!orderKerjaId) return;
+
+            // Gunakan fungsi _modal seperti di log kerja admin
+            _modal(e, {
+                uri: _base_url + 'ipsrs/adminorderkerja/hasil_teknisi_modal/' + orderKerjaId + (nParam ? '?n=' + nParam : ''),
+                title: 'Hasil Tugas Teknisi',
+                size: 'modal-lg'
+            });
+        });
     });
 </script>
