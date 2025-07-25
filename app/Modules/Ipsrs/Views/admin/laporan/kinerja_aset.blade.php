@@ -1,4 +1,28 @@
 @include('ipsrs::admin.laporan._js')
+{{-- filepath: c:\laragon\www\ipsrs\app\Modules\Ipsrs\Views\admin\laporan\kinerja_aset.blade.php --}}
+@if(request('print') == '1')
+    <div class="print-header">
+        <h2 class="text-center">{{ $judul ?? 'Laporan Kinerja Aset' }}</h2>
+        <table class="mb-2" style="width:100%;font-size:14px;">
+            <tr>
+                <td style="width:120px;">Periode</td>
+                <td>: {{ $periode_label ?? '-' }}</td>
+            </tr>
+            <tr>
+                <td>Kategori Aset</td>
+                <td>: {{ $kategori_asset_label ?? '-' }}</td>
+            </tr>
+            <tr>
+                <td>Lokasi</td>
+                <td>: {{ $lokasi_label ?? '-' }}</td>
+            </tr>
+            <tr>
+                <td>Pencarian</td>
+                <td>: {{ $pencarian_label ?? '-' }}</td>
+            </tr>
+        </table>
+    </div>
+@endif
 <div class="page-wrapper laporan-kinerja-aset">
     <div class="page-header d-print-none mt-2">
         <div class="container-xl">
@@ -13,10 +37,9 @@
                 </div>
                 <div class="col-auto ms-auto d-print-none">
                     <div class="btn-list">
-                        <a href="{{ url($uri . '?n=' . request('n') . '&export=excel') }}"
-                            class="btn btn-success d-sm-inline-block">
+                        <button type="button" class="btn btn-success d-sm-inline-block btn-export-excel">
                             <i class="fas fa-file-excel"></i> Ekspor ke Excel
-                        </a>
+                        </button>
                         <button type="button" class="btn btn-primary" onclick="window.print()">
                             <i class="fas fa-print"></i> Cetak Laporan
                         </button>
@@ -33,6 +56,7 @@
                         id="search" autocomplete="off" onsubmit="_search(event)">
                         @csrf
                         <input type="hidden" name="search_act" value="save">
+                        <input type="hidden" name="n" value="{{ request('n') }}">
                         <div class="row g-2">
                             <div class="col-md-4">
                                 <label class="form-label">Kategori Aset</label>
@@ -100,18 +124,16 @@
     </div>
 </div>
 
-<style media="print">
-    .d-print-none {
-        display: none !important;
-    }
-
-    .table-striped tbody tr:nth-of-type(odd) {
-        background-color: rgba(0, 0, 0, .05) !important;
-        -webkit-print-color-adjust: exact;
-    }
-
-    .page-header {
-        border-bottom: 1px solid #aaa;
-        margin-bottom: 20px;
-    }
+<style>
+@media print {
+    @page { size: A4 portrait; margin: 1.5cm; }
+    body { font-family: Arial, sans-serif; font-size: 12px; }
+    .d-print-none, .btn, .page-header, .card-footer { display: none !important; }
+    .print-header { margin-bottom: 20px; }
+    .print-header h2 { font-size: 20px; font-weight: bold; margin-bottom: 10px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #333; padding: 6px 8px; }
+    thead th { background: #eee; }
+    tfoot { font-weight: bold; }
+}
 </style>

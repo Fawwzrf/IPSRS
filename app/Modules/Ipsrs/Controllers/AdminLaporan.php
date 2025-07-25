@@ -57,6 +57,10 @@ class AdminLaporan extends MyController
         $d = [];
         $this->save_session_search($d);
 
+        if (!isset($d['laporan']) || !is_array($d['laporan'])) {
+            $d['laporan'] = [];
+        }
+
         // Ambil data untuk filter
         $d['all_kategori_asset'] = DbModel::allData('mst_kategori_asset', ['deleted_st' => 0]);
         $d['all_lokasi'] = DbModel::allData('mst_lokasi', ['deleted_st' => 0]);
@@ -64,29 +68,34 @@ class AdminLaporan extends MyController
 
         // Untuk ekspor ke Excel jika diminta
         if (request('export') == 'excel') {
+            // Ambil filter dari request, jika kosong ambil dari session
+            $filter = $this->getNormalizedFilter($request, $d);
+            $this->applyPeriodeFilter($filter);
+
+            $result = $this->model->getDatatablesKinerjaAset($filter, 0, 10000, [], $filter['search'] ?? '');
+            $data = $result['data'] ?? [];
             $headers = [
-                'No',
-                'Kode Aset',
                 'Nama Aset',
+                'Merk',
                 'Kategori',
                 'Lokasi',
-                'Tgl Mulai',
-                'Total Biaya (Rp)'
+                'Jumlah OK',
+                'Jumlah Perbaikan',
+                'Jumlah Pemeliharaan',
+                'Terakhir Ditangani'
             ];
-            $data = [];
-            $no = 1;
-            foreach ($d['laporan'] as $row) {
-                $data[] = [
-                    $no++,
-                    $row['kode_aset'] ?? '',
-                    $row['nama_aset'] ?? '',
-                    $row['kategori'] ?? '',
-                    $row['lokasi'] ?? '',
-                    $row['tgl_mulai'] ?? '',
-                    $row['total_biaya'] ?? 0,
-                ];
-            }
-            return $this->exportToExcel($data, 'Laporan_Kinerja_Aset', $headers);
+
+            // Keterangan filter
+            $filters = [
+                'Periode' => $this->getPeriodeLabel($filter),
+                'Kategori Aset' => $this->getNamaKategoriAset($filter['kategori_asset_id'] ?? null),
+                'Lokasi' => $this->getNamaLokasi($filter['lokasi_id'] ?? null),
+                'Pencarian' => $filter['search'] ?? '-'
+            ];
+
+            Log::info('Export Data:', $data);
+
+            return $this->exportToExcel($data, 'Laporan_Kinerja_Aset', $headers, $filters, 'Laporan Kinerja Aset');
         }
 
         if ($request->ajax()) {
@@ -106,6 +115,16 @@ class AdminLaporan extends MyController
             $d['nav_sess']['search']['data']['tgl_end'] = date('t-m-Y');
         }
 
+        if (request('print') == '1') {
+            $d['judul'] = 'Laporan Kinerja Aset';
+            $d['periode_label'] = $this->getPeriodeLabel($request->all());
+            $d['kategori_asset_label'] = $this->getNamaKategoriAset($request->input('kategori_asset_id'));
+            $d['lokasi_label'] = $this->getNamaLokasi($request->input('lokasi_id'));
+            $d['teknisi_label'] = '-';
+            $d['pencarian_label'] = $request->input('search', '-');
+            return view($this->template . 'kinerja_aset', $d);
+        }
+
         return $this->renderView($this->template . 'kinerja_aset', $d);
     }
 
@@ -116,23 +135,32 @@ class AdminLaporan extends MyController
     {
         $d = [];
         $this->save_session_search($d);
-
+        if (!isset($d['laporan']) || !is_array($d['laporan'])) {
+            $d['laporan'] = [];
+        }
         // Ambil data untuk filter
         $d['all_teknisi'] = DbModel::allData('mst_pegawai', ['jabatan_id' => '90', 'deleted_st' => 0]);
 
         // Untuk ekspor ke Excel jika diminta
         if (request('export') == 'excel') {
-            try {
-                return $this->exportToExcel($d['laporan'], 'Laporan_Kinerja_Teknisi', [
-                    'Nama Teknisi',
-                    'Total Tugas',
-                    'Tugas Selesai',
-                    'Rata-rata Durasi (Menit)'
-                ]);
-            } catch (\Exception $e) {
-                Log::error('Error exporting laporan: ' . $e->getMessage());
-                return back()->with('error', 'Gagal mengekspor data: ' . $e->getMessage());
-            }
+            $filter = $this->getNormalizedFilter($request, $d);
+            $this->applyPeriodeFilter($filter);
+
+            $result = $this->model->getDatatablesKinerjaTeknisi($filter, 0, 10000, [], $filter['search'] ?? '');
+            $data = $result['data'] ?? [];
+            $headers = [
+                'Nama Teknisi',
+                'Total Tugas',
+                'Tugas Selesai',
+                'Rata-rata Durasi'
+            ];
+            $filters = [
+                'Periode' => $this->getPeriodeLabel($filter),
+                'Teknisi' => $this->getNamaTeknisi($filter['teknisi_id'] ?? null),
+                'Pencarian' => $filter['search'] ?? '-'
+            ];
+            Log::info('Export Data:', $data);
+            return $this->exportToExcel($data, 'Laporan_Kinerja_Teknisi', $headers, $filters, 'Laporan Kinerja Teknisi');
         }
 
         if ($request->ajax()) {
@@ -152,6 +180,16 @@ class AdminLaporan extends MyController
             $d['nav_sess']['search']['data']['tgl_end'] = date('t-m-Y');
         }
 
+        if (request('print') == '1') {
+            $d['judul'] = 'Laporan Kinerja Teknisi';
+            $d['periode_label'] = $this->getPeriodeLabel($request->all());
+            $d['kategori_asset_label'] = '-';
+            $d['lokasi_label'] = '-';
+            $d['teknisi_label'] = $this->getNamaTeknisi($request->input('pegawai_id'));
+            $d['pencarian_label'] = $request->input('search', '-');
+            return view($this->template . 'kinerja_teknisi', $d);
+        }
+
         return $this->renderView($this->template . 'kinerja_teknisi', $d);
     }
 
@@ -165,14 +203,13 @@ class AdminLaporan extends MyController
         $d = [];
         $this->save_session_search($d);
 
-
         // Pastikan $d['laporan'] selalu terdefinisi agar tidak undefined
         if (!isset($d['laporan']) || !is_array($d['laporan'])) {
             $d['laporan'] = [];
         }
 
         // Hitung total biaya keseluruhan sesuai filter
-        $filter = $request->all();
+        $filter = $this->getNormalizedFilter($request, $d);
         $this->applyPeriodeFilter($filter);
         $total_biaya = $this->model->getTotalBiayaPemeliharaan($filter);
 
@@ -180,20 +217,28 @@ class AdminLaporan extends MyController
 
         // Untuk ekspor ke Excel jika diminta
         if (request('export') == 'excel') {
-            try {
-                return $this->exportToExcel($d['laporan'], 'Laporan_Biaya_Pemeliharaan', [
-                    'Tanggal OK',
-                    'ID Order Kerja',
-                    'Aset',
-                    'Jenis Pekerjaan',
-                    'Biaya Sparepart (Rp)',
-                    'Biaya Lain (Rp)',
-                    'Total Biaya (Rp)'
-                ]);
-            } catch (\Exception $e) {
-                Log::error('Error exporting laporan: ' . $e->getMessage());
-                return back()->with('error', 'Gagal mengekspor data: ' . $e->getMessage());
+            if (empty($filter) && !empty($d['nav_sess']['search']['data'])) {
+                $filter = $d['nav_sess']['search']['data'];
             }
+            $this->applyPeriodeFilter($filter);
+
+            $result = $this->model->getDatatablesBiayaPemeliharaan($filter, 0, 10000, [], $filter['search'] ?? '');
+            $data = $result['data'] ?? [];
+            $headers = [
+                'Tanggal',
+                'Order Kerja',
+                'Aset',
+                'Jenis',
+                'Total Biaya Sparepart',
+                'Biaya Lain',
+                'Total Biaya'
+            ];
+            $filters = [
+                'Periode' => $this->getPeriodeLabel($filter),
+                'Pencarian' => $filter['search'] ?? '-'
+            ];
+            Log::info('Export Data:', $data);
+            return $this->exportToExcel($data, 'Laporan_Biaya_Pemeliharaan', $headers, $filters, 'Laporan Biaya Pemeliharaan & Perbaikan');
         }
 
         if ($request->ajax()) {
@@ -219,6 +264,16 @@ class AdminLaporan extends MyController
             $d['nav_sess']['search']['data']['tgl_end'] = date('t-m-Y');
         }
 
+        if (request('print') == '1') {
+            $d['judul'] = 'Laporan Biaya Pemeliharaan & Perbaikan';
+            $d['periode_label'] = $this->getPeriodeLabel($request->all());
+            $d['kategori_asset_label'] = '-';
+            $d['lokasi_label'] = '-';
+            $d['teknisi_label'] = '-';
+            $d['pencarian_label'] = $request->input('search', '-');
+            return view($this->template . 'biaya_pemeliharaan', $d);
+        }
+
         return $this->renderView($this->template . 'biaya_pemeliharaan', $d);
     }
 
@@ -230,11 +285,20 @@ class AdminLaporan extends MyController
         $d = [];
         $this->save_session_search($d);
 
+        if (!isset($d['laporan']) || !is_array($d['laporan'])) {
+            $d['laporan'] = [];
+        }
+
         // Dropdown teknisi
         $d['all_teknisi'] = DbModel::allData('mst_pegawai', ['jabatan_id' => '90', 'deleted_st' => 0]);
 
         // Ekspor Excel
         if (request('export') == 'excel') {
+            $filter = $this->getNormalizedFilter($request, $d);
+            $this->applyPeriodeFilter($filter);
+
+            $result = $this->model->getDatatablesKinerjaTim($filter, 0, 10000, [], $filter['search'] ?? '');
+            $data = $result['data'] ?? [];
             $headers = [
                 'Order ID',
                 'Teknisi',
@@ -244,19 +308,13 @@ class AdminLaporan extends MyController
                 'Pengerjaan',
                 'Total Penyelesaian'
             ];
-            $data = [];
-            foreach ($d['laporan'] as $row) {
-                $data[] = [
-                    $row['order_kerja_id'] ?? '',
-                    $row['nama_teknisi'] ?? '',
-                    $row['nama_aset'] ?? '',
-                    $row['durasi_respon_admin'] ?? 0,
-                    $row['durasi_penerimaan_teknisi'] ?? 0,
-                    $row['durasi_pengerjaan'] ?? 0,
-                    $row['durasi_total'] ?? 0,
-                ];
-            }
-            return $this->exportToExcel($data, 'Laporan_Kinerja_Tim', $headers);
+            $filters = [
+                'Periode' => $this->getPeriodeLabel($filter),
+                'Teknisi' => $this->getNamaTeknisi($filter['teknisi_id'] ?? null),
+                'Pencarian' => $filter['search'] ?? '-'
+            ];
+            Log::info('Export Data:', $data);
+            return $this->exportToExcel($data, 'Laporan_Kinerja_Tim', $headers, $filters, 'Laporan Kinerja Tim');
         }
 
         if ($request->ajax()) {
@@ -281,6 +339,16 @@ class AdminLaporan extends MyController
             $d['nav_sess']['search']['data']['tgl_end'] = date('t-m-Y');
         }
 
+        if (request('print') == '1') {
+            $d['judul'] = 'Laporan Kinerja Tim';
+            $d['periode_label'] = $this->getPeriodeLabel($request->all());
+            $d['kategori_asset_label'] = '-';
+            $d['lokasi_label'] = '-';
+            $d['teknisi_label'] = $this->getNamaTeknisi($request->input('pegawai_id'));
+            $d['pencarian_label'] = $request->input('search', '-');
+            return view($this->template . 'kinerja_tim', $d);
+        }
+
         return $this->renderView($this->template . 'kinerja_tim', $d);
     }
 
@@ -294,22 +362,24 @@ class AdminLaporan extends MyController
      */
     protected function exportToExcel($data, $filename, $headers)
     {
-        // Fungsi ini bisa diimplementasikan dengan library Excel seperti PhpSpreadsheet
-        // Untuk sekarang, kita gunakan CSV sebagai fallback sederhana
-
         $filename = $filename . '_' . date('Ymd_His') . '.csv';
         $handle = fopen('php://temp', 'r+');
 
-        // Tulis header
         fputcsv($handle, $headers);
 
-        // Tulis data
         foreach ($data as $row) {
             $values = [];
             foreach ($headers as $header) {
                 switch ($header) {
+
                     case 'Nama Aset':
                         $values[] = $row['asset_nm'] ?? '';
+                        break;
+                    case 'Merk':
+                        $values[] = $row['merk'] ?? '';
+                        break;
+                    case 'Kategori':
+                        $values[] = $row['kategori_asset_nm'] ?? '';
                         break;
                     case 'Lokasi':
                         $values[] = $row['lokasi_nm'] ?? '';
@@ -320,14 +390,14 @@ class AdminLaporan extends MyController
                     case 'Jumlah Perbaikan':
                         $values[] = $row['jumlah_perbaikan'] ?? 0;
                         break;
-                    case 'Jumlah PM':
+                    case 'Jumlah Pemeliharaan':
                         $values[] = $row['jumlah_pemeliharaan'] ?? 0;
                         break;
                     case 'Terakhir Ditangani':
-                        $values[] = to_date($row['terakhir_ditangani'] ?? '') ?? '';
+                        $values[] = to_date($row['terakhir_ditangani'] ?? '');
                         break;
-                    case 'Nama Teknisi':
-                        $values[] = $row['pegawai_nm'] ?? '';
+                    case 'Tanggal':
+                        $values[] = to_date($row['tgl_dibuat'] ?? '');
                         break;
                     case 'Total Tugas':
                         $values[] = $row['total_tugas'] ?? 0;
@@ -336,12 +406,15 @@ class AdminLaporan extends MyController
                         $values[] = $row['tugas_selesai'] ?? 0;
                         break;
                     case 'Rata-rata Durasi (Menit)':
+                    case 'Rata-rata Durasi':
                         $values[] = $row['rata_rata_durasi'] ?? 0;
                         break;
                     case 'Tanggal OK':
                         $values[] = to_date($row['tgl_dibuat'] ?? '') ?? '';
                         break;
+                    case 'Order Kerja':
                     case 'ID Order Kerja':
+                    case 'Order ID':
                         $values[] = $row['order_kerja_id'] ?? '';
                         break;
                     case 'Jenis Pekerjaan':
@@ -356,6 +429,27 @@ class AdminLaporan extends MyController
                     case 'Total Biaya (Rp)':
                         $values[] = numId($row['total_biaya_ok'] ?? 0);
                         break;
+                    case 'Teknisi':
+                        $values[] = $row['nama_teknisi'] ?? ($row['pegawai_nm'] ?? '');
+                        break;
+                    case 'Aset':
+                        $values[] = $row['asset_nm'] ?? '';
+                        break;
+                    case 'Jenis':
+                        $values[] = $row['jenis'] ?? '';
+                        break;
+                    case 'Total Biaya Sparepart':
+                        $values[] = $row['total_biaya_sparepart'] ?? 0;
+                        break;
+                    case 'Biaya Lain':
+                        $values[] = $row['biaya_lain'] ?? 0;
+                        break;
+                    case 'Total Biaya':
+                        $values[] = $row['total_biaya_ok'] ?? 0;
+                        break;
+                    case 'Nama Teknisi':
+                        $values[] = $row['pegawai_nm'] ?? ($row['nama_teknisi'] ?? '');
+                        break;
                     default:
                         $values[] = '';
                 }
@@ -367,13 +461,12 @@ class AdminLaporan extends MyController
         $content = stream_get_contents($handle);
         fclose($handle);
 
-        // Set headers dan kirim file
-        $headers = [
+        $headersCsv = [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ];
 
-        return response($content, 200, $headers);
+        return response($content, 200, $headersCsv);
     }
 
     public function ajax_datatables(Request $request)
@@ -409,5 +502,59 @@ class AdminLaporan extends MyController
                 ];
         }
         return response()->json($result);
+    }
+
+    protected function getPeriodeLabel($filter)
+    {
+        $periode = $filter['periode'] ?? 'custom';
+        if ($periode === 'harian' && !empty($filter['tgl_single'])) {
+            return 'Tanggal ' . to_date($filter['tgl_single']);
+        }
+        if ($periode === 'bulanan' && !empty($filter['bulan']) && !empty($filter['tahun_bulan'])) {
+            $bulan = DateTime::createFromFormat('!m', $filter['bulan'])->format('F');
+            return "Bulan $bulan {$filter['tahun_bulan']}";
+        }
+        if ($periode === 'tahunan' && !empty($filter['tahun'])) {
+            return "Tahun {$filter['tahun']}";
+        }
+        if (!empty($filter['tgl_start']) && !empty($filter['tgl_end'])) {
+            if ($filter['tgl_start'] == $filter['tgl_end']) {
+                return 'Tanggal ' . to_date($filter['tgl_start']);
+            }
+            return 'Tanggal ' . to_date($filter['tgl_start']) . ' - ' . to_date($filter['tgl_end']);
+        }
+        return 'Semua Periode';
+    }
+
+    protected function getNamaKategoriAset($id)
+    {
+        if (!$id) return 'Semua';
+        $row = \App\Modules\App\Models\DbModel::rowData('mst_kategori_asset', ['kategori_asset_id' => $id]);
+        return $row['kategori_asset_nm'] ?? '-';
+    }
+    protected function getNamaLokasi($id)
+    {
+        if (!$id) return 'Semua';
+        $row = \App\Modules\App\Models\DbModel::rowData('mst_lokasi', ['lokasi_id' => $id]);
+        return $row['lokasi_nm'] ?? '-';
+    }
+    protected function getNamaTeknisi($id)
+    {
+        if (!$id) return 'Semua';
+        $row = \App\Modules\App\Models\DbModel::rowData('mst_pegawai', ['pegawai_id' => $id]);
+        return $row['pegawai_nm'] ?? '-';
+    }
+
+    protected function getNormalizedFilter(Request $request, $d)
+    {
+        $filter = $request->all();
+        if (empty($filter) && !empty($d['nav_sess']['search']['data'])) {
+            $filter = $d['nav_sess']['search']['data'];
+        }
+        // Normalisasi nama key
+        if (isset($filter['pegawai_id']) && !isset($filter['teknisi_id'])) {
+            $filter['teknisi_id'] = $filter['pegawai_id'];
+        }
+        return $filter;
     }
 }

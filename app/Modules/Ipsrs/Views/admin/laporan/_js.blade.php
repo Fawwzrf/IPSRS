@@ -347,3 +347,24 @@
         });
     });
 </script>
+<script>
+    $(document).on('click', '.btn-export-excel', function(e) {
+        e.preventDefault();
+        var $form = $(this).closest('.card-body').find('form.filter-form');
+        var action = $form.attr('action') || window.location.pathname;
+        var params = $form.serialize();
+
+        // Jika parameter n belum ada, tambahkan dari URL
+        if (params.indexOf('n=') === -1) {
+            var n = (new URLSearchParams(window.location.search)).get('n');
+            if (n) {
+                params += (params.length > 0 ? '&' : '') + 'n=' + encodeURIComponent(n);
+            }
+        }
+
+        // Tambahkan export=excel
+        params += (params.length > 0 ? '&' : '') + 'export=excel';
+
+        window.location.href = action + (action.indexOf('?') > -1 ? '&' : '?') + params;
+    });
+</script>

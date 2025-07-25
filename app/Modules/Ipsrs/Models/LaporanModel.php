@@ -54,8 +54,8 @@ class LaporanModel extends Model
         $sql = "SELECT 
             a.asset_id, 
             a.asset_nm, 
-            a.merk,                  -- <== pindahkan merk ke urutan ke-3
-            ka.kategori_asset_nm,    -- <== kategori setelah merk
+            a.merk,          
+            ka.kategori_asset_nm,
             l.lokasi_nm,
             COUNT(ok.order_kerja_id) as jumlah_ok,
             SUM(CASE WHEN ok.jenis = 'perbaikan' THEN 1 ELSE 0 END) as jumlah_perbaikan,
