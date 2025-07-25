@@ -107,14 +107,21 @@
 
 <style>
 @media print {
-    @page { size: A4 portrait; margin: 1.5cm; }
+    @page {
+        size: A4 portrait;
+        margin: 1.5cm;
+    }
     body { font-family: Arial, sans-serif; font-size: 12px; }
     .d-print-none, .btn, .page-header, .card-footer { display: none !important; }
     .print-header { margin-bottom: 20px; }
     .print-header h2 { font-size: 20px; font-weight: bold; margin-bottom: 10px; }
-    table { border-collapse: collapse; width: 100%; }
+    table { border-collapse: collapse; width: 100%; page-break-inside: avoid; }
     th, td { border: 1px solid #333; padding: 6px 8px; }
     thead th { background: #eee; }
     tfoot { font-weight: bold; }
+    .table-responsive { overflow: visible !important; }
+}
+@media print and (orientation: landscape) {
+    @page { size: A4 landscape; }
 }
 </style>

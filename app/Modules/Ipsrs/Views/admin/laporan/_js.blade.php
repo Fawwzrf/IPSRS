@@ -368,3 +368,16 @@
         window.location.href = action + (action.indexOf('?') > -1 ? '&' : '?') + params;
     });
 </script>
+<script>
+let printOrientation = 'portrait';
+$(document).on('click', '.btn-print-orientation', function() {
+    printOrientation = $(this).data('orientation');
+    if (printOrientation === 'landscape') {
+        $('style#print-orientation').remove();
+        $('<style id="print-orientation">@media print {@page {size: A4 landscape;}}</style>').appendTo('head');
+    } else {
+        $('style#print-orientation').remove();
+        $('<style id="print-orientation">@media print {@page {size: A4 portrait;}}</style>').appendTo('head');
+    }
+});
+</script>
