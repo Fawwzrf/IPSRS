@@ -27,7 +27,9 @@ class LaporanModel extends Model
             $bindings[] = $filter['lokasi_id'];
         }
         if (!empty($search)) {
-            $where[] = "(a.asset_nm LIKE ? OR l.lokasi_nm LIKE ?)";
+            $where[] = "(a.asset_nm LIKE ? OR l.lokasi_nm LIKE ? OR a.merk LIKE ? OR ka.kategori_asset_nm LIKE ?)";
+            $bindings[] = "%{$search}%";
+            $bindings[] = "%{$search}%";
             $bindings[] = "%{$search}%";
             $bindings[] = "%{$search}%";
         }
@@ -50,23 +52,28 @@ class LaporanModel extends Model
 
         // Query data
         $sql = "SELECT 
-                    a.asset_id, a.asset_nm, a.merk, l.lokasi_nm,
-                    COUNT(ok.order_kerja_id) as jumlah_ok,
-                    SUM(CASE WHEN ok.jenis = 'perbaikan' THEN 1 ELSE 0 END) as jumlah_perbaikan,
-                    SUM(CASE WHEN ok.jenis = 'pemeliharaan' THEN 1 ELSE 0 END) as jumlah_pemeliharaan,
-                    MAX(ok.tgl_dibuat) as terakhir_ditangani
-                FROM asset a
-                LEFT JOIN permintaan_komplain pk ON a.asset_id = pk.asset_id
-                LEFT JOIN jadwal_pm jp ON a.asset_id = jp.asset_id
-                LEFT JOIN order_kerja ok ON pk.permintaan_id = ok.permintaan_id OR jp.jadwal_pm_id = ok.jadwal_pm_id
-                LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
-                WHERE {$whereClause}
-                GROUP BY a.asset_id, a.asset_nm, a.merk, l.lokasi_nm
-                ORDER BY {$orderBy}
-                LIMIT {$length} OFFSET {$start}";
+            a.asset_id, 
+            a.asset_nm, 
+            a.merk,                  -- <== pindahkan merk ke urutan ke-3
+            ka.kategori_asset_nm,    -- <== kategori setelah merk
+            l.lokasi_nm,
+            COUNT(ok.order_kerja_id) as jumlah_ok,
+            SUM(CASE WHEN ok.jenis = 'perbaikan' THEN 1 ELSE 0 END) as jumlah_perbaikan,
+            SUM(CASE WHEN ok.jenis = 'pemeliharaan' THEN 1 ELSE 0 END) as jumlah_pemeliharaan,
+            MAX(ok.tgl_dibuat) as terakhir_ditangani
+        FROM asset a
+        LEFT JOIN permintaan_komplain pk ON a.asset_id = pk.asset_id
+        LEFT JOIN jadwal_pm jp ON a.asset_id = jp.asset_id
+        LEFT JOIN order_kerja ok ON pk.permintaan_id = ok.permintaan_id OR jp.jadwal_pm_id = ok.jadwal_pm_id
+        LEFT JOIN mst_kategori_asset ka ON a.kategori_asset_id = ka.kategori_asset_id
+        LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
+        WHERE {$whereClause}
+        GROUP BY a.asset_id, a.asset_nm, a.merk, ka.kategori_asset_nm, l.lokasi_nm
+        ORDER BY {$orderBy}
+        LIMIT {$length} OFFSET {$start}";
 
         $data = DbModel::rawData('result_array', $sql, $bindings);
-        $filtered = count($data);
+        $filtered = is_array($data) ? count($data) : 0;
 
         return [
             'draw' => intval(request('draw')),
@@ -164,7 +171,8 @@ class LaporanModel extends Model
             $bindings[] = to_date((string)$filter['tgl_end'], '-', 'date');
         }
         if (!empty($search)) {
-            $where[] = "(COALESCE(a1.asset_nm, a2.asset_nm) LIKE ? OR ok.order_kerja_id LIKE ?)";
+            $where[] = "(COALESCE(a1.asset_nm, a2.asset_nm) LIKE ? OR ok.order_kerja_id LIKE ? OR ok.jenis LIKE ?)";
+            $bindings[] = "%{$search}%";
             $bindings[] = "%{$search}%";
             $bindings[] = "%{$search}%";
         }
@@ -205,11 +213,15 @@ class LaporanModel extends Model
 
         $filtered = count($data);
 
+        // Hitung total biaya sesuai filter (gunakan filter yang sama!)
+        $total_biaya = $this->getTotalBiayaPemeliharaan($filter);
+
         return [
             'draw' => intval(request('draw')),
             'recordsTotal' => $total,
             'recordsFiltered' => $filtered,
-            'data' => $data
+            'data' => $data,
+            'total_biaya' => $total_biaya // <-- tambahkan ini
         ];
     }
 
@@ -229,7 +241,8 @@ class LaporanModel extends Model
             $bindings[] = $filter['pegawai_id'];
         }
         if (!empty($search)) {
-            $where .= " AND (ok.order_kerja_id LIKE ? OR p.pegawai_nm LIKE ? OR COALESCE(a1.asset_nm, a2.asset_nm) LIKE ?)";
+            $where .= " AND (ok.order_kerja_id LIKE ? OR p.pegawai_nm LIKE ? OR ok.jenis LIKE ? OR COALESCE(a1.asset_nm, a2.asset_nm) LIKE ?)";
+            $bindings[] = "%{$search}%";
             $bindings[] = "%{$search}%";
             $bindings[] = "%{$search}%";
             $bindings[] = "%{$search}%";
@@ -292,36 +305,84 @@ class LaporanModel extends Model
         ];
         $bindings = [];
 
+        // Filter tanggal sesuai periode
         if (!empty($filter['tgl_start']) && !empty($filter['tgl_end'])) {
-            $where[] = "ok.tgl_dibuat BETWEEN ? AND ?";
+            $where[] = "DATE(ok.tgl_dibuat) BETWEEN ? AND ?";
             $bindings[] = function_exists('to_date') ? to_date((string)$filter['tgl_start'], '-', 'date') : $filter['tgl_start'];
             $bindings[] = function_exists('to_date') ? to_date((string)$filter['tgl_end'], '-', 'date') : $filter['tgl_end'];
         }
+
+        // Filter pencarian aset atau order kerja
         if (!empty($filter['search'])) {
-            $where[] = "(COALESCE(a1.asset_nm, a2.asset_nm) LIKE ? OR ok.order_kerja_id LIKE ?)";
+            $where[] = "(COALESCE(a1.asset_nm, a2.asset_nm) LIKE ? OR ok.order_kerja_id LIKE ? OR ok.jenis LIKE ?)";
             $search = $filter['search'];
             if (is_array($search)) {
-                $search = implode(' ', $search); // Gabungkan jadi string
+                $search = implode(' ', $search);
             }
             $bindings[] = "%{$search}%";
             $bindings[] = "%{$search}%";
+            $bindings[] = "%{$search}%";
         }
+
         $whereClause = implode(' AND ', $where);
 
         $sql = "SELECT 
-            SUM(
-                COALESCE((SELECT SUM(ps.jumlah * ps.harga_satuan) FROM penggunaan_sparepart ps WHERE ps.log_kerja_id = lk.log_kerja_id), 0) 
-                + COALESCE(lk.total_biaya, 0)
-            ) as total_biaya
-            FROM order_kerja ok
-            LEFT JOIN log_kerja lk ON ok.order_kerja_id = lk.order_kerja_id
-            LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-            LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
-            LEFT JOIN asset a1 ON pk.asset_id = a1.asset_id
-            LEFT JOIN asset a2 ON jp.asset_id = a2.asset_id
-            WHERE {$whereClause}";
+        SUM(
+            COALESCE((SELECT SUM(ps.jumlah * ps.harga_satuan) FROM penggunaan_sparepart ps WHERE ps.log_kerja_id = lk.log_kerja_id), 0) 
+            + COALESCE(lk.total_biaya, 0)
+        ) as total_biaya
+        FROM order_kerja ok
+        LEFT JOIN log_kerja lk ON ok.order_kerja_id = lk.order_kerja_id
+        LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+        LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+        LEFT JOIN asset a1 ON pk.asset_id = a1.asset_id
+        LEFT JOIN asset a2 ON jp.asset_id = a2.asset_id
+        WHERE {$whereClause}";
 
         $row = DbModel::rawData('row_array', $sql, $bindings);
         return (float) ($row['total_biaya'] ?? 0);
+    }
+
+    // --- RATA-RATA PENYELESAIAN TIM ---
+    public function getRataRataPenyelesaianTim($filter)
+    {
+        $where = "pt.deleted_st = 0 AND ok.deleted_st = 0";
+        $bindings = [];
+
+        $search = $filter['search'] ?? '';
+        if (is_array($search)) {
+            $search = implode(' ', $search);
+        }
+
+        if (!empty($filter['tgl_start']) && !empty($filter['tgl_end'])) {
+            $where .= " AND DATE(pt.tgl_selesai) BETWEEN ? AND ?";
+            $bindings[] = to_date($filter['tgl_start'], '-', 'date');
+            $bindings[] = to_date($filter['tgl_end'], '-', 'date');
+        }
+        if (!empty($filter['pegawai_id'])) {
+            $where .= " AND pt.pegawai_id = ?";
+            $bindings[] = $filter['pegawai_id'];
+        }
+        if (!empty($search)) {
+            $where .= " AND (ok.order_kerja_id LIKE ? OR p.pegawai_nm LIKE ? OR ok.jenis LIKE ? OR COALESCE(a1.asset_nm, a2.asset_nm) LIKE ?)";
+            $bindings[] = "%{$search}%";
+            $bindings[] = "%{$search}%";
+            $bindings[] = "%{$search}%";
+            $bindings[] = "%{$search}%";
+        }
+
+        $sql = "SELECT AVG(TIMESTAMPDIFF(MINUTE, 
+                IF(ok.jenis = 'Pemeliharaan', jp.tgl_terakhir, pk.created_at), pt.tgl_selesai)
+            ) as rata_rata_penyelesaian
+        FROM penugasan_teknisi pt
+        JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
+        JOIN mst_pegawai p ON pt.pegawai_id = p.pegawai_id
+        LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+        LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+        LEFT JOIN asset a1 ON pk.asset_id = a1.asset_id
+        LEFT JOIN asset a2 ON jp.asset_id = a2.asset_id
+        WHERE $where";
+        $row = DbModel::rawData('row_array', $sql, $bindings);
+        return round($row['rata_rata_penyelesaian'] ?? 0, 2);
     }
 }

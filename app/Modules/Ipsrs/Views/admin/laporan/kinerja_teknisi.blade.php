@@ -42,6 +42,10 @@
                                 </select>
                             </div>
                             <div class="col-md-4">
+                                <label class="form-label">Pencarian</label>
+                                <input type="text" name="search" class="form-control">
+                            </div>
+                            <div class="col-md-4">
                                 <div class="input-group mt-4">
                                     <button type="button" class="btn btn-primary btn-filter" ><i class="fas fa-search"></i>&nbsp;Filter</button>
                                     <button type="button" class="btn btn-secondary btn-reset"><i class="fas fa-times"></i>&nbsp;Reset</button>

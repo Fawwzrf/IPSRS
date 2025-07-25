@@ -20,6 +20,35 @@ class AdminLaporan extends MyController
         $this->template = 'ipsrs::admin.laporan.';
     }
 
+    protected function applyPeriodeFilter(&$filter)
+    {
+        $periode = $filter['periode'] ?? 'custom';
+        if ($periode === 'custom') {
+            // Sudah ada tgl_start & tgl_end dari form
+            return;
+        }
+        if ($periode === 'harian' && !empty($filter['tgl_single'])) {
+            $filter['tgl_start'] = $filter['tgl_single'];
+            $filter['tgl_end'] = $filter['tgl_single'];
+            return;
+        }
+        if ($periode === 'bulanan' && !empty($filter['bulan']) && !empty($filter['tahun_bulan'])) {
+            $bulan = $filter['bulan'];
+            $tahun = $filter['tahun_bulan'];
+            $lastDay = date('t', strtotime("01-$bulan-$tahun"));
+            $filter['tgl_start'] = "01-$bulan-$tahun";
+            $filter['tgl_end'] = "$lastDay-$bulan-$tahun";
+            return;
+        }
+        if ($periode === 'tahunan' && !empty($filter['tahun'])) {
+            $filter['tgl_start'] = '01-01-' . $filter['tahun'];
+            $filter['tgl_end'] = '31-12-' . $filter['tahun'];
+            return;
+        }
+        // Default: hari ini
+        $filter['tgl_start'] = date('d-m-Y');
+        $filter['tgl_end'] = date('d-m-Y');
+    }
     /**
      * Menampilkan laporan Kinerja Aset.
      */
@@ -27,7 +56,7 @@ class AdminLaporan extends MyController
     {
         $d = [];
         $this->save_session_search($d);
-        
+
         // Ambil data untuk filter
         $d['all_kategori_asset'] = DbModel::allData('mst_kategori_asset', ['deleted_st' => 0]);
         $d['all_lokasi'] = DbModel::allData('mst_lokasi', ['deleted_st' => 0]);
@@ -36,7 +65,13 @@ class AdminLaporan extends MyController
         // Untuk ekspor ke Excel jika diminta
         if (request('export') == 'excel') {
             $headers = [
-                'No', 'Kode Aset', 'Nama Aset', 'Kategori', 'Lokasi', 'Tgl Mulai', 'Total Biaya (Rp)'
+                'No',
+                'Kode Aset',
+                'Nama Aset',
+                'Kategori',
+                'Lokasi',
+                'Tgl Mulai',
+                'Total Biaya (Rp)'
             ];
             $data = [];
             $no = 1;
@@ -65,6 +100,12 @@ class AdminLaporan extends MyController
             return response()->json($result);
         }
 
+        // Tambahkan kode ini untuk memastikan filter tanggal selalu ada
+        if (empty($d['nav_sess']['search']['data']['tgl_start']) || empty($d['nav_sess']['search']['data']['tgl_end'])) {
+            $d['nav_sess']['search']['data']['tgl_start'] = date('01-m-Y');
+            $d['nav_sess']['search']['data']['tgl_end'] = date('t-m-Y');
+        }
+
         return $this->renderView($this->template . 'kinerja_aset', $d);
     }
 
@@ -75,7 +116,7 @@ class AdminLaporan extends MyController
     {
         $d = [];
         $this->save_session_search($d);
-        
+
         // Ambil data untuk filter
         $d['all_teknisi'] = DbModel::allData('mst_pegawai', ['jabatan_id' => '90', 'deleted_st' => 0]);
 
@@ -83,7 +124,10 @@ class AdminLaporan extends MyController
         if (request('export') == 'excel') {
             try {
                 return $this->exportToExcel($d['laporan'], 'Laporan_Kinerja_Teknisi', [
-                    'Nama Teknisi', 'Total Tugas', 'Tugas Selesai', 'Rata-rata Durasi (Menit)'
+                    'Nama Teknisi',
+                    'Total Tugas',
+                    'Tugas Selesai',
+                    'Rata-rata Durasi (Menit)'
                 ]);
             } catch (\Exception $e) {
                 Log::error('Error exporting laporan: ' . $e->getMessage());
@@ -102,8 +146,16 @@ class AdminLaporan extends MyController
             return response()->json($result);
         }
 
+        // Tambahkan kode ini untuk memastikan filter tanggal selalu ada
+        if (empty($d['nav_sess']['search']['data']['tgl_start']) || empty($d['nav_sess']['search']['data']['tgl_end'])) {
+            $d['nav_sess']['search']['data']['tgl_start'] = date('01-m-Y');
+            $d['nav_sess']['search']['data']['tgl_end'] = date('t-m-Y');
+        }
+
         return $this->renderView($this->template . 'kinerja_teknisi', $d);
     }
+
+
 
     /**
      * Menampilkan laporan Biaya Pemeliharaan & Perbaikan.
@@ -113,11 +165,6 @@ class AdminLaporan extends MyController
         $d = [];
         $this->save_session_search($d);
 
-        // Set default date range jika tidak ada
-        if (empty($d['nav_sess']['search']['data']['tgl_start'])) {
-            $d['nav_sess']['search']['data']['tgl_start'] = date('d-m-Y', strtotime('-30 days'));
-            $d['nav_sess']['search']['data']['tgl_end'] = date('d-m-Y');
-        }
 
         // Pastikan $d['laporan'] selalu terdefinisi agar tidak undefined
         if (!isset($d['laporan']) || !is_array($d['laporan'])) {
@@ -126,6 +173,7 @@ class AdminLaporan extends MyController
 
         // Hitung total biaya keseluruhan sesuai filter
         $filter = $request->all();
+        $this->applyPeriodeFilter($filter);
         $total_biaya = $this->model->getTotalBiayaPemeliharaan($filter);
 
         $d['total_biaya'] = $total_biaya;
@@ -134,8 +182,13 @@ class AdminLaporan extends MyController
         if (request('export') == 'excel') {
             try {
                 return $this->exportToExcel($d['laporan'], 'Laporan_Biaya_Pemeliharaan', [
-                    'Tanggal OK', 'ID Order Kerja', 'Aset', 'Jenis Pekerjaan', 
-                    'Biaya Sparepart (Rp)', 'Biaya Lain (Rp)', 'Total Biaya (Rp)'
+                    'Tanggal OK',
+                    'ID Order Kerja',
+                    'Aset',
+                    'Jenis Pekerjaan',
+                    'Biaya Sparepart (Rp)',
+                    'Biaya Lain (Rp)',
+                    'Total Biaya (Rp)'
                 ]);
             } catch (\Exception $e) {
                 Log::error('Error exporting laporan: ' . $e->getMessage());
@@ -146,12 +199,24 @@ class AdminLaporan extends MyController
         if ($request->ajax()) {
             // Proses datatables
             $filter = $request->all();
+            $this->applyPeriodeFilter($filter);
             $start = intval($request->start ?? 0);
             $length = intval($request->length ?? 10);
             $order = $request->order ?? [];
-            $search = $request->search['value'] ?? '';
+            $search = $request->search['value'] ?? $request->input('search', '');
+            if (is_array($search)) {
+                $search = implode(' ', $search);
+            }
+            $filter['search'] = $search;
             $result = $this->model->getDatatablesBiayaPemeliharaan($filter, $start, $length, $order, $search);
+
             return response()->json($result);
+        }
+
+        // Tambahkan kode ini untuk memastikan filter tanggal selalu ada
+        if (empty($d['nav_sess']['search']['data']['tgl_start']) || empty($d['nav_sess']['search']['data']['tgl_end'])) {
+            $d['nav_sess']['search']['data']['tgl_start'] = date('01-m-Y');
+            $d['nav_sess']['search']['data']['tgl_end'] = date('t-m-Y');
         }
 
         return $this->renderView($this->template . 'biaya_pemeliharaan', $d);
@@ -165,19 +230,19 @@ class AdminLaporan extends MyController
         $d = [];
         $this->save_session_search($d);
 
-        // Set default tanggal jika belum ada di session
-        if (empty($d['nav_sess']['search']['data']['tgl_start'])) {
-            $d['nav_sess']['search']['data']['tgl_start'] = date('01-m-Y');
-            $d['nav_sess']['search']['data']['tgl_end'] = date('d-m-Y');
-        }
-
         // Dropdown teknisi
         $d['all_teknisi'] = DbModel::allData('mst_pegawai', ['jabatan_id' => '90', 'deleted_st' => 0]);
 
         // Ekspor Excel
         if (request('export') == 'excel') {
             $headers = [
-                'Order ID', 'Teknisi', 'Aset', 'Respon Admin', 'Penerimaan Teknisi', 'Pengerjaan', 'Total Penyelesaian'
+                'Order ID',
+                'Teknisi',
+                'Aset',
+                'Respon Admin',
+                'Penerimaan Teknisi',
+                'Pengerjaan',
+                'Total Penyelesaian'
             ];
             $data = [];
             foreach ($d['laporan'] as $row) {
@@ -200,9 +265,20 @@ class AdminLaporan extends MyController
             $start = intval($request->start ?? 0);
             $length = intval($request->length ?? 10);
             $order = $request->order ?? [];
-            $search = $request->search['value'] ?? '';
+            $search = $request->search['value'] ?? $request->input('search', '');
+            if (is_array($search)) {
+                $search = implode(' ', $search);
+            }
+            $filter['search'] = $search; // <-- Tambahkan baris ini!
             $result = $this->model->getDatatablesKinerjaTim($filter, $start, $length, $order, $search);
+            $result['rata_rata_penyelesaian'] = $this->model->getRataRataPenyelesaianTim($filter);
             return response()->json($result);
+        }
+
+        // Tambahkan kode ini untuk memastikan filter tanggal selalu ada
+        if (empty($d['nav_sess']['search']['data']['tgl_start']) || empty($d['nav_sess']['search']['data']['tgl_end'])) {
+            $d['nav_sess']['search']['data']['tgl_start'] = date('01-m-Y');
+            $d['nav_sess']['search']['data']['tgl_end'] = date('t-m-Y');
         }
 
         return $this->renderView($this->template . 'kinerja_tim', $d);
@@ -220,13 +296,13 @@ class AdminLaporan extends MyController
     {
         // Fungsi ini bisa diimplementasikan dengan library Excel seperti PhpSpreadsheet
         // Untuk sekarang, kita gunakan CSV sebagai fallback sederhana
-        
+
         $filename = $filename . '_' . date('Ymd_His') . '.csv';
         $handle = fopen('php://temp', 'r+');
-        
+
         // Tulis header
         fputcsv($handle, $headers);
-        
+
         // Tulis data
         foreach ($data as $row) {
             $values = [];
@@ -286,22 +362,24 @@ class AdminLaporan extends MyController
             }
             fputcsv($handle, $values);
         }
-        
+
         rewind($handle);
         $content = stream_get_contents($handle);
         fclose($handle);
-        
+
         // Set headers dan kirim file
         $headers = [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ];
-        
+
         return response($content, 200, $headers);
     }
+
     public function ajax_datatables(Request $request)
     {
         $filter = $request->all();
+        $this->applyPeriodeFilter($filter);
         $start = intval($request->start ?? 0);
         $length = intval($request->length ?? 10);
         $order = $request->order ?? [];
