@@ -35,24 +35,35 @@ class SparepartModel extends Model
     static function loadDatatables()
     {
         self::initSession();
-        
-        $where = "1 = 1 ";
 
-        // Filter berdasarkan status aktif
-        if (@self::$nav_sess['search']['data']['active_st'] != '') {
-            $where .= " AND a.active_st = '" . @self::$nav_sess['search']['data']['active_st'] . "' ";
+        $filters = [];
+        $params = [];
+
+        // Filter status aktif
+        $activeSt = @self::$nav_sess['search']['data']['active_st'];
+        if ($activeSt !== '') {
+            $filters[] = "a.active_st = ?";
+            $params[] = $activeSt;
         }
-        
-        // Filter berdasarkan pencarian
-        if (@self::$nav_sess['search']['data']['term'] != '') {
-            $where .= " AND (
-                LOWER(a.sparepart_id) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%' 
-                OR LOWER(a.sparepart_nm) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%'
-                OR LOWER(a.no_seri) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%'
-                OR LOWER(a.merk) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%'
-                OR LOWER(a.lokasi_penyimpanan) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%'
-            ) ";
+
+        // Filter pencarian
+        $term = @self::$nav_sess['search']['data']['term'];
+        if ($term !== '') {
+            $likeTerm = '%' . strtolower($term) . '%';
+            $filters[] = "(" .
+                "LOWER(a.sparepart_id) LIKE ? OR " .
+                "LOWER(a.sparepart_nm) LIKE ? OR " .
+                "LOWER(a.no_seri) LIKE ? OR " .
+                "LOWER(a.merk) LIKE ? OR " .
+                "LOWER(a.lokasi_penyimpanan) LIKE ?" .
+            ")";
+            $params = array_merge($params, array_fill(0, 5, $likeTerm));
         }
+
+        // Always filter deleted_st
+        $filters[] = "a.deleted_st = 0";
+
+        $where = implode(' AND ', $filters);
 
         $query = "SELECT * FROM (
                     SELECT 
@@ -60,14 +71,14 @@ class SparepartModel extends Model
                         a.harga, a.stok, a.lokasi_penyimpanan, a.active_st
                     FROM 
                         mst_sparepart a
-                    WHERE $where AND a.deleted_st = 0
+                    WHERE $where
                 ) x ";
-                
+
         $search = ['sparepart_id', 'sparepart_nm', 'no_seri', 'merk', 'lokasi_penyimpanan'];
         $where = null;
         $isWhere = null;
-        
-        $result = DbModel::datatablesQuery($query, $search, $where, $isWhere);
+
+        $result = DbModel::datatablesQuery($query, $search, $where, $isWhere, $params);
         return response()->json($result);
     }
 }

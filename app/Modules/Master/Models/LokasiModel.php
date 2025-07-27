@@ -120,6 +120,4 @@ class LokasiModel extends Model
         $result = DbModel::datatablesQuery($sql, $searchColumns, $where, $isWhere);
         return response()->json($result);
     }
-
-    // Pertahankan fungsi lain yang sudah ada...
 }
