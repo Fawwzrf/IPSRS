@@ -2,14 +2,14 @@
     <h5 class="modal-title">Tambah Log Kerja</h5>
 </div>
 
-<form id="form-log-kerja" action="{{ $form_act }}" method="post" enctype="multipart/form-data">
-    @csrf
+<form id="form-log-kerja" action="<?= $form_act ?>" method="post" enctype="multipart/form-data">
+    <?php echo csrf_field(); ?>
     <div class="modal-body">
         <div id="form-message"></div>
 
-        <input type="hidden" name="order_kerja_id" value="{{ $order_kerja_id }}">
-        <input type="hidden" name="asset_id" value="{{ $asset_id }}">
-        <input type="hidden" name="n" value="{{ $n_param ?? '' }}">
+        <input type="hidden" name="order_kerja_id" value="<?= $order_kerja_id ?>">
+        <input type="hidden" name="asset_id" value="<?= $asset_id ?>">
+        <input type="hidden" name="n" value="<?= $n_param ?? '' ?>">
 
         <div class="mb-3">
             <label class="form-label required">Diagnosa</label>
@@ -47,21 +47,21 @@
             <input type="file" name="fotos[]" class="form-control" multiple accept="image/*">
             <div class="form-text text-muted">Upload foto hasil pekerjaan (bisa lebih dari satu).</div>
         </div>
-        @if (!empty($log_fotos))
+        <?php if (!empty($log_fotos)): ?>
                 <div class="row mt-3">
                     <div class="col-12">
                         <p><strong>Foto Bukti yang Sudah Diunggah:</strong></p>
                         <div class="d-flex flex-wrap">
-                            @foreach ($log_fotos as $foto)
+                            <?php foreach ($log_fotos as $foto): ?>
                                 <div class="me-2 mb-2">
-                                    <img src="{{ $foto['foto_url'] }}" alt="Foto Bukti" class="img-thumbnail"
+                                    <img src="<?= $foto['foto_url'] ?>" alt="Foto Bukti" class="img-thumbnail"
                                         style="height: 100px;">
                                 </div>
-                            @endforeach
+                            <?php endforeach; ?>
                         </div>
                     </div>
                 </div>
-            @endif
+            <?php endif; ?>
 
         <div class="mb-3">
             <label class="form-label">Sparepart yang Digunakan</label>
@@ -70,9 +70,9 @@
                     <div class="col-md-6">
                         <select name="sparepart_id[]" class="form-select">
                             <option value="">-- Pilih Sparepart --</option>
-                            @foreach($all_sparepart as $sp)
-                                <option value="{{ $sp['sparepart_id'] }}">{{ $sp['sparepart_nm'] }}</option>
-                            @endforeach
+                            <?php foreach($all_sparepart as $sp): ?>
+                                <option value="<?= $sp['sparepart_id'] ?>"><?= $sp['sparepart_nm'] ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="col-md-4">

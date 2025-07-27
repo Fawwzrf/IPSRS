@@ -10,47 +10,47 @@
         </div>
     </div>
     
-    @if (isset($error_message))
+    <?php if (isset($error_message)): ?>
         <div class="alert alert-danger" role="alert">
             <h4 class="alert-title">Terjadi Kesalahan</h4>
-            <div>{{ $error_message }}</div>
+            <div><?= $error_message ?></div>
         </div>
-    @endif
+    <?php endif ?>
 
-    @if (isset($tugas_baru_count) && $tugas_baru_count > 0)
+    <?php if (isset($tugas_baru_count) && $tugas_baru_count > 0): ?>
         <div class="alert alert-info d-flex flex-column flex-md-row align-items-md-center justify-content-md-between" role="alert">
             <div>
-                <h4 class="alert-title mb-1">{{ $tugas_baru_count }} tugas baru!</h4>
+                <h4 class="alert-title mb-1"><?= $tugas_baru_count ?> tugas baru!</h4>
                 <div>Segera periksa daftar tugas Anda</div>
             </div>
-            <a href="{{ url('ipsrs/teknisitugas') }}?n={{ request('n') }}" class="btn btn-primary mt-2 mt-md-0">
+            <a href="<?= url('ipsrs/teknisitugas') ?>?n=<?= request('n') ?>" class="btn btn-primary mt-2 mt-md-0">
                 <i class="fas fa-clipboard-list me-1"></i> Lihat Tugas
             </a>
         </div>
-    @endif
+    <?php endif ?>
 
     <!-- Statistik Ringkasan -->
     <div class="row g-2 mb-2">
-        @foreach([
+        <?php foreach([
             ['count' => $tugas_baru_count ?? 0, 'label' => 'Tugas Baru', 'icon' => 'clipboard-list', 'bg' => 'primary text-white'],
             ['count' => isset($tugas_aktif_list) && is_array($tugas_aktif_list) ? count($tugas_aktif_list) : 0, 'label' => 'Pekerjaan Aktif', 'icon' => 'tools', 'bg' => 'success text-white'],
             ['count' => $tugas_selesai_count ?? 0, 'label' => 'Selesai Bulan Ini', 'icon' => 'check-circle', 'bg' => 'info text-white'],
             ['count' => $tugas_mendesak_count ?? 0, 'label' => 'Prioritas Tinggi', 'icon' => 'clock', 'bg' => 'warning text-white'],
-        ] as $stat)
+        ] as $stat): ?>
         <div class="col-6 col-md-3">
             <div class="card mobile-card shadow-sm">
                 <div class="card-body p-2 px-3 d-flex align-items-center">
-                    <div class="avatarlogo bg-{{ $stat['bg'] }} me-2 flex-shrink-0">
-                        <i class="fas fa-{{ $stat['icon'] }}"></i>
+                    <div class="avatarlogo bg-<?= $stat['bg'] ?> me-2 flex-shrink-0">
+                        <i class="fas fa-<?= $stat['icon'] ?>"></i>
                     </div>
                     <div>
-                        <div class="fw-bold fs-5">{{ $stat['count'] }}</div>
-                        <div class="text-muted text-truncate small">{{ $stat['label'] }}</div>
+                        <div class="fw-bold fs-5"><?= $stat['count'] ?></div>
+                        <div class="text-muted text-truncate small"><?= $stat['label'] ?></div>
                     </div>
                 </div>
             </div>
         </div>
-        @endforeach
+        <?php endforeach ?>
     </div>
 
     <!-- Tugas Aktif Card -->
@@ -58,36 +58,38 @@
         <div class="card-header py-2">
             <div class="d-flex justify-content-between align-items-center">
                 <h3 class="card-title m-0 fs-6 fw-bold">Tugas Sedang Dikerjakan</h3>
-                <a href="{{ url('ipsrs/teknisitugas') }}?n={{ request('n') }}" class="btn btn-sm btn-outline-primary">
+                <a href="<?= url('ipsrs/teknisitugas') ?>?n=<?= request('n') ?>" class="btn btn-sm btn-outline-primary">
                     Semua <i class="fas fa-chevron-right ms-1"></i>
                 </a>
             </div>
         </div>
         <div class="list-group list-group-flush">
-            @forelse($tugas_aktif_list ?? [] as $tugas)
-                <div class="list-group-item p-2" onclick="_modal(event, {uri: '{{ url('ipsrs/teknisitugas/detail/' . $tugas['penugasan_id']) }}?n={{ request('n') }}', size: 'modal-lg', title: 'Detail Tugas'})">
+            <?php if (!empty($tugas_aktif_list)): ?>
+                <?php foreach($tugas_aktif_list as $tugas): ?>
+                <div class="list-group-item p-2" onclick="_modal(event, {uri: '<?= url('ipsrs/teknisitugas/detail/' . $tugas['penugasan_id']) ?>?n=<?= request('n') ?>', size: 'modal-lg', title: 'Detail Tugas'})">
                     <div class="d-flex justify-content-between align-items-center mb-1">
-                        <strong class="text-truncate">{{ $tugas['asset_nm'] ?? '-' }}</strong>
-                        @if(isset($tugas['prioritas']))
-                            <span class="badge bg-{{ $tugas['prioritas'] == 'tinggi' ? 'danger' : ($tugas['prioritas'] == 'sedang' ? 'warning' : 'info') }}">
-                                {{ ucfirst($tugas['prioritas']) }}
+                        <strong class="text-truncate"><?= $tugas['asset_nm'] ?? '-' ?></strong>
+                        <?php if(isset($tugas['prioritas'])): ?>
+                            <span class="badge bg-<?= $tugas['prioritas'] == 'tinggi' ? 'danger' : ($tugas['prioritas'] == 'sedang' ? 'warning' : 'info') ?>">
+                                <?= ucfirst($tugas['prioritas']) ?>
                             </span>
-                        @endif
+                        <?php endif ?>
                     </div>
                     <div class="d-flex align-items-center text-muted small">
                         <i class="fas fa-map-marker-alt me-1"></i>
-                        {{ $tugas['lokasi_nm'] ?? '-' }}
+                        <?= $tugas['lokasi_nm'] ?? '-' ?>
                     </div>
                     <div class="text-muted small">
-                        {{ \Illuminate\Support\Str::limit($tugas['deskripsi'] ?? '-', 60) }}
+                        <?= \Illuminate\Support\Str::limit($tugas['deskripsi'] ?? '-', 60) ?>
                     </div>
                 </div>
-            @empty
+                <?php endforeach ?>
+            <?php else: ?>
                 <div class="empty p-3">
                     <i class="fas fa-tools fa-2x text-muted mb-2"></i>
                     <div class="empty-title">Tidak ada pekerjaan aktif</div>
                 </div>
-            @endforelse
+            <?php endif ?>
         </div>
     </div>
 
@@ -97,28 +99,28 @@
             <h3 class="card-title m-0 fs-6 fw-bold">Jadwal Pemeliharaan Mendatang</h3>
         </div>
         <div class="list-group list-group-flush">
-            @if(isset($jadwal_mendatang) && is_array($jadwal_mendatang) && count($jadwal_mendatang) > 0)
-                @foreach($jadwal_mendatang as $jadwal)
+            <?php if(isset($jadwal_mendatang) && is_array($jadwal_mendatang) && count($jadwal_mendatang) > 0): ?>
+                <?php foreach($jadwal_mendatang as $jadwal): ?>
                     <div class="list-group-item p-2">
                         <div class="d-flex justify-content-between align-items-center mb-1">
-                            <strong class="text-truncate">{{ $jadwal['asset_nm'] ?? '-' }}</strong>
-                            <span class="badge bg-danger">{{ isset($jadwal['tgl_jadwal']) ? to_date($jadwal['tgl_jadwal']) : '-' }}</span>
+                            <strong class="text-truncate"><?= $jadwal['asset_nm'] ?? '-' ?></strong>
+                            <span class="badge bg-danger"><?= isset($jadwal['tgl_jadwal']) ? to_date($jadwal['tgl_jadwal']) : '-' ?></span>
                         </div>
                         <div class="d-flex align-items-center text-muted small">
                             <i class="fas fa-map-marker-alt me-1"></i>
-                            {{ $jadwal['lokasi_nm'] ?? '-' }}
+                            <?= $jadwal['lokasi_nm'] ?? '-' ?>
                         </div>
                         <div class="text-muted small">
-                            {{ \Illuminate\Support\Str::limit($jadwal['deskripsi'] ?? 'Pemeliharaan Rutin', 60) }}
+                            <?= \Illuminate\Support\Str::limit($jadwal['deskripsi'] ?? 'Pemeliharaan Rutin', 60) ?>
                         </div>
                     </div>
-                @endforeach
-            @else
+                <?php endforeach ?>
+            <?php else: ?>
                 <div class="empty p-3">
                     <i class="fas fa-calendar-alt fa-2x text-muted mb-2"></i>
                     <div class="empty-title">Tidak ada jadwal mendatang</div>
                 </div>
-            @endif
+            <?php endif ?>
         </div>
     </div>
 
@@ -149,25 +151,25 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @if(isset($top_spareparts) && is_array($top_spareparts) && count($top_spareparts) > 0)
-                        @foreach($top_spareparts as $part)
+                    <?php if(isset($top_spareparts) && is_array($top_spareparts) && count($top_spareparts) > 0): ?>
+                        <?php foreach($top_spareparts as $part): ?>
                             <tr>
-                                <td>{{ $part['sparepart_nm'] ?? '-' }}</td>
-                                <td class="text-center">{{ $part['jumlah_pakai'] ?? 0 }}</td>
+                                <td><?= $part['sparepart_nm'] ?? '-' ?></td>
+                                <td class="text-center"><?= $part['jumlah_pakai'] ?? 0 ?></td>
                                 <td class="text-center">
-                                    @if(isset($part['stok']) && isset($part['stok_min']) && $part['stok'] <= $part['stok_min'])
-                                        <span class="badge bg-danger">{{ $part['stok'] }}</span>
-                                    @else
-                                        <span class="badge bg-success">{{ $part['stok'] ?? 0 }}</span>
-                                    @endif
+                                    <?php if(isset($part['stok']) && isset($part['stok_min']) && $part['stok'] <= $part['stok_min']): ?>
+                                        <span class="badge bg-danger"><?= $part['stok'] ?></span>
+                                    <?php else: ?>
+                                        <span class="badge bg-success"><?= $part['stok'] ?? 0 ?></span>
+                                    <?php endif ?>
                                 </td>
                             </tr>
-                        @endforeach
-                    @else
+                        <?php endforeach ?>
+                    <?php else: ?>
                         <tr>
                             <td colspan="3" class="text-center text-muted py-3">Belum ada data penggunaan sparepart</td>
                         </tr>
-                    @endif
+                    <?php endif ?>
                 </tbody>
             </table>
         </div>
@@ -200,70 +202,3 @@
     }
 </style>
 
-@section('scripts')
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        try {
-            console.log("Chart initialization started");
-            
-            // Data untuk grafik
-            const selesaiData = [{{ implode(',', isset($chart_kinerja) && isset($chart_kinerja['selesai']) ? $chart_kinerja['selesai'] : [0,0,0,0]) }}];
-            const baruData = [{{ implode(',', isset($chart_kinerja) && isset($chart_kinerja['baru']) ? $chart_kinerja['baru'] : [0,0,0,0]) }}];
-            
-            console.log("Chart data:", selesaiData, baruData);
-            
-            // Mendapatkan referensi ke canvas
-            const ctx = document.getElementById('chart-kinerja');
-            if (!ctx) {
-                console.error("Canvas element not found!");
-                return;
-            }
-            
-            // Chart.js versi lama menggunakan sintaks yang berbeda
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Minggu 1', 'Minggu 2', 'Minggu 3', 'Minggu 4'],
-                    datasets: [{
-                        label: 'Tugas Selesai',
-                        data: selesaiData,
-                        backgroundColor: '#206bc4',
-                        borderColor: '#206bc4',
-                        borderWidth: 1
-                    }, {
-                        label: 'Tugas Baru',
-                        data: baruData,
-                        backgroundColor: '#79a6dc',
-                        borderColor: '#79a6dc',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        yAxes: [{
-                            ticks: {
-                                beginAtZero: true,
-                                precision: 0
-                            }
-                        }]
-                    },
-                    tooltips: {
-                        callbacks: {
-                            label: function(tooltipItem, data) {
-                                return data.datasets[tooltipItem.datasetIndex].label + ': ' + tooltipItem.yLabel + ' tugas';
-                            }
-                        }
-                    }
-                }
-            });
-            
-            console.log("Chart rendered successfully");
-        } catch (error) {
-            console.error("Error rendering chart:", error);
-            console.error(error.stack);
-        }
-    });
-</script>
-@endsection

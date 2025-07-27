@@ -1,4 +1,4 @@
-@php
+<?php
     function getPrioritasBadge($prioritas)
     {
         switch (strtolower($prioritas)) {
@@ -10,23 +10,23 @@
                 return '<span class="badge bg-secondary me-1">Normal</span>';
         }
     }
-@endphp
+?>
 
 @include('ipsrs::teknisi.tugas._js')
 
 <div class="container-fluid p-0">
-    @if (session('success'))
+    <?php if (session('success')): ?>
         <div class="alert alert-success alert-dismissible fade show mt-2" role="alert">
-            {{ session('success') }}
+            <?= session('success') ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-    @endif
-    @if (session('error'))
+    <?php endif; ?>
+    <?php if (session('error')): ?>
         <div class="alert alert-danger alert-dismissible fade show mt-2" role="alert">
-            {{ session('error') }}
+            <?= session('error') ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-    @endif
+    <?php endif; ?>
 
     <div class="page-header d-flex flex-column">
         <h2 class="page-title m-3">Daftar Tugas Saya</h2>
@@ -41,18 +41,18 @@
                         <a href="#tabs-baru" class="nav-link active" data-bs-toggle="tab">
                             <i class="fas fa-clipboard-list me-1 d-md-none"></i>
                             <span>Tugas Baru</span>
-                            @if(count($list_tugas_baru) > 0)
-                                <span class="badge bg-danger ms-1">{{ count($list_tugas_baru) }}</span>
-                            @endif
+                            <?php if(count($list_tugas_baru) > 0): ?>
+                                <span class="badge bg-danger ms-1"><?= count($list_tugas_baru) ?></span>
+                            <?php endif; ?>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="#tabs-dikerjakan" class="nav-link" data-bs-toggle="tab">
                             <i class="fas fa-tools me-1 d-md-none"></i>
                             <span>Dikerjakan</span>
-                            @if(count($list_tugas_dikerjakan) > 0)
-                                <span class="badge bg-danger ms-1">{{ count($list_tugas_dikerjakan) }}</span>
-                            @endif
+                            <?php if(count($list_tugas_dikerjakan) > 0): ?>
+                                <span class="badge bg-danger ms-1"><?= count($list_tugas_dikerjakan) ?></span>
+                            <?php endif; ?>
                         </a>
                     </li>
                     <li class="nav-item">
@@ -72,131 +72,131 @@
         </div>
         <div class="card-body p-0">
             <div class="tab-content">
-                {{-- Tab untuk Tugas Baru --}}
+                <!-- Tab untuk Tugas Baru -->
                 <div class="tab-pane active show" id="tabs-baru">
                     <div class="list-group list-group-flush">
-                        @forelse($list_tugas_baru as $tugas)
-                            <div class="list-group-item p-3" onclick="_modal(event, {uri: '{{ url('ipsrs/teknisitugas/form_detail_modal/' . $tugas['penugasan_id']) }}', size: 'modal-lg', title: 'Detail Tugas'})">
+                        <?php if(!empty($list_tugas_baru)): foreach($list_tugas_baru as $tugas): ?>
+                            <div class="list-group-item p-3" onclick="_modal(event, {uri: '<?= url('ipsrs/teknisitugas/form_detail_modal/' . $tugas['penugasan_id']) ?>', size: 'modal-lg', title: 'Detail Tugas'})">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <strong class="text-truncate">{{ $tugas['asset_nm'] }}</strong>
-                                    <div>{!! getPrioritasBadge($tugas['prioritas']) !!}</div>
+                                    <strong class="text-truncate"><?= $tugas['asset_nm'] ?></strong>
+                                    <div><?= getPrioritasBadge($tugas['prioritas']) ?></div>
                                 </div>
                                 <div class="d-flex align-items-center text-muted small mb-2">
                                     <i class="fas fa-map-marker-alt me-1"></i>
-                                    {{ $tugas['lokasi_nm'] }}
+                                    <?= $tugas['lokasi_nm'] ?>
                                 </div>
-                                {{-- Tampilkan Sumber Pekerjaan --}}
+                                <!-- Tampilkan Sumber Pekerjaan -->
                                 <div class="d-flex flex-wrap gap-1 mb-2">
-                                    @if (!empty($tugas['permintaan_id']))
+                                    <?php if (!empty($tugas['permintaan_id'])): ?>
                                         <span class="badge bg-azure-lt">Komplain</span>
-                                    @elseif(!empty($tugas['jadwal_pm_id']))
+                                    <?php elseif(!empty($tugas['jadwal_pm_id'])): ?>
                                         <span class="badge bg-purple-lt">Jadwal PM</span>
-                                    @endif
+                                    <?php endif; ?>
                                 </div>
                                 <p class="mb-0 text-muted small">
-                                    {{ \Illuminate\Support\Str::limit($tugas['deskripsi'], 80) }}
+                                    <?= \Illuminate\Support\Str::limit($tugas['deskripsi'], 80) ?>
                                 </p>
                             </div>
-                        @empty
+                        <?php endforeach; else: ?>
                             <div class="empty p-4">
                                 <div class="empty-img">
                                     <i class="fas fa-clipboard fa-3x text-muted"></i>
                                 </div>
                                 <p class="empty-title">Tidak ada tugas baru</p>
                             </div>
-                        @endforelse
+                        <?php endif; ?>
                     </div>
                 </div>
 
-                {{-- Tab untuk Tugas Sedang Dikerjakan --}}
+                <!-- Tab untuk Tugas Sedang Dikerjakan -->
                 <div class="tab-pane" id="tabs-dikerjakan">
                     <div class="list-group list-group-flush">
-                        @forelse($list_tugas_dikerjakan as $tugas)
-                            <div class="list-group-item p-3" onclick="_modal(event, {uri: '{{ url('ipsrs/teknisitugas/form_detail_modal/' . $tugas['penugasan_id']) }}', size: 'modal-lg', title: 'Detail Tugas'})">
+                        <?php if(!empty($list_tugas_dikerjakan)): foreach($list_tugas_dikerjakan as $tugas): ?>
+                            <div class="list-group-item p-3" onclick="_modal(event, {uri: '<?= url('ipsrs/teknisitugas/form_detail_modal/' . $tugas['penugasan_id']) ?>', size: 'modal-lg', title: 'Detail Tugas'})">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <strong class="text-truncate">{{ $tugas['asset_nm'] }}</strong>
-                                    <div>{!! getPrioritasBadge($tugas['prioritas']) !!}</div>
+                                    <strong class="text-truncate"><?= $tugas['asset_nm'] ?></strong>
+                                    <div><?= getPrioritasBadge($tugas['prioritas']) ?></div>
                                 </div>
                                 <div class="d-flex align-items-center text-muted small mb-2">
                                     <i class="fas fa-map-marker-alt me-1"></i>
-                                    {{ $tugas['lokasi_nm'] }}
+                                    <?= $tugas['lokasi_nm'] ?>
                                 </div>
-                                {{-- Tampilkan Sumber Pekerjaan --}}
+                                <!-- Tampilkan Sumber Pekerjaan -->
                                 <div class="d-flex flex-wrap gap-1 mb-2">
-                                    @if(!empty($tugas['permintaan_id']))
+                                    <?php if(!empty($tugas['permintaan_id'])): ?>
                                         <span class="badge bg-azure-lt">Komplain</span>
-                                    @elseif(!empty($tugas['jadwal_pm_id']))
+                                    <?php elseif(!empty($tugas['jadwal_pm_id'])): ?>
                                         <span class="badge bg-purple-lt">Jadwal PM</span>
-                                    @endif
+                                    <?php endif; ?>
                                 </div>
                                 <p class="mb-0 text-muted small">
-                                    {{ \Illuminate\Support\Str::limit($tugas['deskripsi'], 80) }}
+                                    <?= \Illuminate\Support\Str::limit($tugas['deskripsi'], 80) ?>
                                 </p>
                             </div>
-                        @empty
+                        <?php endforeach; else: ?>
                             <div class="empty p-4">
                                 <div class="empty-img">
                                     <i class="fas fa-tools fa-3x text-muted"></i>
                                 </div>
                                 <p class="empty-title">Tidak ada tugas yang sedang dikerjakan</p>
                             </div>
-                        @endforelse
+                        <?php endif; ?>
                     </div>
                 </div>
 
-                {{-- Tab untuk Tugas Selesai --}}
+                <!-- Tab untuk Tugas Selesai -->
                 <div class="tab-pane" id="tabs-selesai">
                     <div class="list-group list-group-flush">
-                        @forelse($list_tugas_selesai as $tugas)
-                            <div class="list-group-item p-3" onclick="_modal(event, {uri: '{{ url('ipsrs/teknisitugas/form_detail_modal/' . $tugas['penugasan_id']) }}', size: 'modal-lg', title: 'Detail Tugas'})">
+                        <?php if(!empty($list_tugas_selesai)): foreach($list_tugas_selesai as $tugas): ?>
+                            <div class="list-group-item p-3" onclick="_modal(event, {uri: '<?= url('ipsrs/teknisitugas/form_detail_modal/' . $tugas['penugasan_id']) ?>', size: 'modal-lg', title: 'Detail Tugas'})">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <strong class="text-truncate">{{ $tugas['asset_nm'] }}</strong>
+                                    <strong class="text-truncate"><?= $tugas['asset_nm'] ?></strong>
                                     <span class="badge bg-success">Selesai</span>
                                 </div>
                                 <div class="d-flex align-items-center text-muted small mb-2">
                                     <i class="fas fa-map-marker-alt me-1"></i>
-                                    {{ $tugas['lokasi_nm'] }}
+                                    <?= $tugas['lokasi_nm'] ?>
                                 </div>
                                 <p class="mb-0 text-muted small">
-                                    {{ \Illuminate\Support\Str::limit($tugas['deskripsi'], 80) }}
+                                    <?= \Illuminate\Support\Str::limit($tugas['deskripsi'], 80) ?>
                                 </p>
                             </div>
-                        @empty
+                        <?php endforeach; else: ?>
                             <div class="empty p-4">
                                 <div class="empty-img">
                                     <i class="fas fa-check-circle fa-3x text-muted"></i>
                                 </div>
                                 <p class="empty-title">Belum ada tugas yang selesai</p>
                             </div>
-                        @endforelse
+                        <?php endif; ?>
                     </div>
                 </div>
 
-                {{-- Tab untuk Tugas Ditolak --}}
+                <!-- Tab untuk Tugas Ditolak -->
                 <div class="tab-pane" id="tabs-ditolak">
                     <div class="list-group list-group-flush">
-                        @forelse($list_tugas_ditolak as $tugas)
-                            <div class="list-group-item p-3" onclick="_modal(event, {uri: '{{ url('ipsrs/teknisitugas/form_detail_modal/' . $tugas['penugasan_id']) }}', size: 'modal-lg', title: 'Detail Tugas'})">
+                        <?php if(!empty($list_tugas_ditolak)): foreach($list_tugas_ditolak as $tugas): ?>
+                            <div class="list-group-item p-3" onclick="_modal(event, {uri: '<?= url('ipsrs/teknisitugas/form_detail_modal/' . $tugas['penugasan_id']) ?>', size: 'modal-lg', title: 'Detail Tugas'})">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <strong class="text-truncate">{{ $tugas['asset_nm'] }}</strong>
+                                    <strong class="text-truncate"><?= $tugas['asset_nm'] ?></strong>
                                     <span class="badge bg-danger">Ditolak</span>
                                 </div>
                                 <div class="d-flex align-items-center text-muted small mb-2">
                                     <i class="fas fa-map-marker-alt me-1"></i>
-                                    {{ $tugas['lokasi_nm'] }}
+                                    <?= $tugas['lokasi_nm'] ?>
                                 </div>
                                 <p class="mb-0 text-muted small">
-                                    Alasan: {{ $tugas['catatan_penolakan'] ?? 'Tidak ada alasan.' }}
+                                    Alasan: <?= $tugas['catatan_penolakan'] ?? 'Tidak ada alasan.' ?>
                                 </p>
                             </div>
-                        @empty
+                        <?php endforeach; else: ?>
                             <div class="empty p-4">
                                 <div class="empty-img">
                                     <i class="fas fa-ban fa-3x text-muted"></i>
                                 </div>
                                 <p class="empty-title">Tidak ada tugas yang ditolak</p>
                             </div>
-                        @endforelse
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>

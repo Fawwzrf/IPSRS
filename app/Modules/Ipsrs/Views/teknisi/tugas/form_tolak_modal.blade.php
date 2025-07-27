@@ -1,6 +1,6 @@
-<form action="{{ $form_act }}" method="post" id="form-ajax">
-    @csrf
-    <input type="hidden" name="penugasan_id" value="{{ $penugasan_id }}">
+<form action="<?= $form_act ?>" method="post" id="form-ajax">
+    <?php echo csrf_field(); ?>
+    <input type="hidden" name="penugasan_id" value="<?= $penugasan_id ?>">
     
     <div class="modal-body">
         <div class="mb-3">

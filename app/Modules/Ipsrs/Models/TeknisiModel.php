@@ -45,15 +45,21 @@ class TeknisiModel extends Model
     public function getListTugasByStatus($teknisi_id, $status, $limit = null)
     {
         try {
-            $sql = "SELECT pt.penugasan_id, pt.catatan_penolakan, ok.order_kerja_id, a.asset_id, a.asset_nm, l.lokasi_nm, ok.jenis, ok.prioritas, ok.permintaan_id,
-            ok.jadwal_pm_id, ok.tgl_dibuat,
-                        COALESCE(pk.deskripsi, 'Pemeliharaan Rutin') as deskripsi
+            $sql = "SELECT pt.penugasan_id, pt.catatan_penolakan, ok.order_kerja_id, 
+                        COALESCE(a_pk.asset_id, a_jp.asset_id) as asset_id, 
+                        COALESCE(a_pk.asset_nm, a_jp.asset_nm) as asset_nm, 
+                        COALESCE(l.lokasi_nm, l2.lokasi_nm) as lokasi_nm, 
+                        ok.jenis, ok.prioritas, ok.permintaan_id,
+                        ok.jadwal_pm_id, ok.tgl_dibuat,
+                        COALESCE(pk.deskripsi, jp.deskripsi, 'Pemeliharaan Rutin') as deskripsi
                     FROM trx_penugasan_teknisi pt
                     JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                     LEFT JOIN trx_permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                     LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
-                    LEFT JOIN mst_asset a ON pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id
-                    LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
+                    LEFT JOIN mst_asset a_pk ON pk.asset_id = a_pk.asset_id
+                    LEFT JOIN mst_asset a_jp ON jp.asset_id = a_jp.asset_id
+                    LEFT JOIN mst_lokasi l ON a_pk.lokasi_id = l.lokasi_id
+                    LEFT JOIN mst_lokasi l2 ON a_jp.lokasi_id = l2.lokasi_id
                     WHERE pt.pegawai_id = ? AND pt.status = ? AND pt.deleted_st = 0
                     ORDER BY ok.tgl_dibuat DESC";
 
@@ -75,8 +81,20 @@ class TeknisiModel extends Model
         $sql = "SELECT 
                     pt.*,
                     ok.order_kerja_id, 
-                    a.asset_id, a.asset_nm, 
-                    l.lokasi_nm, 
+                    -- Pilih asset dari pk jika ada, jika tidak dari jp
+                    CASE 
+                        WHEN pk.asset_id IS NOT NULL THEN pk.asset_id
+                        ELSE jp.asset_id
+                    END AS asset_id,
+                    CASE 
+                        WHEN pk.asset_id IS NOT NULL THEN a_pk.asset_nm
+                        ELSE a_jp.asset_nm
+                    END AS asset_nm,
+                    -- Pilih lokasi dari pk jika ada, jika tidak dari jp
+                    CASE 
+                        WHEN pk.asset_id IS NOT NULL THEN l.lokasi_nm
+                        ELSE l2.lokasi_nm
+                    END AS lokasi_nm,
                     ok.jenis, 
                     ok.tgl_dibuat,
                     pk.deskripsi,
@@ -90,8 +108,10 @@ class TeknisiModel extends Model
                 JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                 LEFT JOIN trx_permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                 LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
-                LEFT JOIN mst_asset a ON pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id
-                LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
+                LEFT JOIN mst_asset a_pk ON pk.asset_id = a_pk.asset_id
+                LEFT JOIN mst_asset a_jp ON jp.asset_id = a_jp.asset_id
+                LEFT JOIN mst_lokasi l ON a_pk.lokasi_id = l.lokasi_id
+                LEFT JOIN mst_lokasi l2 ON a_jp.lokasi_id = l2.lokasi_id
                 LEFT JOIN mst_pegawai pelapor ON pk.pegawai_id = pelapor.pegawai_id
                 WHERE pt.penugasan_id = ? AND pt.deleted_st = 0";
 
@@ -211,21 +231,23 @@ class TeknisiModel extends Model
         $today = date('Y-m-d');
         $next_month = date('Y-m-d', strtotime('+30 days'));
 
-        $sql = "SELECT jp.jadwal_pm_id, jp.tgl_berikutnya, a.asset_nm, l.lokasi_nm, jp.deskripsi
+        $sql = "SELECT 
+                    jp.jadwal_pm_id, 
+                    jp.tgl_berikutnya, 
+                    COALESCE(a.asset_id, NULL) AS asset_id,
+                    COALESCE(a.asset_nm, NULL) AS asset_nm,
+                    COALESCE(l.lokasi_nm, NULL) AS lokasi_nm,
+                    COALESCE(jp.deskripsi, 'Pemeliharaan Rutin') as deskripsi
                 FROM trx_jadwal_pm jp
-                JOIN mst_asset a ON jp.asset_id = a.asset_id
+                LEFT JOIN mst_asset a ON jp.asset_id = a.asset_id
                 LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
                 WHERE jp.tgl_berikutnya BETWEEN ? AND ?
-                AND jp.status = 'aktif'
-                AND a.lokasi_id IN (
-                    SELECT DISTINCT a2.lokasi_id 
-                    FROM trx_penugasan_teknisi pt
-                    JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
-                    LEFT JOIN trx_permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-                    LEFT JOIN trx_jadwal_pm jp2 ON ok.jadwal_pm_id = jp2.jadwal_pm_id
-                    LEFT JOIN mst_asset a2 ON pk.asset_id = a2.asset_id OR jp2.asset_id = a2.asset_id
-                    WHERE pt.pegawai_id = ? AND pt.deleted_st = 0
-                )
+                  AND jp.status = 'aktif'
+                  AND jp.jadwal_pm_id IN (
+                      SELECT pt.jadwal_pm_id
+                      FROM trx_penugasan_teknisi pt
+                      WHERE pt.pegawai_id = ?
+                  )
                 ORDER BY jp.tgl_berikutnya ASC
                 LIMIT ?";
 
@@ -293,23 +315,32 @@ class TeknisiModel extends Model
         try {
             $data = [];
 
+            // Jumlah tugas baru
             $sql = "SELECT COUNT(*) as total FROM trx_penugasan_teknisi 
                     WHERE pegawai_id = ? AND status = 'ditugaskan' AND deleted_st = 0";
             $result = DbModel::rawData('row_array', $sql, [$teknisi_id]);
             $data['tugas_baru_count'] = $result['total'] ?? 0;
 
-            $sql = "SELECT pt.penugasan_id, ok.order_kerja_id, a.asset_nm, l.lokasi_nm, ok.prioritas, 
-                    ok.tgl_dibuat, COALESCE(pk.deskripsi, jp.deskripsi, 'Pemeliharaan Rutin') as deskripsi
+            // Daftar tugas aktif (sedang dikerjakan), gunakan COALESCE dan alias untuk asset/lokasi
+            $sql = "SELECT pt.penugasan_id, ok.order_kerja_id, 
+                        COALESCE(a_pk.asset_id, a_jp.asset_id) AS asset_id,
+                        COALESCE(a_pk.asset_nm, a_jp.asset_nm) AS asset_nm,
+                        COALESCE(l.lokasi_nm, l2.lokasi_nm) AS lokasi_nm,
+                        ok.prioritas, ok.tgl_dibuat, 
+                        COALESCE(pk.deskripsi, jp.deskripsi, 'Pemeliharaan Rutin') AS deskripsi
                     FROM trx_penugasan_teknisi pt
                     JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                     LEFT JOIN trx_permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                     LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
-                    LEFT JOIN mst_asset a ON (pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id)
-                    LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
+                    LEFT JOIN mst_asset a_pk ON pk.asset_id = a_pk.asset_id
+                    LEFT JOIN mst_asset a_jp ON jp.asset_id = a_jp.asset_id
+                    LEFT JOIN mst_lokasi l ON a_pk.lokasi_id = l.lokasi_id
+                    LEFT JOIN mst_lokasi l2 ON a_jp.lokasi_id = l2.lokasi_id
                     WHERE pt.pegawai_id = ? AND pt.status = 'sedang_dikerjakan' AND pt.deleted_st = 0
                     ORDER BY ok.tgl_dibuat DESC LIMIT 5";
             $data['tugas_aktif_list'] = DbModel::rawData('result_array', $sql, [$teknisi_id]) ?: [];
 
+            // Jumlah tugas selesai bulan ini
             $start_date = date('Y-m-01');
             $end_date = date('Y-m-t');
             $sql = "SELECT COUNT(*) as total FROM trx_penugasan_teknisi 
@@ -323,6 +354,7 @@ class TeknisiModel extends Model
             $result = DbModel::rawData('row_array', $sql, [$teknisi_id, $start_date, $end_date, $start_date, $end_date]);
             $data['tugas_selesai_count'] = $result['total'] ?? 0;
 
+            // Jumlah tugas mendesak
             $sql = "SELECT COUNT(*) as total FROM trx_penugasan_teknisi pt
                     JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                     WHERE pt.pegawai_id = ? AND pt.status IN ('ditugaskan','sedang_dikerjakan') 
@@ -330,17 +362,22 @@ class TeknisiModel extends Model
             $result = DbModel::rawData('row_array', $sql, [$teknisi_id]);
             $data['tugas_mendesak_count'] = $result['total'] ?? 0;
 
+            // Jumlah tugas ditolak/dibatalkan
             $sql = "SELECT COUNT(*) as total FROM trx_penugasan_teknisi 
                     WHERE pegawai_id = ? AND status = 'dibatalkan' AND deleted_st = 0";
             $result = DbModel::rawData('row_array', $sql, [$teknisi_id]);
             $data['tugas_ditolak_count'] = $result['total'] ?? 0;
 
+            // Jadwal pemeliharaan mendatang, gunakan COALESCE dan alias
             $today = date('Y-m-d');
             $next_month = date('Y-m-d', strtotime('+30 days'));
-            $sql = "SELECT jp.jadwal_pm_id, jp.tgl_berikutnya, a.asset_nm, l.lokasi_nm, 
-                    COALESCE(jp.deskripsi, 'Pemeliharaan Rutin') as deskripsi
+            $sql = "SELECT jp.jadwal_pm_id, jp.tgl_berikutnya, 
+                        COALESCE(a.asset_id, NULL) AS asset_id,
+                        COALESCE(a.asset_nm, NULL) AS asset_nm,
+                        COALESCE(l.lokasi_nm, NULL) AS lokasi_nm,
+                        COALESCE(jp.deskripsi, 'Pemeliharaan Rutin') AS deskripsi
                     FROM trx_jadwal_pm jp
-                    JOIN mst_asset a ON jp.asset_id = a.asset_id
+                    LEFT JOIN mst_asset a ON jp.asset_id = a.asset_id
                     LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
                     WHERE jp.tgl_berikutnya BETWEEN ? AND ? AND jp.status = 'aktif'
                     AND jp.jadwal_pm_id IN (
@@ -348,26 +385,22 @@ class TeknisiModel extends Model
                         FROM trx_penugasan_teknisi pt
                         WHERE pt.pegawai_id = ?
                     )
-                    ))
                     ORDER BY jp.tgl_berikutnya ASC LIMIT 5";
-            $data['jadwal_mendatang'] = DbModel::rawData('result_array', $sql, [$today, $next_month, $teknisi_id, $teknisi_id]) ?: [];
+            $data['jadwal_mendatang'] = DbModel::rawData('result_array', $sql, [$today, $next_month, $teknisi_id]) ?: [];
 
+            // Chart kinerja
             $data['chart_kinerja'] = $this->getSimplePerformanceChartData($teknisi_id);
 
-            $sql = "SELECT s.sparepart_id, s.sparepart_nm, s.stok, COALESCE(s.stok_min, 0) as stok_min,
-                    COUNT(ps.penggunaan_id) as jumlah_pakai
+            // Sparepart paling sering dipakai, gunakan COALESCE dan alias
+            $sql = "SELECT s.sparepart_id, s.sparepart_nm, s.stok, COALESCE(s.stok_min, 0) AS stok_min,
+                        COUNT(ps.penggunaan_id) AS jumlah_pakai
                     FROM mst_sparepart s
                     JOIN trx_penggunaan_sparepart ps ON s.sparepart_id = ps.sparepart_id
                     JOIN trx_log_kerja lk ON ps.log_kerja_id = lk.log_kerja_id
-                    WHERE lk.teknisi_pegawai_id = ? OR lk.teknisi_pegawai_id IN (
-                        SELECT pegawai_id FROM trx_penugasan_teknisi 
-                        WHERE order_kerja_id IN (
-                            SELECT order_kerja_id FROM trx_penugasan_teknisi WHERE pegawai_id = ?
-                        )
-                    )
+                    WHERE lk.teknisi_pegawai_id = ?
                     GROUP BY s.sparepart_id, s.sparepart_nm, s.stok, s.stok_min
                     ORDER BY jumlah_pakai DESC LIMIT 5";
-            $data['top_spareparts'] = DbModel::rawData('result_array', $sql, [$teknisi_id, $teknisi_id]) ?: [];
+            $data['top_spareparts'] = DbModel::rawData('result_array', $sql, [$teknisi_id]) ?: [];
 
             return $data;
         } catch (\Exception $e) {

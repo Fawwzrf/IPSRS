@@ -42,10 +42,10 @@
                 </div>
                 <div class="card-body">
                     <form id="form-scan-barcode"
-                        action="{{ url('ipsrs/teknisitugas/verify_barcode') }}{{ isset($n_param) ? '?n=' . $n_param : '' }}"
+                        action="<?= url('ipsrs/teknisitugas/verify_barcode') ?><?= isset($n_param) ? '?n=' . $n_param : '' ?>"
                         method="post">
-                        @csrf
-                        <input type="hidden" name="order_kerja_id" value="{{ $order_kerja_id }}">
+                        <?php csrf_field(); ?>
+                        <input type="hidden" name="order_kerja_id" value="<?= $order_kerja_id ?>">
 
                         <div class="mb-3">
                             <label class="form-label required">Kode Barcode</label>
