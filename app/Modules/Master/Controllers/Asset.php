@@ -24,9 +24,7 @@ class Asset extends MyController
     function index()
     {
         $d = [];
-        Log::info("Before save_session_search");
         $this->save_session_search($d);
-        Log::info("After save_session_search: ", [session(request('n'))]);
         $d['all_lokasi'] = DbModel::allData('mst_lokasi', ['deleted_st' => '0', 'active_st' => '1', 'tipe_lokasi' => 'Ruangan']);
         $d['all_kategori_asset'] = DbModel::allData('mst_kategori_asset', ['deleted_st' => '0', 'active_st' => '1']);
         return $this->renderView($this->template . 'index', $d);
@@ -47,12 +45,28 @@ class Asset extends MyController
     /**
      * Menyimpan data aset (insert/update)
      */
-    function save($id = null)
-    {
+function save($id = null)
+{
         $d = _post();
+
+        // Validasi dan normalisasi tanggal
         $d['perolehan_tgl'] = !empty($d['perolehan_tgl']) ? to_date($d['perolehan_tgl'], '-', 'date') : null;
         $d['pm_berikutnya'] = !empty($d['pm_berikutnya']) ? to_date($d['pm_berikutnya'], '-', 'date') : null;
 
+        // Validasi wajib
+        $required = [
+                'asset_nm' => 'Nama Aset wajib diisi!',
+                'no_seri' => 'Nomor Seri wajib diisi!',
+                'kategori_asset_id' => 'Kategori Aset wajib diisi!',
+                'lokasi_id' => 'Lokasi wajib diisi!',
+        ];
+        foreach ($required as $field => $msg) {
+                if (empty($d[$field])) {
+                        return response()->json(_response('20', $this->uri, ['message' => $msg]));
+                }
+        }
+
+        // Validasi nomor seri unik
         if (!empty($d['no_seri'])) {
                 $queryCheckNoSeri = DbModel::rawData(
                         'row_array',
@@ -64,6 +78,7 @@ class Asset extends MyController
                 }
         }
 
+        // Proses simpan/ubah
         if ($id == null) {
                 $d['asset_id'] = DbModel::getId('mst_asset', 2, 12);
                 if (empty($d['asset_id'])) {
@@ -86,7 +101,7 @@ class Asset extends MyController
                         return response()->json(_response('12', $this->uri, ['message' => 'Gagal mengupdate data!']));
                 }
         }
-    }
+}
 
     /**
      * Menampilkan modal detail aset
@@ -96,7 +111,7 @@ class Asset extends MyController
         $assetModel = new AssetModel();
         $d['asset'] = $assetModel->getAssetDetailById($id);
         $d['history'] = $assetModel->getAssetHistory($id);
-        $d['title'] = 'Detail Aset: ' . $d['mst_asset']['asset_nm'];
+        $d['title'] = 'Detail Aset: ' . ($d['asset']['asset_nm'] ?? '');
         return $this->renderView($this->template . 'detail_modal', $d);
     }
 
@@ -105,7 +120,6 @@ class Asset extends MyController
      */
     function ajax_datatables()
     {
-        Log::info("Ajax datatables session: ", [session(request('n'))]);
         return AssetModel::loadDatatables();
     }
 }

@@ -150,4 +150,17 @@ class AssetModel extends Model
     {
         return $this->updateStatus($asset_id, self::STATUS_AKTIF);
     }
+
+    /**
+     * Update status aset berdasarkan asset_id dan status baru
+     */
+    protected function updateStatus($asset_id, $new_status)
+    {
+        if (!in_array($new_status, self::$valid_statuses)) {
+            return false;
+        }
+
+        $query = "UPDATE mst_asset SET status = ? WHERE asset_id = ? AND deleted_st = 0";
+        return DbModel::rawData('exec', $query, [$new_status, $asset_id]);
+    }
 }
