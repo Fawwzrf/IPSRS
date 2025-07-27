@@ -1,8 +1,8 @@
 @include('ipsrs::pelapor._js')
 
-<form id="form-pelapor-komplain" action="{{ url('ipsrs/pelapor/save') }}" method="post" autocomplete="off" enctype="multipart/form-data">
-    @csrf
-    <input type="hidden" name="pegawai_id" value="{{ $pegawai_id ?? session('pegawai_id') }}">
+<form id="form-pelapor-komplain" action="<?= url('ipsrs/pelapor/save') ?>" method="post" autocomplete="off" enctype="multipart/form-data">
+    <?php echo csrf_field(); ?>
+    <input type="hidden" name="pegawai_id" value="<?= $pegawai_id ?? session('pegawai_id') ?>">
 
     <div class="card-body">
         <fieldset class="border p-2 rounded mb-3">
@@ -12,11 +12,11 @@
                 <label class="form-label required">Lokasi Kerusakan</label>
                 <select class="form-select chosen-select" name="lokasi_id" id="lokasi-select" required>
                     <option value="">- Pilih Lokasi Terlebih Dahulu -</option>
-                    @foreach($all_lokasi as $lokasi)
-                        <option value="{{ $lokasi['lokasi_id'] }}" data-denah-url="{{ $lokasi['denah_url'] ?? '' }}">
-                            {{ $lokasi['lokasi_nm'] }}
+                    <?php foreach($all_lokasi as $lokasi): ?>
+                        <option value="<?= $lokasi['lokasi_id'] ?>" data-denah-url="<?= $lokasi['denah_url'] ?? '' ?>">
+                            <?= $lokasi['lokasi_nm'] ?>
                         </option>
-                    @endforeach
+                    <?php endforeach; ?>
                 </select>
             </div>
 
@@ -51,7 +51,6 @@
     </div>
 </form>
 
-{{-- Menyimpan semua data aset ke dalam variabel JavaScript --}}
 <script>
-    window.allAssets = @json($all_asset);
+    window.allAssets = <?= json_encode($all_asset) ?>;
 </script>
