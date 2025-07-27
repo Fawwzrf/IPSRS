@@ -5,8 +5,7 @@ namespace App\Modules\Master\Controllers;
 use App\Http\Controllers\MyController;
 use App\Modules\App\Models\DbModel;
 use App\Modules\Master\Models\LokasiModel;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
+
 
 class Lokasi extends MyController
 {
@@ -56,36 +55,6 @@ class Lokasi extends MyController
         }
         return $this->renderView($this->template . 'form_modal', $d);
     }
-
-    /**
-     * Generate lokasi_id baru berdasarkan tipe dan parent
-     */
-    private function _generateLokasiId($tipe, $parentId = null)
-    {
-        $prefix = $parentId ? $parentId . '.' : '';
-        $query = "SELECT MAX(lokasi_id) as last_id FROM mst_lokasi WHERE tipe_lokasi = ? AND deleted_st = 0";
-        $params = [$tipe];
-
-        if ($parentId) {
-            $query .= " AND parent_lokasi_id = ?";
-            $params[] = $parentId;
-        } else {
-            $query .= " AND parent_lokasi_id IS NULL";
-        }
-
-        $lastData = DbModel::rawData('row_array', $query, $params);
-        $lastId = $lastData['last_id'] ?? '';
-
-        if (empty($lastId)) {
-            return $prefix . '01';
-        } else {
-            $parts = explode('.', $lastId);
-            $lastNumber = (int)end($parts);
-            $newNumber = $lastNumber + 1;
-            return $prefix . str_pad($newNumber, 2, '0', STR_PAD_LEFT);
-        }
-    }
-
     /**
      * Simpan data lokasi (insert/update)
      */
@@ -97,16 +66,25 @@ class Lokasi extends MyController
             $d['parent_lokasi_id'] = null;
         }
 
-        $queryCheckUnique = "SELECT * FROM mst_lokasi WHERE lokasi_nm = '" . addslashes($d['lokasi_nm']) . "' AND tipe_lokasi = '" . addslashes($d['tipe_lokasi']) . "' AND deleted_st = 0";
+        $params = [
+            'lokasi_nm'   => $d['lokasi_nm'],
+            'tipe_lokasi' => $d['tipe_lokasi'],
+            'deleted_st'  => 0,
+        ];
+        $queryCheckUnique = "SELECT * FROM mst_lokasi WHERE lokasi_nm = :lokasi_nm AND tipe_lokasi = :tipe_lokasi AND deleted_st = :deleted_st";
+
         if (!empty($d['parent_lokasi_id'])) {
-            $queryCheckUnique .= " AND parent_lokasi_id = '" . addslashes($d['parent_lokasi_id']) . "'";
+            $queryCheckUnique .= " AND parent_lokasi_id = :parent_lokasi_id";
+            $params['parent_lokasi_id'] = $d['parent_lokasi_id'];
         } else {
             $queryCheckUnique .= " AND (parent_lokasi_id IS NULL OR parent_lokasi_id = '')";
         }
         if ($id != null) {
-            $queryCheckUnique .= " AND lokasi_id != '" . addslashes($id) . "'";
+            $queryCheckUnique .= " AND lokasi_id != :lokasi_id";
+            $params['lokasi_id'] = $id;
         }
-        $checkUnique = DbModel::rawData('row_array', $queryCheckUnique);
+
+        $checkUnique = DbModel::rawData('row_array', $queryCheckUnique, $params);
         if ($checkUnique != null) {
             return response()->json(_response('20', $this->uri, ['message' => 'Kombinasi Nama, Tipe, dan Lokasi Induk sudah ada!']));
         }
@@ -144,24 +122,7 @@ class Lokasi extends MyController
                 }
             }
         } catch (\Throwable $th) {
-            Log::error('Error saving location: ' . $th->getMessage(), ['trace' => $th->getTraceAsString()]);
             return response()->json(_response('10', $this->uri, ['message' => 'Terjadi kesalahan saat menyimpan data: ' . $th->getMessage()]));
-        }
-
-        if ($id) {
-            $old_id = $id;
-            $new_id = $d['lokasi_id'];
-            if ($old_id != $new_id) {
-                if (DbModel::validId('mst_lokasi', 'lokasi_id', $new_id)) {
-                    return response()->json(_response('20', $this->uri, ['message' => 'ID Lokasi baru sudah digunakan!']));
-                }
-            }
-            $result = DbModel::updateData('mst_lokasi', $d, ['lokasi_id' => $old_id]);
-            return response()->json(_response($result ? '02' : '12', $this->uri, $d));
-        } else {
-            $d['lokasi_id'] = $this->_generateLokasiId($d['tipe_lokasi'], $d['parent_lokasi_id']);
-            $result = DbModel::insertData('mst_lokasi', $d);
-            return response()->json(_response($result ? '01' : '11', $this->uri, $d));
         }
     }
 
@@ -195,3 +156,4 @@ class Lokasi extends MyController
         return LokasiModel::loadDatatables();
     }
 }
+
