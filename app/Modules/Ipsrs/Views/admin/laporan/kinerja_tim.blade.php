@@ -48,6 +48,11 @@
         <div class="container-xl">
             <div class="card">
                 <div class="card-body">
+                    @php
+                        $dataFilter = @$nav_sess['search']['data'];
+                        if (!is_array($dataFilter)) $dataFilter = [];
+                    @endphp
+
                     <form action="{{ url($uri . '?n=' . request('n')) }}" method="POST" class="mb-0 filter-form"
                         id="search" autocomplete="off" onsubmit="_search(event)">
                         @csrf
@@ -110,11 +115,11 @@
                             <div class="col-md-3">
                                 <label class="form-label">Teknisi</label>
                                 <select name="pegawai_id" class="form-select chosen-select">
-                                    <option value="">Semua Teknisi</option>
-                                    @foreach ($all_teknisi as $teknisi)
-                                        <option value="{{ $teknisi['pegawai_id'] }}"
-                                            {{ isset($nav_sess['search']['data']['pegawai_id']) && $nav_sess['search']['data']['pegawai_id'] == $teknisi['pegawai_id'] ? 'selected' : '' }}>
-                                            {{ $teknisi['pegawai_nm'] }}
+                                    <option value="">-- Semua Teknisi --</option>
+                                    @foreach($all_teknisi as $t)
+                                        <option value="{{ $t['pegawai_id'] }}"
+                                            @if(($dataFilter['pegawai_id'] ?? '') == $t['pegawai_id']) selected @endif>
+                                            {{ $t['pegawai_nm'] }}
                                         </option>
                                     @endforeach
                                 </select>

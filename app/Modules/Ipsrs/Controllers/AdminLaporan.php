@@ -6,7 +6,6 @@ use App\Http\Controllers\MyController;
 use App\Modules\App\Models\DbModel;
 use App\Modules\Ipsrs\Models\LaporanModel;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Http\Request;
 
 
 class AdminLaporan extends MyController
@@ -52,7 +51,7 @@ class AdminLaporan extends MyController
     /**
      * Menampilkan laporan Kinerja Aset.
      */
-    public function kinerjaAset(Request $request)
+    public function kinerjaAset()
     {
         $d = [];
         $this->save_session_search($d);
@@ -61,67 +60,51 @@ class AdminLaporan extends MyController
             $d['laporan'] = [];
         }
 
-        // Ambil data untuk filter
         $d['all_kategori_asset'] = DbModel::allData('mst_kategori_asset', ['deleted_st' => 0]);
         $d['all_lokasi'] = DbModel::allData('mst_lokasi', ['deleted_st' => 0]);
 
-
-        // Untuk ekspor ke Excel jika diminta
+        // Export Excel
         if (request('export') == 'excel') {
-            // Ambil filter dari request, jika kosong ambil dari session
-            $filter = $this->getNormalizedFilter($request, $d);
+            $filter = $this->getSessionFilter();
             $this->applyPeriodeFilter($filter);
 
             $result = $this->model->getDatatablesKinerjaAset($filter, 0, 10000, [], $filter['search'] ?? '');
             $data = $result['data'] ?? [];
             $headers = [
-                'Nama Aset',
-                'Merk',
-                'Kategori',
-                'Lokasi',
-                'Jumlah OK',
-                'Jumlah Perbaikan',
-                'Jumlah Pemeliharaan',
-                'Terakhir Ditangani'
+                'Nama Aset', 'Merk', 'Kategori', 'Lokasi', 'Jumlah OK',
+                'Jumlah Perbaikan', 'Jumlah Pemeliharaan', 'Terakhir Ditangani'
             ];
-
-            // Keterangan filter
             $filters = [
                 'Periode' => $this->getPeriodeLabel($filter),
                 'Kategori Aset' => $this->getNamaKategoriAset($filter['kategori_asset_id'] ?? null),
                 'Lokasi' => $this->getNamaLokasi($filter['lokasi_id'] ?? null),
                 'Pencarian' => $filter['search'] ?? '-'
             ];
-
-            Log::info('Export Data:', $data);
-
             return $this->exportToExcel($data, 'Laporan_Kinerja_Aset', $headers, $filters, 'Laporan Kinerja Aset');
         }
 
-        if ($request->ajax()) {
-            // Proses datatables
-            $filter = $request->all();
-            $start = intval($request->start ?? 0);
-            $length = intval($request->length ?? 10);
-            $order = $request->order ?? [];
-            $search = $request->search['value'] ?? '';
+        // AJAX datatables
+        if (request()->ajax()) {
+            $nav_sess = session(request('n'));
+            $filter = $nav_sess['search']['data'] ?? [];
+            $start = intval(request('start', 0)); // Ambil dari request, bukan session!
+            $length = intval(request('length', 10));
+            $order = request('order', []);
+            $search = request('search.value', ''); // Ambil dari request DataTables!
+            \Log::debug('AJAX Filter:', $filter);
+            \Log::debug('AJAX Search:', ['search' => $search]);
             $result = $this->model->getDatatablesKinerjaAset($filter, $start, $length, $order, $search);
             return response()->json($result);
         }
-
-        // Tambahkan kode ini untuk memastikan filter tanggal selalu ada
-        if (empty($d['nav_sess']['search']['data']['tgl_start']) || empty($d['nav_sess']['search']['data']['tgl_end'])) {
-            $d['nav_sess']['search']['data']['tgl_start'] = date('01-m-Y');
-            $d['nav_sess']['search']['data']['tgl_end'] = date('t-m-Y');
-        }
-
+        // Print
         if (request('print') == '1') {
+            $filter = $this->getSessionFilter();
             $d['judul'] = 'Laporan Kinerja Aset';
-            $d['periode_label'] = $this->getPeriodeLabel($request->all());
-            $d['kategori_asset_label'] = $this->getNamaKategoriAset($request->input('kategori_asset_id'));
-            $d['lokasi_label'] = $this->getNamaLokasi($request->input('lokasi_id'));
+            $d['periode_label'] = $this->getPeriodeLabel($filter);
+            $d['kategori_asset_label'] = $this->getNamaKategoriAset($filter['kategori_asset_id'] ?? null);
+            $d['lokasi_label'] = $this->getNamaLokasi($filter['lokasi_id'] ?? null);
             $d['teknisi_label'] = '-';
-            $d['pencarian_label'] = $request->input('search', '-');
+            $d['pencarian_label'] = $filter['search'] ?? '-';
             return view($this->template . 'kinerja_aset', $d);
         }
 
@@ -131,19 +114,17 @@ class AdminLaporan extends MyController
     /**
      * Menampilkan laporan Kinerja Teknisi.
      */
-    public function kinerjaTeknisi(Request $request)
+    public function kinerjaTeknisi()
     {
         $d = [];
         $this->save_session_search($d);
         if (!isset($d['laporan']) || !is_array($d['laporan'])) {
             $d['laporan'] = [];
         }
-        // Ambil data untuk filter
         $d['all_teknisi'] = DbModel::allData('mst_pegawai', ['jabatan_id' => '90', 'deleted_st' => 0]);
 
-        // Untuk ekspor ke Excel jika diminta
         if (request('export') == 'excel') {
-            $filter = $this->getNormalizedFilter($request, $d);
+            $filter = $this->getSessionFilter();
             $this->applyPeriodeFilter($filter);
 
             $result = $this->model->getDatatablesKinerjaTeknisi($filter, 0, 10000, [], $filter['search'] ?? '');
@@ -159,34 +140,33 @@ class AdminLaporan extends MyController
                 'Teknisi' => $this->getNamaTeknisi($filter['teknisi_id'] ?? null),
                 'Pencarian' => $filter['search'] ?? '-'
             ];
-            Log::info('Export Data:', $data);
             return $this->exportToExcel($data, 'Laporan_Kinerja_Teknisi', $headers, $filters, 'Laporan Kinerja Teknisi');
         }
 
-        if ($request->ajax()) {
-            // Proses datatables
-            $filter = $request->all();
-            $start = intval($request->start ?? 0);
-            $length = intval($request->length ?? 10);
-            $order = $request->order ?? [];
-            $search = $request->search['value'] ?? '';
+        if (request()->ajax()) {
+            $nav_sess = session(request('n'));
+            $filter = $nav_sess['search']['data'] ?? [];
+            $start = intval(request('start', 0)); // Ambil dari request, bukan session!
+            $length = intval(request('length', 10));
+            $order = request('order', []);
+            $search = request('search.value', ''); // Ambil dari request DataTables!
             $result = $this->model->getDatatablesKinerjaTeknisi($filter, $start, $length, $order, $search);
             return response()->json($result);
         }
 
-        // Tambahkan kode ini untuk memastikan filter tanggal selalu ada
         if (empty($d['nav_sess']['search']['data']['tgl_start']) || empty($d['nav_sess']['search']['data']['tgl_end'])) {
             $d['nav_sess']['search']['data']['tgl_start'] = date('01-m-Y');
             $d['nav_sess']['search']['data']['tgl_end'] = date('t-m-Y');
         }
 
         if (request('print') == '1') {
+            $filter = $this->getSessionFilter();
             $d['judul'] = 'Laporan Kinerja Teknisi';
-            $d['periode_label'] = $this->getPeriodeLabel($request->all());
+            $d['periode_label'] = $this->getPeriodeLabel($filter);
             $d['kategori_asset_label'] = '-';
             $d['lokasi_label'] = '-';
-            $d['teknisi_label'] = $this->getNamaTeknisi($request->input('pegawai_id'));
-            $d['pencarian_label'] = $request->input('search', '-');
+            $d['teknisi_label'] = $this->getNamaTeknisi($filter['teknisi_id'] ?? null);
+            $d['pencarian_label'] = $filter['search'] ?? '-';
             return view($this->template . 'kinerja_teknisi', $d);
         }
 
@@ -198,7 +178,7 @@ class AdminLaporan extends MyController
     /**
      * Menampilkan laporan Biaya Pemeliharaan & Perbaikan.
      */
-    public function biayaPemeliharaan(Request $request)
+    public function biayaPemeliharaan()
     {
         $d = [];
         $this->save_session_search($d);
@@ -208,8 +188,7 @@ class AdminLaporan extends MyController
             $d['laporan'] = [];
         }
 
-        // Hitung total biaya keseluruhan sesuai filter
-        $filter = $this->getNormalizedFilter($request, $d);
+        $filter = $this->getSessionFilter();
         $this->applyPeriodeFilter($filter);
         $total_biaya = $this->model->getTotalBiayaPemeliharaan($filter);
 
@@ -217,9 +196,6 @@ class AdminLaporan extends MyController
 
         // Untuk ekspor ke Excel jika diminta
         if (request('export') == 'excel') {
-            if (empty($filter) && !empty($d['nav_sess']['search']['data'])) {
-                $filter = $d['nav_sess']['search']['data'];
-            }
             $this->applyPeriodeFilter($filter);
 
             $result = $this->model->getDatatablesBiayaPemeliharaan($filter, 0, 10000, [], $filter['search'] ?? '');
@@ -237,24 +213,18 @@ class AdminLaporan extends MyController
                 'Periode' => $this->getPeriodeLabel($filter),
                 'Pencarian' => $filter['search'] ?? '-'
             ];
-            Log::info('Export Data:', $data);
             return $this->exportToExcel($data, 'Laporan_Biaya_Pemeliharaan', $headers, $filters, 'Laporan Biaya Pemeliharaan & Perbaikan');
         }
 
-        if ($request->ajax()) {
-            // Proses datatables
-            $filter = $request->all();
+        if (request()->ajax()) {
+            $nav_sess = session(request('n'));
+            $filter = $nav_sess['search']['data'] ?? [];
             $this->applyPeriodeFilter($filter);
-            $start = intval($request->start ?? 0);
-            $length = intval($request->length ?? 10);
-            $order = $request->order ?? [];
-            $search = $request->search['value'] ?? $request->input('search', '');
-            if (is_array($search)) {
-                $search = implode(' ', $search);
-            }
-            $filter['search'] = $search;
+            $start = intval(request('start', 0)); // Ambil dari request, bukan session!
+            $length = intval(request('length', 10));
+            $order = request('order', []);
+            $search = request('search.value', ''); // Ambil dari request DataTables!
             $result = $this->model->getDatatablesBiayaPemeliharaan($filter, $start, $length, $order, $search);
-
             return response()->json($result);
         }
 
@@ -265,12 +235,13 @@ class AdminLaporan extends MyController
         }
 
         if (request('print') == '1') {
+            $filter = $this->getSessionFilter();
             $d['judul'] = 'Laporan Biaya Pemeliharaan & Perbaikan';
-            $d['periode_label'] = $this->getPeriodeLabel($request->all());
+            $d['periode_label'] = $this->getPeriodeLabel($filter);
             $d['kategori_asset_label'] = '-';
             $d['lokasi_label'] = '-';
             $d['teknisi_label'] = '-';
-            $d['pencarian_label'] = $request->input('search', '-');
+            $d['pencarian_label'] = $filter['search'] ?? '-';
             return view($this->template . 'biaya_pemeliharaan', $d);
         }
 
@@ -280,7 +251,7 @@ class AdminLaporan extends MyController
     /**
      * Menampilkan laporan Kinerja Tim.
      */
-    public function kinerjaTim(Request $request)
+    public function kinerjaTim()
     {
         $d = [];
         $this->save_session_search($d);
@@ -289,12 +260,11 @@ class AdminLaporan extends MyController
             $d['laporan'] = [];
         }
 
-        // Dropdown teknisi
         $d['all_teknisi'] = DbModel::allData('mst_pegawai', ['jabatan_id' => '90', 'deleted_st' => 0]);
 
         // Ekspor Excel
         if (request('export') == 'excel') {
-            $filter = $this->getNormalizedFilter($request, $d);
+            $filter = $this->getSessionFilter();
             $this->applyPeriodeFilter($filter);
 
             $result = $this->model->getDatatablesKinerjaTim($filter, 0, 10000, [], $filter['search'] ?? '');
@@ -313,21 +283,17 @@ class AdminLaporan extends MyController
                 'Teknisi' => $this->getNamaTeknisi($filter['teknisi_id'] ?? null),
                 'Pencarian' => $filter['search'] ?? '-'
             ];
-            Log::info('Export Data:', $data);
             return $this->exportToExcel($data, 'Laporan_Kinerja_Tim', $headers, $filters, 'Laporan Kinerja Tim');
         }
 
-        if ($request->ajax()) {
-            // Proses datatables
-            $filter = $request->all();
-            $start = intval($request->start ?? 0);
-            $length = intval($request->length ?? 10);
-            $order = $request->order ?? [];
-            $search = $request->search['value'] ?? $request->input('search', '');
-            if (is_array($search)) {
-                $search = implode(' ', $search);
-            }
-            $filter['search'] = $search; // <-- Tambahkan baris ini!
+        if (request()->ajax()) {
+            $nav_sess = session(request('n'));
+            $filter = $nav_sess['search']['data'] ?? [];
+            $this->applyPeriodeFilter($filter);
+            $start = intval(request('start', 0)); // Ambil dari request, bukan session!
+            $length = intval(request('length', 10));
+            $order = request('order', []);
+            $search = request('search.value', ''); // Ambil dari request DataTables!
             $result = $this->model->getDatatablesKinerjaTim($filter, $start, $length, $order, $search);
             $result['rata_rata_penyelesaian'] = $this->model->getRataRataPenyelesaianTim($filter);
             return response()->json($result);
@@ -340,12 +306,13 @@ class AdminLaporan extends MyController
         }
 
         if (request('print') == '1') {
+            $filter = $this->getSessionFilter();
             $d['judul'] = 'Laporan Kinerja Tim';
-            $d['periode_label'] = $this->getPeriodeLabel($request->all());
+            $d['periode_label'] = $this->getPeriodeLabel($filter);
             $d['kategori_asset_label'] = '-';
             $d['lokasi_label'] = '-';
-            $d['teknisi_label'] = $this->getNamaTeknisi($request->input('pegawai_id'));
-            $d['pencarian_label'] = $request->input('search', '-');
+            $d['teknisi_label'] = $this->getNamaTeknisi($filter['teknisi_id'] ?? null);
+            $d['pencarian_label'] = $filter['search'] ?? '-';
             return view($this->template . 'kinerja_tim', $d);
         }
 
@@ -469,17 +436,16 @@ class AdminLaporan extends MyController
         return response($content, 200, $headersCsv);
     }
 
-    public function ajax_datatables(Request $request)
+    public function ajax_datatables()
     {
-        $filter = $request->all();
-        $this->applyPeriodeFilter($filter);
-        $start = intval($request->start ?? 0);
-        $length = intval($request->length ?? 10);
-        $order = $request->order ?? [];
-        $search = $request->search['value'] ?? '';
+        $nav_sess = session(request('n'));
+        $filter = $nav_sess['search']['data'] ?? [];
+        $start = intval($nav_sess['start'] ?? 0);
+        $length = intval($nav_sess['length'] ?? 10);
+        $order = $nav_sess['order'] ?? [];
+        $search = $nav_sess['search']['value'] ?? '';
+        $laporan = $nav_sess['laporan'] ?? '';
 
-        // Tentukan laporan berdasarkan parameter 'laporan'
-        $laporan = $request->input('laporan');
         switch ($laporan) {
             case 'kinerja_aset':
                 $result = $this->model->getDatatablesKinerjaAset($filter, $start, $length, $order, $search);
@@ -495,7 +461,7 @@ class AdminLaporan extends MyController
                 break;
             default:
                 $result = [
-                    'draw' => intval($request->draw),
+                    'draw' => intval($nav_sess['draw'] ?? 1),
                     'recordsTotal' => 0,
                     'recordsFiltered' => 0,
                     'data' => []
@@ -545,12 +511,11 @@ class AdminLaporan extends MyController
         return $row['pegawai_nm'] ?? '-';
     }
 
-    protected function getNormalizedFilter(Request $request, $d)
+    // Tambahkan helper untuk ambil filter dari session
+    protected function getSessionFilter()
     {
-        $filter = $request->all();
-        if (empty($filter) && !empty($d['nav_sess']['search']['data'])) {
-            $filter = $d['nav_sess']['search']['data'];
-        }
+        $nav_sess = session(request('n'));
+        $filter = $nav_sess['search']['data'] ?? [];
         // Normalisasi nama key
         if (isset($filter['pegawai_id']) && !isset($filter['teknisi_id'])) {
             $filter['teknisi_id'] = $filter['pegawai_id'];

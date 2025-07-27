@@ -1,6 +1,6 @@
 @include('ipsrs::admin.laporan._js')
 {{-- filepath: c:\laragon\www\ipsrs\app\Modules\Ipsrs\Views\admin\laporan\kinerja_aset.blade.php --}}
-@if(request('print') == '1')
+@if (request('print') == '1')
     <div class="print-header">
         <h2 class="text-center">{{ $judul ?? 'Laporan Kinerja Aset' }}</h2>
         <table class="mb-2" style="width:100%;font-size:14px;">
@@ -60,13 +60,18 @@
                         <div class="row g-2">
                             <div class="col-md-4">
                                 <label class="form-label">Kategori Aset</label>
+                                @php
+                                    $dataFilter = @$nav_sess['search']['data'];
+                                    if (!is_array($dataFilter)) $dataFilter = [];
+                                @endphp
                                 <select name="kategori_asset_id" id="kategori_asset_id"
                                     class="form-select chosen-select">
                                     <option value="">-- Semua Kategori --</option>
                                     @foreach ($all_kategori_asset as $k)
                                         <option value="{{ $k['kategori_asset_id'] }}"
-                                            @if (@$nav_sess['search']['data']['kategori_asset_id'] == $k['kategori_asset_id']) selected @endif>
-                                            {{ $k['kategori_asset_nm'] }}</option>
+                                            @if (($dataFilter['kategori_asset_id'] ??'') == $k['kategori_asset_id']) selected @endif>
+                                            {{ $k['kategori_asset_nm'] }}
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>
@@ -76,7 +81,8 @@
                                     <option value="">-- Semua Lokasi --</option>
                                     @foreach ($all_lokasi as $l)
                                         <option value="{{ $l['lokasi_id'] }}"
-                                            @if (@$nav_sess['search']['data']['lokasi_id'] == $l['lokasi_id']) selected @endif>{{ $l['lokasi_nm'] }}
+                                            @if (($dataFilter['lokasi_id'] ?? '') == $l['lokasi_id']) selected @endif>
+                                            {{ $l['lokasi_nm'] }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -125,22 +131,62 @@
 </div>
 
 <style>
-@media print {
-    @page {
-        size: A4 portrait;
-        margin: 1.5cm;
+    @media print {
+        @page {
+            size: A4 portrait;
+            margin: 1.5cm;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+        }
+
+        .d-print-none,
+        .btn,
+        .page-header,
+        .card-footer {
+            display: none !important;
+        }
+
+        .print-header {
+            margin-bottom: 20px;
+        }
+
+        .print-header h2 {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            page-break-inside: avoid;
+        }
+
+        th,
+        td {
+            border: 1px solid #333;
+            padding: 6px 8px;
+        }
+
+        thead th {
+            background: #eee;
+        }
+
+        tfoot {
+            font-weight: bold;
+        }
+
+        .table-responsive {
+            overflow: visible !important;
+        }
     }
-    body { font-family: Arial, sans-serif; font-size: 12px; }
-    .d-print-none, .btn, .page-header, .card-footer { display: none !important; }
-    .print-header { margin-bottom: 20px; }
-    .print-header h2 { font-size: 20px; font-weight: bold; margin-bottom: 10px; }
-    table { border-collapse: collapse; width: 100%; page-break-inside: avoid; }
-    th, td { border: 1px solid #333; padding: 6px 8px; }
-    thead th { background: #eee; }
-    tfoot { font-weight: bold; }
-    .table-responsive { overflow: visible !important; }
-}
-@media print and (orientation: landscape) {
-    @page { size: A4 landscape; }
-}
+
+    @media print and (orientation: landscape) {
+        @page {
+            size: A4 landscape;
+        }
+    }
 </style>

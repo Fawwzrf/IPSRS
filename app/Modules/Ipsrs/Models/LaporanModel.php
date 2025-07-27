@@ -4,12 +4,16 @@ namespace App\Modules\Ipsrs\Models;
 
 use App\Modules\App\Models\DbModel;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 class LaporanModel extends Model
 {
     // --- DATATABLES KINERJA ASET ---
     public function getDatatablesKinerjaAset($filter, $start, $length, $order, $search)
     {
+        \Log::debug('Model Filter:', $filter);
+        \Log::debug('Model Search:', ['search' => $search]);
+
         $where = [
             "a.deleted_st = 0",
             "(pk.deleted_st IS NULL OR pk.deleted_st = 0)",
