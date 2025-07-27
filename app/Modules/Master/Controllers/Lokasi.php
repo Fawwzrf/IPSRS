@@ -175,7 +175,7 @@ class Lokasi extends MyController
             return response()->json(_response('13', $this->uri, ['message' => 'Lokasi ini memiliki sub-lokasi dan tidak dapat dihapus.']));
         }
 
-        $hasAssets = DbModel::getData('asset', ['lokasi_id' => $id, 'deleted_st' => 0]);
+        $hasAssets = DbModel::getData('mst_asset', ['lokasi_id' => $id, 'deleted_st' => 0]);
         if ($hasAssets) {
             return response()->json(_response('13', $this->uri, ['message' => 'Lokasi ini masih terhubung dengan aset dan tidak dapat dihapus.']));
         }
@@ -195,4 +195,3 @@ class Lokasi extends MyController
         return LokasiModel::loadDatatables();
     }
 }
-

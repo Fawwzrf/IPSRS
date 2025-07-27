@@ -48,21 +48,21 @@ class AssetModel extends Model
     static function loadDatatables()
     {
         self::initSession();
-        
+
         $where = "1 = 1 ";
 
         if (@self::$nav_sess['search']['data']['lokasi_id'] != '') {
             $where .= " AND a.lokasi_id = '" . @self::$nav_sess['search']['data']['lokasi_id'] . "' ";
         }
-        
+
         if (@self::$nav_sess['search']['data']['kategori_asset_id'] != '') {
             $where .= " AND a.kategori_asset_id = '" . @self::$nav_sess['search']['data']['kategori_asset_id'] . "' ";
         }
-        
+
         if (@self::$nav_sess['search']['data']['status'] != '') {
             $where .= " AND a.status = '" . @self::$nav_sess['search']['data']['status'] . "' ";
         }
-        
+
         if (@self::$nav_sess['search']['data']['term'] != '') {
             $where .= " AND (LOWER(a.asset_nm) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%' 
                       OR LOWER(a.no_seri) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%'
@@ -75,16 +75,16 @@ class AssetModel extends Model
                     b.kategori_asset_nm,
                     c.lokasi_nm
                   FROM 
-                    asset a
+                    mst_asset a
                     LEFT JOIN mst_kategori_asset b ON a.kategori_asset_id = b.kategori_asset_id
                     LEFT JOIN mst_lokasi c ON a.lokasi_id = c.lokasi_id
                   WHERE $where AND a.deleted_st = 0
                 ) x ";
-                
+
         $search = ['asset_id', 'asset_nm', 'no_seri', 'merk', 'kategori_asset_nm', 'lokasi_nm'];
         $where = null;
         $isWhere = null;
-        
+
         $result = DbModel::datatablesQuery($query, $search, $where, $isWhere);
         return response()->json($result);
     }
@@ -95,7 +95,7 @@ class AssetModel extends Model
     public function getAssetDetailById($id)
     {
         $query = "SELECT a.*, k.kategori_asset_nm, l.lokasi_nm
-                  FROM asset a
+                  FROM mst_asset a
                   LEFT JOIN mst_kategori_asset k ON a.kategori_asset_id = k.kategori_asset_id
                   LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
                   WHERE a.asset_id = ? AND a.deleted_st = 0";
@@ -121,7 +121,7 @@ class AssetModel extends Model
                     (SELECT MAX(tgl_selesai) FROM penugasan_teknisi WHERE order_kerja_id = ok.order_kerja_id) as tgl_selesai
                   FROM order_kerja ok
                   LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-                  LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+                  LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                   WHERE (pk.asset_id = ? OR jp.asset_id = ?) AND ok.deleted_st = 0
                   ORDER BY ok.tgl_dibuat DESC";
         return DbModel::rawData('result_array', $query, [$asset_id, $asset_id]);
@@ -151,4 +151,3 @@ class AssetModel extends Model
         return $this->updateStatus($asset_id, self::STATUS_AKTIF);
     }
 }
-

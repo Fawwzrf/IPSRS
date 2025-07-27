@@ -36,7 +36,7 @@ class Pelapor extends MyController
     public function form_komplain_modal()
     {
         $d['all_lokasi'] = DbModel::allData('mst_lokasi', ['deleted_st' => 0, 'active_st' => 1], 'lokasi_nm ASC');
-        $d['all_asset'] = DbModel::allData('asset', ['deleted_st' => 0, 'active_st' => 1], 'asset_nm ASC');
+        $d['all_asset'] = DbModel::allData('mst_asset', ['deleted_st' => 0, 'active_st' => 1], 'asset_nm ASC');
         $d['form_act'] = url('ipsrs/pelapor/save');
         $d['pegawai_id'] = session('pegawai_id');
 
@@ -107,4 +107,3 @@ class Pelapor extends MyController
         return $this->renderPartial('table_komplain', $d);
     }
 }
-

@@ -37,7 +37,7 @@ class PelaporModel extends Model
                     a.asset_nm,
                     l.lokasi_nm
                 FROM permintaan_komplain pk
-                LEFT JOIN asset a ON pk.asset_id = a.asset_id
+                LEFT JOIN mst_asset a ON pk.asset_id = a.asset_id
                 LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
                 WHERE pk.pegawai_id = ? AND pk.deleted_st = 0
                 ORDER BY pk.tgl DESC
@@ -54,7 +54,7 @@ class PelaporModel extends Model
         $sql = "SELECT COUNT(*) as total
                 FROM permintaan_komplain
                 WHERE pegawai_id = ? AND deleted_st = 0";
-                
+
         $result = DbModel::rawData('row_array', $sql, [$pegawai_id]);
         return $result['total'] ?? 0;
     }
@@ -74,14 +74,14 @@ class PelaporModel extends Model
     {
         $status = strtolower($status);
         $badgeClass = 'bg-secondary';
-        
+
         if ($status == 'baru') $badgeClass = 'bg-info';
         elseif ($status == 'diverifikasi') $badgeClass = 'bg-primary';
         elseif ($status == 'diproses') $badgeClass = 'bg-warning';
         elseif ($status == 'selesai') $badgeClass = 'bg-success';
         elseif ($status == 'ditolak') $badgeClass = 'bg-danger';
         elseif ($status == 'dibatalkan') $badgeClass = 'bg-secondary';
-        
+
         return $badgeClass;
     }
 }

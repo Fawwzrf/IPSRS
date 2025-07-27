@@ -221,7 +221,7 @@ class TeknisiTugas extends MyController
         }
         $d['asset_id'] = $asset_id;
 
-        $d['log_kerja'] = $this->model->getLogKerja($order_kerja_id);
+        $d['trx_log_kerja'] = $this->model->getLogKerja($order_kerja_id);
         $d['all_sparepart'] = $this->model->getAllSparepart();
 
         // Arahkan form action ke metode save_log_kerja di controller ini
@@ -576,7 +576,7 @@ class TeknisiTugas extends MyController
     {
         try {
             // Ambil data aset
-            $asset = DbModel::getData('asset', ['asset_id' => $asset_id]);
+            $asset = DbModel::getData('mst_asset', ['asset_id' => $asset_id]);
             if (!$asset) {
                 return redirect('ipsrs/teknisitugas')->with('error', 'Data aset tidak ditemukan');
             }
@@ -589,9 +589,9 @@ class TeknisiTugas extends MyController
 
             // Persiapkan data untuk view
             $d = [];
-            $d['asset'] = $asset;
+            $d['mst_asset'] = $asset;
             $d['order_kerja'] = $order_kerja_list;
-            $d['log_kerja'] = $log_kerja;
+            $d['trx_log_kerja'] = $log_kerja;
             $d['n_param'] = request('n');
 
             // URL untuk form log kerja
@@ -626,7 +626,7 @@ class TeknisiTugas extends MyController
             }
 
             $d = [];
-            $d['asset'] = $asset;
+            $d['mst_asset'] = $asset;
             $d['order_kerja_id'] = request('order_kerja_id');
             $d['n_param'] = request('n');
 
@@ -664,7 +664,7 @@ class TeknisiTugas extends MyController
                     }
 
                     // Ambil log kerja terkait order kerja ini
-                    $log = DbModel::getData('log_kerja', ['order_kerja_id' => $order['order_kerja_id'], 'deleted_st' => 0]);
+                    $log = DbModel::getData('trx_log_kerja', ['order_kerja_id' => $order['order_kerja_id'], 'deleted_st' => 0]);
                     $item['sparepart'] = [];
                     if ($log) {
                         $sparepart = $this->model->getSparepartByLogKerjaId($log['log_kerja_id']);

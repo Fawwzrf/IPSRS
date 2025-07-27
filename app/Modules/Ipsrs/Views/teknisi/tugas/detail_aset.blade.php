@@ -157,7 +157,7 @@
                                                         </td>
                                                         <td>
                                                             @if (isset($item['jenis']))
-                                                                {{ $item['jenis'] == 'jadwal_pm' ? 'Jadwal PM' : ($item['jenis'] == 'order_kerja' ? 'Perbaikan' : ucfirst($item['jenis'])) }}
+                                                                {{ $item['jenis'] == 'trx_jadwal_pm' ? 'Jadwal PM' : ($item['jenis'] == 'order_kerja' ? 'Perbaikan' : ucfirst($item['jenis'])) }}
                                                             @else
                                                                 -
                                                             @endif
@@ -170,7 +170,8 @@
                                                                 <ul class="mb-0 ps-3">
                                                                     @foreach ($item['sparepart'] as $sp)
                                                                         <li>{{ $sp['sparepart_nm'] ?? '-' }}
-                                                                            ({{ $sp['jumlah'] ?? 0 }})</li>
+                                                                            ({{ $sp['jumlah'] ?? 0 }})
+                                                                        </li>
                                                                     @endforeach
                                                                 </ul>
                                                             @else
@@ -275,7 +276,8 @@
 
             // Gunakan fungsi _modal seperti di log kerja admin
             _modal(e, {
-                uri: _base_url + 'ipsrs/adminorderkerja/hasil_teknisi_modal/' + orderKerjaId + (nParam ? '?n=' + nParam : ''),
+                uri: _base_url + 'ipsrs/adminorderkerja/hasil_teknisi_modal/' + orderKerjaId + (
+                    nParam ? '?n=' + nParam : ''),
                 title: 'Hasil Tugas Teknisi',
                 size: 'modal-lg'
             });

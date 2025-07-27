@@ -51,8 +51,8 @@ class TeknisiModel extends Model
                     FROM penugasan_teknisi pt
                     JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                     LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-                    LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
-                    LEFT JOIN asset a ON pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id
+                    LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+                    LEFT JOIN mst_asset a ON pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id
                     LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
                     WHERE pt.pegawai_id = ? AND pt.status = ? AND pt.deleted_st = 0
                     ORDER BY ok.tgl_dibuat DESC";
@@ -89,8 +89,8 @@ class TeknisiModel extends Model
                 FROM penugasan_teknisi pt
                 JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                 LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-                LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
-                LEFT JOIN asset a ON pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id
+                LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+                LEFT JOIN mst_asset a ON pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id
                 LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
                 LEFT JOIN mst_pegawai pelapor ON pk.pegawai_id = pelapor.pegawai_id
                 WHERE pt.penugasan_id = ? AND pt.deleted_st = 0";
@@ -212,8 +212,8 @@ class TeknisiModel extends Model
         $next_month = date('Y-m-d', strtotime('+30 days'));
 
         $sql = "SELECT jp.jadwal_pm_id, jp.tgl_berikutnya, a.asset_nm, l.lokasi_nm, jp.deskripsi
-                FROM jadwal_pm jp
-                JOIN asset a ON jp.asset_id = a.asset_id
+                FROM trx_jadwal_pm jp
+                JOIN mst_asset a ON jp.asset_id = a.asset_id
                 LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
                 WHERE jp.tgl_berikutnya BETWEEN ? AND ?
                 AND jp.status = 'aktif'
@@ -222,8 +222,8 @@ class TeknisiModel extends Model
                     FROM penugasan_teknisi pt
                     JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                     LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-                    LEFT JOIN jadwal_pm jp2 ON ok.jadwal_pm_id = jp2.jadwal_pm_id
-                    LEFT JOIN asset a2 ON pk.asset_id = a2.asset_id OR jp2.asset_id = a2.asset_id
+                    LEFT JOIN trx_jadwal_pm jp2 ON ok.jadwal_pm_id = jp2.jadwal_pm_id
+                    LEFT JOIN mst_asset a2 ON pk.asset_id = a2.asset_id OR jp2.asset_id = a2.asset_id
                     WHERE pt.pegawai_id = ? AND pt.deleted_st = 0
                 )
                 ORDER BY jp.tgl_berikutnya ASC
@@ -277,7 +277,7 @@ class TeknisiModel extends Model
                 COUNT(ps.penggunaan_id) as jumlah_pakai, SUM(ps.jumlah) as total_jumlah
                 FROM mst_sparepart s
                 JOIN penggunaan_sparepart ps ON s.sparepart_id = ps.sparepart_id
-                JOIN log_kerja lk ON ps.log_kerja_id = lk.log_kerja_id
+                JOIN trx_log_kerja lk ON ps.log_kerja_id = lk.log_kerja_id
                 WHERE lk.teknisi_pegawai_id = ?
                 GROUP BY s.sparepart_id, s.sparepart_nm, s.stok, s.stok_min
                 ORDER BY jumlah_pakai DESC
@@ -303,8 +303,8 @@ class TeknisiModel extends Model
                     FROM penugasan_teknisi pt
                     JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                     LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-                    LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
-                    LEFT JOIN asset a ON (pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id)
+                    LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+                    LEFT JOIN mst_asset a ON (pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id)
                     LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
                     WHERE pt.pegawai_id = ? AND pt.status = 'sedang_dikerjakan' AND pt.deleted_st = 0
                     ORDER BY ok.tgl_dibuat DESC LIMIT 5";
@@ -339,8 +339,8 @@ class TeknisiModel extends Model
             $next_month = date('Y-m-d', strtotime('+30 days'));
             $sql = "SELECT jp.jadwal_pm_id, jp.tgl_berikutnya, a.asset_nm, l.lokasi_nm, 
                     COALESCE(jp.deskripsi, 'Pemeliharaan Rutin') as deskripsi
-                    FROM jadwal_pm jp
-                    JOIN asset a ON jp.asset_id = a.asset_id
+                    FROM trx_jadwal_pm jp
+                    JOIN mst_asset a ON jp.asset_id = a.asset_id
                     LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
                     WHERE jp.tgl_berikutnya BETWEEN ? AND ? AND jp.status = 'aktif'
                     AND jp.jadwal_pm_id IN (
@@ -358,7 +358,7 @@ class TeknisiModel extends Model
                     COUNT(ps.penggunaan_id) as jumlah_pakai
                     FROM mst_sparepart s
                     JOIN penggunaan_sparepart ps ON s.sparepart_id = ps.sparepart_id
-                    JOIN log_kerja lk ON ps.log_kerja_id = lk.log_kerja_id
+                    JOIN trx_log_kerja lk ON ps.log_kerja_id = lk.log_kerja_id
                     WHERE lk.teknisi_pegawai_id = ? OR lk.teknisi_pegawai_id IN (
                         SELECT pegawai_id FROM penugasan_teknisi 
                         WHERE order_kerja_id IN (
@@ -444,7 +444,7 @@ class TeknisiModel extends Model
                    FROM penugasan_teknisi pt
                    JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                    LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-                   LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+                   LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                    WHERE pt.penugasan_id = ? AND pt.deleted_st = 0";
 
             $result = DbModel::rawData('row_array', $sql, [$penugasan_id]);
@@ -467,7 +467,7 @@ class TeknisiModel extends Model
     public function getAssetIdByBarcodeOrOrderKerja($barcode, $order_kerja_id)
     {
         // Cari berdasarkan barcode/no_seri
-        $asset = DbModel::getData('asset', ['no_seri' => $barcode]);
+        $asset = DbModel::getData('mst_asset', ['no_seri' => $barcode]);
         if ($asset) {
             return $asset['asset_id'];
         }
@@ -479,7 +479,7 @@ class TeknisiModel extends Model
                 $permintaan = DbModel::getData('permintaan_komplain', ['permintaan_id' => $order_kerja['permintaan_id']]);
                 return $permintaan['asset_id'] ?? null;
             } elseif (!empty($order_kerja['jadwal_pm_id'])) {
-                $jadwalPm = DbModel::getData('jadwal_pm', ['jadwal_pm_id' => $order_kerja['jadwal_pm_id']]);
+                $jadwalPm = DbModel::getData('trx_jadwal_pm', ['jadwal_pm_id' => $order_kerja['jadwal_pm_id']]);
                 return $jadwalPm['asset_id'] ?? null;
             }
         }
@@ -496,14 +496,14 @@ class TeknisiModel extends Model
     // Mengambil data jadwal PM berdasarkan ID
     public function getJadwalPm($jadwal_pm_id)
     {
-        $sql = "SELECT * FROM jadwal_pm WHERE jadwal_pm_id = ? AND deleted_st = 0";
+        $sql = "SELECT * FROM trx_jadwal_pm WHERE jadwal_pm_id = ? AND deleted_st = 0";
         return DbModel::rawData('row_array', $sql, [$jadwal_pm_id]);
     }
 
     // Mengambil data log kerja berdasarkan order kerja
     public function getLogKerja($order_kerja_id)
     {
-        $sql = "SELECT * FROM log_kerja WHERE order_kerja_id = ? AND deleted_st = 0";
+        $sql = "SELECT * FROM trx_log_kerja WHERE order_kerja_id = ? AND deleted_st = 0";
         return DbModel::rawData('row_array', $sql, [$order_kerja_id]);
     }
 
@@ -558,49 +558,49 @@ class TeknisiModel extends Model
     // Mengambil data asset berdasarkan ID
     public function getAsset($asset_id)
     {
-        $sql = "SELECT * FROM asset WHERE asset_id = ? AND deleted_st = 0";
+        $sql = "SELECT * FROM mst_asset WHERE asset_id = ? AND deleted_st = 0";
         return DbModel::rawData('row_array', $sql, [$asset_id]);
     }
 
     // Mengambil daftar log kerja berdasarkan asset
     public function getLogKerjaList($asset_id)
     {
-        $sql = "SELECT * FROM log_kerja WHERE asset_id = ? AND deleted_st = 0 ORDER BY tgl_mulai DESC";
+        $sql = "SELECT * FROM trx_log_kerja WHERE asset_id = ? AND deleted_st = 0 ORDER BY tgl_mulai DESC";
         return DbModel::rawData('result_array', $sql, [$asset_id]);
     }
 
     // Mengambil daftar order kerja berdasarkan asset
     public function getOrderKerjaListByAsset($asset_id)
     {
-        $sql = "SELECT * FROM order_kerja WHERE (permintaan_id IN (SELECT permintaan_id FROM permintaan_komplain WHERE asset_id = ?) OR jadwal_pm_id IN (SELECT jadwal_pm_id FROM jadwal_pm WHERE asset_id = ?)) AND deleted_st = 0";
+        $sql = "SELECT * FROM order_kerja WHERE (permintaan_id IN (SELECT permintaan_id FROM permintaan_komplain WHERE asset_id = ?) OR jadwal_pm_id IN (SELECT jadwal_pm_id FROM trx_jadwal_pm WHERE asset_id = ?)) AND deleted_st = 0";
         return DbModel::rawData('result_array', $sql, [$asset_id, $asset_id]);
     }
 
-/**
- * Ambil daftar order_kerja beserta nama teknisi dan deskripsi berdasarkan asset_id
- */
-public function getOrderKerjaByAssetId($asset_id)
-{
-    $sql = "SELECT ok.*, p.pegawai_nm as teknisi_nama, 
+    /**
+     * Ambil daftar order_kerja beserta nama teknisi dan deskripsi berdasarkan asset_id
+     */
+    public function getOrderKerjaByAssetId($asset_id)
+    {
+        $sql = "SELECT ok.*, p.pegawai_nm as teknisi_nama, 
                    COALESCE(pk.deskripsi, j.deskripsi) as deskripsi
             FROM order_kerja ok
             LEFT JOIN penugasan_teknisi pt ON ok.order_kerja_id = pt.order_kerja_id
             LEFT JOIN mst_pegawai p ON pt.pegawai_id = p.pegawai_id
             LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-            LEFT JOIN jadwal_pm j ON ok.jadwal_pm_id = j.jadwal_pm_id
+            LEFT JOIN trx_jadwal_pm j ON ok.jadwal_pm_id = j.jadwal_pm_id
             WHERE ok.deleted_st = 0
               AND ( (pk.asset_id = ? AND (pk.deleted_st = 0 OR pk.deleted_st IS NULL)) 
                   OR (j.asset_id = ? AND (j.deleted_st = 0 OR j.deleted_st IS NULL)) )
               AND (pt.deleted_st = 0 OR pt.deleted_st IS NULL)
             ORDER BY ok.tgl_dibuat DESC";
-    return \App\Modules\App\Models\DbModel::rawData('result_array', $sql, [$asset_id, $asset_id]);
-}
-// ...existing code...
+        return \App\Modules\App\Models\DbModel::rawData('result_array', $sql, [$asset_id, $asset_id]);
+    }
+    // ...existing code...
 
     // Mengambil detail asset berdasarkan ID
     public function getAssetDetail($asset_id)
     {
-        $sql = "SELECT a.*, l.lokasi_nm FROM asset a LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id WHERE a.asset_id = ? AND a.deleted_st = 0";
+        $sql = "SELECT a.*, l.lokasi_nm FROM mst_asset a LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id WHERE a.asset_id = ? AND a.deleted_st = 0";
         return DbModel::rawData('row_array', $sql, [$asset_id]);
     }
 

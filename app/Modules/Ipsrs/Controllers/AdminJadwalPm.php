@@ -18,24 +18,24 @@ class AdminJadwalPm extends MyController
     public function index()
     {
         $d = [];
-        
+
         // Penting: Panggil save_session_search untuk mengelola session pencarian
         $this->save_session_search($d);
-        
+
         // Tidak perlu set $d['nav_sess'] = session(request('n')) karena sudah dihandle di parent
-        
+
         // Data untuk dropdown filter
-        $d['all_asset'] = DbModel::allData('asset', ['deleted_st' => 0, 'active_st' => 1]);
-        
+        $d['all_asset'] = DbModel::allData('mst_asset', ['deleted_st' => 0, 'active_st' => 1]);
+
         return $this->renderView($this->template . 'index', $d);
     }
 
     public function form_modal($id = null)
     {
-        $d['main'] = DbModel::getData('jadwal_pm', ['jadwal_pm_id' => $id]);
-        $d['all_asset'] = DbModel::allData('asset', ['deleted_st' => 0, 'active_st' => 1]);
+        $d['main'] = DbModel::getData('trx_jadwal_pm', ['jadwal_pm_id' => $id]);
+        $d['all_asset'] = DbModel::allData('mst_asset', ['deleted_st' => 0, 'active_st' => 1]);
         $d['form_act'] = $this->uri . '/save/' . $id;
-        
+
         return $this->renderView($this->template . 'form_modal', $d);
     }
 
@@ -59,7 +59,7 @@ class AdminJadwalPm extends MyController
 
         // Pindahkan logika save ke model
         $result = JadwalPmModel::saveData($d, $id);
-        
+
         if ($result) {
             if ($id == null) {
                 return response()->json(_response('01', $this->uri, $d));
@@ -81,8 +81,8 @@ class AdminJadwalPm extends MyController
         if (DbModel::getData('order_kerja', ['jadwal_pm_id' => $id, 'deleted_st' => 0])) {
             return response()->json(_response('13', $this->uri, ['message' => 'Jadwal ini sudah digunakan di Order Kerja dan tidak dapat dihapus.']));
         }
-        
-        $result = DbModel::deleteData('jadwal_pm', ['jadwal_pm_id' => $id]);
+
+        $result = DbModel::deleteData('trx_jadwal_pm', ['jadwal_pm_id' => $id]);
         return response()->json(_response($result ? '03' : '13', $this->uri));
     }
 

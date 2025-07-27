@@ -50,7 +50,7 @@ class DashboardModel extends Model
     public function getCountAsetPerbaikan()
     {
         try {
-            $sql = "SELECT COUNT(*) as total FROM asset WHERE status = 'perbaikan' AND deleted_st = 0";
+            $sql = "SELECT COUNT(*) as total FROM mst_asset WHERE status = 'perbaikan' AND deleted_st = 0";
             $result = DbModel::rawData('row_array', $sql);
             return $result['total'] ?? 0;
         } catch (\Exception $e) {
@@ -77,7 +77,7 @@ class DashboardModel extends Model
             // Menggunakan subquery untuk konsistensi format dengan modul acuan
             $sql = "SELECT COUNT(*) as total FROM (
                     SELECT jp.jadwal_pm_id
-                    FROM jadwal_pm jp
+                    FROM trx_jadwal_pm jp
                     WHERE jp.deleted_st = 0 
                     AND jp.jadwal_pm_id NOT IN (
                         SELECT jadwal_pm_id FROM order_kerja 
@@ -121,8 +121,8 @@ class DashboardModel extends Model
                         a.asset_nm 
                     FROM order_kerja ok
                     LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-                    LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
-                    LEFT JOIN asset a ON (pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id)
+                    LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+                    LEFT JOIN mst_asset a ON (pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id)
                     WHERE ok.status IN ('baru', 'ditugaskan') 
                     AND ok.prioritas = 'darurat'
                     AND ok.deleted_st = 0
@@ -148,7 +148,7 @@ class DashboardModel extends Model
                 FROM penugasan_teknisi pt
                 JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                 LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-                LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+                LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                 WHERE pt.deleted_st = 0 AND ok.deleted_st = 0";
             $result = DbModel::rawData('row_array', $sql);
             return $result['avg_total_penyelesaian'] ?? 0;

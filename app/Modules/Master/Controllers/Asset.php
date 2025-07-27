@@ -39,7 +39,7 @@ class Asset extends MyController
     {
         $d['all_lokasi'] = DbModel::allData('mst_lokasi', ['deleted_st' => '0', 'active_st' => '1', 'tipe_lokasi' => 'Ruangan']);
         $d['all_kategori_asset'] = DbModel::allData('mst_kategori_asset', ['deleted_st' => '0', 'active_st' => '1']);
-        $d['main'] = DbModel::getData('asset', ['asset_id' => $id]);
+        $d['main'] = DbModel::getData('mst_asset', ['asset_id' => $id]);
         $d['form_act'] = $this->uri . '/save/' . $id;
         return $this->renderView($this->template . 'form_modal', $d);
     }
@@ -56,7 +56,7 @@ class Asset extends MyController
         if (!empty($d['no_seri'])) {
                 $queryCheckNoSeri = DbModel::rawData(
                         'row_array',
-                        "SELECT * FROM asset WHERE no_seri = ? AND asset_id != ? AND deleted_st = 0",
+                        "SELECT * FROM mst_asset WHERE no_seri = ? AND asset_id != ? AND deleted_st = 0",
                         [$d['no_seri'], $id ?? '']
                 );
                 if ($queryCheckNoSeri != null) {
@@ -65,21 +65,21 @@ class Asset extends MyController
         }
 
         if ($id == null) {
-                $d['asset_id'] = DbModel::getId('asset', 2, 12);
+                $d['asset_id'] = DbModel::getId('mst_asset', 2, 12);
                 if (empty($d['asset_id'])) {
                         return response()->json(_response('11', $this->uri, ['message' => 'Gagal membuat ID Aset baru!']));
                 }
-                if (DbModel::validId('asset', 'asset_id', $d['asset_id'])) {
+                if (DbModel::validId('mst_asset', 'asset_id', $d['asset_id'])) {
                         return response()->json(_response('20', $this->uri, ['message' => 'ID Aset sudah digunakan!']));
                 }
-                $result = DbModel::insertData('asset', $d);
+                $result = DbModel::insertData('mst_asset', $d);
                 if ($result) {
                         return response()->json(_response('01', $this->uri, $d));
                 } else {
                         return response()->json(_response('11', $this->uri, ['message' => 'Gagal menyimpan data!']));
                 }
         } else {
-                $result = DbModel::updateData('asset', $d, ['asset_id' => $id]);
+                $result = DbModel::updateData('mst_asset', $d, ['asset_id' => $id]);
                 if ($result) {
                         return response()->json(_response('02', $this->uri, $d));
                 } else {
@@ -96,7 +96,7 @@ class Asset extends MyController
         $assetModel = new AssetModel();
         $d['asset'] = $assetModel->getAssetDetailById($id);
         $d['history'] = $assetModel->getAssetHistory($id);
-        $d['title'] = 'Detail Aset: ' . $d['asset']['asset_nm'];
+        $d['title'] = 'Detail Aset: ' . $d['mst_asset']['asset_nm'];
         return $this->renderView($this->template . 'detail_modal', $d);
     }
 

@@ -51,7 +51,8 @@ class LaporanModel extends Model
         }
 
         // Count total
-        $sqlCount = "SELECT COUNT(*) as total FROM asset a WHERE a.deleted_st = 0";
+        $sqlCount = "SELECT COUNT(*) as total FROM mst
+        _asset a WHERE a.deleted_st = 0";
         $total = DbModel::rawData('row_array', $sqlCount)['total'] ?? 0;
 
         // Query data
@@ -65,9 +66,9 @@ class LaporanModel extends Model
             SUM(CASE WHEN ok.jenis = 'perbaikan' THEN 1 ELSE 0 END) as jumlah_perbaikan,
             SUM(CASE WHEN ok.jenis = 'pemeliharaan' THEN 1 ELSE 0 END) as jumlah_pemeliharaan,
             MAX(ok.tgl_dibuat) as terakhir_ditangani
-        FROM asset a
+        FROM mst_asset a
         LEFT JOIN permintaan_komplain pk ON a.asset_id = pk.asset_id
-        LEFT JOIN jadwal_pm jp ON a.asset_id = jp.asset_id
+        LEFT JOIN trx_jadwal_pm jp ON a.asset_id = jp.asset_id
         LEFT JOIN order_kerja ok ON pk.permintaan_id = ok.permintaan_id OR jp.jadwal_pm_id = ok.jadwal_pm_id
         LEFT JOIN mst_kategori_asset ka ON a.kategori_asset_id = ka.kategori_asset_id
         LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
@@ -130,7 +131,7 @@ class LaporanModel extends Model
                 FROM mst_pegawai p
                 LEFT JOIN penugasan_teknisi pt ON p.pegawai_id = pt.pegawai_id
                 LEFT JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
-                LEFT JOIN log_kerja lk ON ok.order_kerja_id = lk.order_kerja_id
+                LEFT JOIN trx_log_kerja lk ON ok.order_kerja_id = lk.order_kerja_id
                 WHERE {$whereClause}
                 GROUP BY p.pegawai_id, p.pegawai_nm
                 ORDER BY {$orderBy}
@@ -204,11 +205,11 @@ class LaporanModel extends Model
             lk.total_biaya as biaya_lain,
             COALESCE((SELECT SUM(ps.jumlah * ps.harga_satuan) FROM penggunaan_sparepart ps WHERE ps.log_kerja_id = lk.log_kerja_id), 0) + COALESCE(lk.total_biaya, 0) as total_biaya_ok
         FROM order_kerja ok
-        LEFT JOIN log_kerja lk ON ok.order_kerja_id = lk.order_kerja_id
+        LEFT JOIN trx_log_kerja lk ON ok.order_kerja_id = lk.order_kerja_id
         LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-        LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
-        LEFT JOIN asset a1 ON pk.asset_id = a1.asset_id
-        LEFT JOIN asset a2 ON jp.asset_id = a2.asset_id
+        LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+        LEFT JOIN mst_asset a1 ON pk.asset_id = a1.asset_id
+        LEFT JOIN mst_asset a2 ON jp.asset_id = a2.asset_id
         WHERE {$whereClause}
         ORDER BY {$orderBy}
         LIMIT {$length} OFFSET {$start}";
@@ -281,9 +282,9 @@ class LaporanModel extends Model
         JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
         JOIN mst_pegawai p ON pt.pegawai_id = p.pegawai_id
         LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-        LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
-        LEFT JOIN asset a1 ON pk.asset_id = a1.asset_id
-        LEFT JOIN asset a2 ON jp.asset_id = a2.asset_id
+        LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+        LEFT JOIN mst_asset a1 ON pk.asset_id = a1.asset_id
+        LEFT JOIN mst_asset a2 ON jp.asset_id = a2.asset_id
         WHERE {$where}
         ORDER BY {$orderBy}
         LIMIT {$length} OFFSET {$start}";
@@ -336,11 +337,11 @@ class LaporanModel extends Model
             + COALESCE(lk.total_biaya, 0)
         ) as total_biaya
         FROM order_kerja ok
-        LEFT JOIN log_kerja lk ON ok.order_kerja_id = lk.order_kerja_id
+        LEFT JOIN trx_log_kerja lk ON ok.order_kerja_id = lk.order_kerja_id
         LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-        LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
-        LEFT JOIN asset a1 ON pk.asset_id = a1.asset_id
-        LEFT JOIN asset a2 ON jp.asset_id = a2.asset_id
+        LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+        LEFT JOIN mst_asset a1 ON pk.asset_id = a1.asset_id
+        LEFT JOIN mst_asset a2 ON jp.asset_id = a2.asset_id
         WHERE {$whereClause}";
 
         $row = DbModel::rawData('row_array', $sql, $bindings);
@@ -382,9 +383,9 @@ class LaporanModel extends Model
         JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
         JOIN mst_pegawai p ON pt.pegawai_id = p.pegawai_id
         LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-        LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
-        LEFT JOIN asset a1 ON pk.asset_id = a1.asset_id
-        LEFT JOIN asset a2 ON jp.asset_id = a2.asset_id
+        LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+        LEFT JOIN mst_asset a1 ON pk.asset_id = a1.asset_id
+        LEFT JOIN mst_asset a2 ON jp.asset_id = a2.asset_id
         WHERE $where";
         $row = DbModel::rawData('row_array', $sql, $bindings);
         return round($row['rata_rata_penyelesaian'] ?? 0, 2);

@@ -27,47 +27,46 @@ class JadwalPmModel extends Model
     static function loadDatatables()
     {
         self::initSession();
-        
+
         $where = "1 = 1 ";
 
         // Filter berdasarkan aset
         if (@self::$nav_sess['search']['data']['asset_id'] != '') {
-            $where .= " AND pm.asset_id = '" . @self::$nav_sess['search']['data']['asset_id'] . "' ";
+            $where .= " AND jp.asset_id = '" . @self::$nav_sess['search']['data']['asset_id'] . "' ";
         }
-        
+
         // Filter berdasarkan status
         if (@self::$nav_sess['search']['data']['status'] != '') {
-            $where .= " AND pm.status = '" . @self::$nav_sess['search']['data']['status'] . "' ";
+            $where .= " AND jp.status = '" . @self::$nav_sess['search']['data']['status'] . "' ";
         }
-        
+
         // Filter berdasarkan pencarian
         if (@self::$nav_sess['search']['data']['term'] != '') {
             $where .= " AND (LOWER(a.asset_nm) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%' 
-                      OR LOWER(pm.jenis) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%'
-                      OR LOWER(pm.frekuensi) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%') ";
+                      OR LOWER(jp.jenis) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%'
+                      OR LOWER(jp.frekuensi) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%') ";
         }
 
         // Gunakan subquery dengan alias seperti pada modul acuan
         $query = "SELECT * FROM (
                     SELECT 
-                      pm.jadwal_pm_id,
+                      jp.jadwal_pm_id,
                       a.asset_nm,
-                      pm.frekuensi,
-                      pm.jenis,
-                      pm.tgl_terakhir,
-                      pm.tgl_berikutnya,
-                      pm.status,
-                      pm.active_st
-                    FROM 
-                      jadwal_pm pm
-                      LEFT JOIN asset a ON pm.asset_id = a.asset_id
-                    WHERE $where AND pm.deleted_st = 0
+                      jp.frekuensi,
+                      jp.jenis,
+                      jp.tgl_terakhir,
+                      jp.tgl_berikutnya,
+                      jp.status,
+                      jp.active_st
+                    FROM trx_jadwal_pm jp
+                      LEFT JOIN mst_asset a ON jp.asset_id = a.asset_id
+                    WHERE $where AND jp.deleted_st = 0
                 ) x ";
-                
+
         $search = ['asset_nm', 'frekuensi', 'jenis', 'status'];
         $where = null;
         $isWhere = null;
-        
+
         $result = DbModel::datatablesQuery($query, $search, $where, $isWhere);
         return response()->json($result);
     }
@@ -123,36 +122,36 @@ class JadwalPmModel extends Model
             if ($id == null) {
                 // Insert mode
                 if (empty($post['jadwal_pm_id'])) {
-                    $dataToSave['jadwal_pm_id'] = DbModel::getId('jadwal_pm', 2, 12);
+                    $dataToSave['jadwal_pm_id'] = DbModel::getId('trx_jadwal_pm', 2, 12);
                 } else {
                     $dataToSave['jadwal_pm_id'] = $post['jadwal_pm_id'];
                 }
-                
+
                 $dataToSave['created_by'] = session('user_name');
                 $dataToSave['created_at'] = now();
-                
-                $result = DB::table('jadwal_pm')->insert($dataToSave);
+
+                $result = DB::table('trx_jadwal_pm')->insert($dataToSave);
             } else {
                 // Update mode
                 $dataToSave['updated_by'] = session('user_name');
                 $dataToSave['updated_at'] = now();
-                
-                $result = DB::table('jadwal_pm')
+
+                $result = DB::table('trx_jadwal_pm')
                     ->where('jadwal_pm_id', $id)
                     ->update($dataToSave);
             }
 
             // Commit transaksi jika berhasil
             DB::commit();
-            
+
             return true;
         } catch (\Exception $e) {
             // Rollback transaksi jika terjadi error
             DB::rollBack();
-            
+
             // Log error untuk debugging
             \Log::error('Error saving jadwal_pm: ' . $e->getMessage());
-            
+
             return false;
         }
     }

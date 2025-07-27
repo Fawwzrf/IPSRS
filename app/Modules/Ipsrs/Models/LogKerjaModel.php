@@ -33,14 +33,14 @@ class LogKerjaModel extends Model
         try {
             \DB::beginTransaction();
 
-            $existingLog = DbModel::getData('log_kerja', ['order_kerja_id' => $order_kerja_id]);
+            $existingLog = DbModel::getData('trx_log_kerja', ['order_kerja_id' => $order_kerja_id]);
             if ($existingLog) {
-                DbModel::updateData('log_kerja', $logKerjaData, ['log_kerja_id' => $existingLog['log_kerja_id']]);
+                DbModel::updateData('trx_log_kerja', $logKerjaData, ['log_kerja_id' => $existingLog['log_kerja_id']]);
                 $log_kerja_id = $existingLog['log_kerja_id'];
             } else {
-                $log_kerja_id = DbModel::getId('log_kerja', 2, 12);
+                $log_kerja_id = DbModel::getId('trx_log_kerja', 2, 12);
                 $logKerjaData['log_kerja_id'] = $log_kerja_id;
-                DbModel::insertData('log_kerja', $logKerjaData);
+                DbModel::insertData('trx_log_kerja', $logKerjaData);
             }
 
             // Proses Upload Foto
@@ -130,7 +130,7 @@ class LogKerjaModel extends Model
 
                 if (!empty($order_current['jadwal_pm_id'])) {
                     DbModel::updateData(
-                        'jadwal_pm',
+                        'trx_jadwal_pm',
                         ['status' => 'selesai'],
                         ['jadwal_pm_id' => $order_current['jadwal_pm_id']]
                     );
@@ -144,19 +144,19 @@ class LogKerjaModel extends Model
                 $permintaan = DbModel::getData('permintaan_komplain', ['permintaan_id' => $order_current['permintaan_id']]);
                 $asset_id = $permintaan['asset_id'] ?? null;
             } elseif (!empty($order_current['jadwal_pm_id'])) {
-                $jadwal = DbModel::getData('jadwal_pm', ['jadwal_pm_id' => $order_current['jadwal_pm_id']]);
+                $jadwal = DbModel::getData('trx_jadwal_pm', ['jadwal_pm_id' => $order_current['jadwal_pm_id']]);
                 $asset_id = $jadwal['asset_id'] ?? null;
             }
 
             if ($asset_id) {
                 if ($status_baru == 'diproses' || $status_baru == 'menunggu_sparepart') {
                     // Update status aset menjadi 'perbaikan'
-                    DbModel::updateData('asset', ['status' => 'perbaikan'], ['asset_id' => $asset_id]);
+                    DbModel::updateData('mst_asset', ['status' => 'perbaikan'], ['asset_id' => $asset_id]);
                 } elseif ($status_baru == 'selesai') {
                     // Cek apakah masih ada order kerja lain yang aktif untuk aset ini
                     $active_orders_query = "SELECT COUNT(*) as jumlah FROM order_kerja 
                                           WHERE (permintaan_id IN (SELECT permintaan_id FROM permintaan_komplain WHERE asset_id = ?) 
-                                          OR jadwal_pm_id IN (SELECT jadwal_pm_id FROM jadwal_pm WHERE asset_id = ?))
+                                          OR jadwal_pm_id IN (SELECT jadwal_pm_id FROM trx_jadwal_pm WHERE asset_id = ?))
                                           AND status NOT IN ('selesai', 'dibatalkan')
                                           AND order_kerja_id != ?";
 
@@ -164,7 +164,7 @@ class LogKerjaModel extends Model
 
                     if ($active_orders['jumlah'] == 0) {
                         // Tidak ada order kerja aktif lain, kembalikan status aset menjadi 'aktif'
-                        DbModel::updateData('asset', ['status' => 'aktif'], ['asset_id' => $asset_id]);
+                        DbModel::updateData('mst_asset', ['status' => 'aktif'], ['asset_id' => $asset_id]);
                     }
                 }
             }
@@ -179,7 +179,7 @@ class LogKerjaModel extends Model
     public function getLogByOrderId($order_kerja_id)
     {
         $query = "SELECT lk.*, p.pegawai_nm as teknisi_nm
-                  FROM log_kerja lk
+                  FROM trx_log_kerja lk
                   LEFT JOIN mst_pegawai p ON lk.teknisi_pegawai_id = p.pegawai_id
                   WHERE lk.order_kerja_id = ? AND lk.deleted_st = 0";
         return DbModel::rawData('row_array', $query, [$order_kerja_id]);
@@ -242,15 +242,15 @@ class LogKerjaModel extends Model
                 WHEN ok.jadwal_pm_id IS NOT NULL THEN 'Jadwal PM'
                 ELSE 'Perbaikan'
                 END as jenis,
-                (SELECT COUNT(*) FROM log_kerja_foto WHERE log_kerja_id = lk.log_kerja_id) as foto_count,
+                (SELECT COUNT(*) FROM trx_log_kerja_foto WHERE log_kerja_id = lk.log_kerja_id) as foto_count,
                 a.asset_nm
             FROM 
-                log_kerja lk
+                trx_log_kerja lk
                 LEFT JOIN mst_pegawai p ON lk.teknisi_pegawai_id = p.pegawai_id
                 LEFT JOIN order_kerja ok ON lk.order_kerja_id = ok.order_kerja_id
                 LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-                LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
-                LEFT JOIN asset a ON a.asset_id = COALESCE(pk.asset_id, jp.asset_id)
+                LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+                LEFT JOIN mst_asset a ON a.asset_id = COALESCE(pk.asset_id, jp.asset_id)
             WHERE $where AND lk.deleted_st = 0
             ) x ";
 
@@ -270,8 +270,8 @@ class LogKerjaModel extends Model
                 END as jenis
             FROM order_kerja ok
             LEFT JOIN permintaan_komplain p ON p.permintaan_id = ok.permintaan_id
-            LEFT JOIN jadwal_pm jp ON jp.jadwal_pm_id = ok.jadwal_pm_id
-            LEFT JOIN asset a ON a.asset_id = COALESCE(p.asset_id, jp.asset_id)
+            LEFT JOIN trx_jadwal_pm jp ON jp.jadwal_pm_id = ok.jadwal_pm_id
+            LEFT JOIN mst_asset a ON a.asset_id = COALESCE(p.asset_id, jp.asset_id)
             WHERE ok.deleted_st = 0 AND ok.status != 'selesai'
             ORDER BY ok.order_kerja_id DESC";
         return DbModel::rawData('result_array', $sql) ?: [];
@@ -297,7 +297,7 @@ class LogKerjaModel extends Model
     public function getLogById($log_kerja_id)
     {
         $sql = "SELECT lk.*, p.pegawai_nm as teknisi_nm
-            FROM log_kerja lk
+            FROM trx_log_kerja lk
             LEFT JOIN mst_pegawai p ON lk.teknisi_pegawai_id = p.pegawai_id
             WHERE lk.log_kerja_id = ? AND lk.deleted_st = 0";
         return DbModel::rawData('row_array', $sql, [$log_kerja_id]);
@@ -310,7 +310,7 @@ class LogKerjaModel extends Model
 
     public function getLogByOrderKerja($order_kerja_id)
     {
-        return DbModel::rawData('result_array', "SELECT * FROM log_kerja WHERE order_kerja_id = ?", [$order_kerja_id]) ?: [];
+        return DbModel::rawData('result_array', "SELECT * FROM trx_log_kerja WHERE order_kerja_id = ?", [$order_kerja_id]) ?: [];
     }
 
     public function getSparepartByLogKerja($log_kerja_id)

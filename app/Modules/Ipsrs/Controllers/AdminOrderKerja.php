@@ -50,8 +50,8 @@ class AdminOrderKerja extends MyController
             $sql = "SELECT jp.*, a.asset_nm, 
                     COALESCE(jp.frekuensi, 'N/A') as frekuensi, 
                     COALESCE(jp.jenis, 'N/A') as jenis
-                    FROM jadwal_pm jp 
-                    JOIN asset a ON jp.asset_id = a.asset_id 
+                    FROM trx_jadwal_pm jp 
+                    JOIN mst_asset a ON jp.asset_id = a.asset_id 
                     WHERE jp.deleted_st = 0 
                     AND jp.active_st = 1
                     AND jp.status != 'dibatalkan'
@@ -66,7 +66,7 @@ class AdminOrderKerja extends MyController
             // Ambil permintaan komplain yang belum dibuatkan order kerja
             $sql = "SELECT pk.*, a.asset_nm 
                     FROM permintaan_komplain pk 
-                    JOIN asset a ON pk.asset_id = a.asset_id 
+                    JOIN mst_asset a ON pk.asset_id = a.asset_id 
                     WHERE pk.deleted_st = 0 
                     AND pk.status IN ('diverifikasi', 'baru', 'dikirim', 'diterima')
                     AND pk.permintaan_id NOT IN (
@@ -85,8 +85,8 @@ class AdminOrderKerja extends MyController
                 $sql = "SELECT jp.*, a.asset_nm, 
                         COALESCE(jp.frekuensi, 'N/A') as frekuensi, 
                         COALESCE(jp.jenis, 'N/A') as jenis
-                        FROM jadwal_pm jp 
-                        JOIN asset a ON jp.asset_id = a.asset_id 
+                        FROM trx_jadwal_pm jp 
+                        JOIN mst_asset a ON jp.asset_id = a.asset_id 
                         WHERE jp.jadwal_pm_id = ?";
                 $d['all_jadwal_pm'] = DbModel::rawData('result_array', $sql, [$d['main']['jadwal_pm_id']]);
             } else {
@@ -97,7 +97,7 @@ class AdminOrderKerja extends MyController
             if (!empty($d['main']['permintaan_id'])) {
                 $sql = "SELECT pk.*, a.asset_nm 
                         FROM permintaan_komplain pk 
-                        JOIN asset a ON pk.asset_id = a.asset_id 
+                        JOIN mst_asset a ON pk.asset_id = a.asset_id 
                         WHERE pk.permintaan_id = ?";
                 $d['all_komplain'] = DbModel::rawData('result_array', $sql, [$d['main']['permintaan_id']]);
             } else {
@@ -176,7 +176,7 @@ class AdminOrderKerja extends MyController
                 // Ambil deskripsi dari jadwal_pm atau permintaan jika tersedia
                 if (empty($d['catatan']) && empty($d['deskripsi'])) {
                     if (!empty($d['jadwal_pm_id'])) {
-                        $jadwal = DbModel::getData('jadwal_pm', ['jadwal_pm_id' => $d['jadwal_pm_id']]);
+                        $jadwal = DbModel::getData('trx_jadwal_pm', ['jadwal_pm_id' => $d['jadwal_pm_id']]);
                         if ($jadwal) {
                             // PERBAIKAN: Gunakan catatan, bukan deskripsi
                             $d['catatan'] = 'Pemeliharaan: ' . $jadwal['jenis'];
@@ -338,7 +338,7 @@ class AdminOrderKerja extends MyController
         $log_kerja = DbModel::rawData(
             'result_array',
             "SELECT lk.*, p.pegawai_nm
-             FROM log_kerja lk
+             FROM trx_log_kerja lk
              LEFT JOIN mst_pegawai p ON lk.teknisi_pegawai_id = p.pegawai_id
              WHERE lk.order_kerja_id = ? AND lk.deleted_st = 0",
             [$order_kerja_id]
@@ -349,7 +349,7 @@ class AdminOrderKerja extends MyController
             // Foto
             $log['fotos'] = DbModel::rawData(
                 'result_array',
-                "SELECT foto_url, deskripsi FROM log_kerja_foto WHERE log_kerja_id = ?",
+                "SELECT foto_url, deskripsi FROM trx_log_kerja_foto WHERE log_kerja_id = ?",
                 [$log['log_kerja_id']]
             );
 

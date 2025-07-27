@@ -70,7 +70,7 @@ class KategoriAsset extends MyController
     // Menghapus kategori aset
     public function delete($id)
     {
-        $hasAssets = DbModel::getData('asset', ['kategori_asset_id' => $id, 'deleted_st' => 0]);
+        $hasAssets = DbModel::getData('mst_asset', ['kategori_asset_id' => $id, 'deleted_st' => 0]);
         if ($hasAssets) {
             return response()->json(_response('13', $this->uri, ['message' => 'Kategori ini masih terhubung dengan aset dan tidak dapat dihapus.']));
         }

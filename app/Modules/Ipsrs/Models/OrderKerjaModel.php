@@ -62,9 +62,9 @@ class OrderKerjaModel extends Model
                     FROM 
                       order_kerja ok
                       LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
-                      LEFT JOIN jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
-                      LEFT JOIN asset a1 ON pk.asset_id = a1.asset_id
-                      LEFT JOIN asset a2 ON jp.asset_id = a2.asset_id
+                      LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
+                      LEFT JOIN mst_asset a1 ON pk.asset_id = a1.asset_id
+                      LEFT JOIN mst_asset a2 ON jp.asset_id = a2.asset_id
                     WHERE $where AND ok.deleted_st = 0
                 ) x";
 
@@ -386,8 +386,8 @@ class OrderKerjaModel extends Model
                     jp.tgl_berikutnya,
                     jp.status
                   FROM 
-                    jadwal_pm jp
-                    LEFT JOIN asset a ON jp.asset_id = a.asset_id
+                    trx_jadwal_pm jp
+                    LEFT JOIN mst_asset a ON jp.asset_id = a.asset_id
                   WHERE 
                     jp.deleted_st = 0 
                     AND jp.active_st = 1
