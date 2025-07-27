@@ -59,7 +59,7 @@ class PermintaanKomplainModel extends Model
                       a.asset_nm,
                       p.pegawai_nm
                     FROM 
-                      permintaan_komplain k
+                      trx_permintaan_komplain k
                       LEFT JOIN mst_asset a ON k.asset_id = a.asset_id
                       LEFT JOIN mst_pegawai p ON k.pegawai_id = p.pegawai_id
                     WHERE $where AND k.deleted_st = 0
@@ -76,7 +76,7 @@ class PermintaanKomplainModel extends Model
     public function getById($id)
     {
         if (!$id) return null;
-        return DbModel::getData('permintaan_komplain', ['permintaan_id' => $id]);
+        return DbModel::getData('trx_permintaan_komplain', ['permintaan_id' => $id]);
     }
 
     public static function saveData($id = null, $d = [])
@@ -143,7 +143,7 @@ class PermintaanKomplainModel extends Model
                 // Untuk debugging, log data yang akan dimasukkan
                 \Log::info('PermintaanKomplainModel: Inserting filtered data', ['data' => $dataToInsert]);
 
-                $insert = DbModel::insertData('permintaan_komplain', $dataToInsert);
+                $insert = DbModel::insertData('trx_permintaan_komplain', $dataToInsert);
                 if (!$insert) {
                     throw new \Exception("Gagal menyimpan permintaan");
                 }
@@ -190,7 +190,7 @@ class PermintaanKomplainModel extends Model
                 // Untuk debugging, log data yang akan diupdate
                 \Log::info('PermintaanKomplainModel: Updating filtered data', ['data' => $dataToUpdate]);
 
-                $update = DbModel::updateData('permintaan_komplain', $dataToUpdate, ['permintaan_id' => $id]);
+                $update = DbModel::updateData('trx_permintaan_komplain', $dataToUpdate, ['permintaan_id' => $id]);
                 if (!$update) {
                     throw new \Exception("Gagal mengupdate permintaan");
                 }
@@ -223,7 +223,7 @@ class PermintaanKomplainModel extends Model
 
             // Soft delete
             $result = DbModel::updateData(
-                'permintaan_komplain',
+                'trx_permintaan_komplain',
                 ['deleted_st' => 1, 'updated_by' => session('user_name'), 'updated_at' => now()],
                 ['permintaan_id' => $id]
             );
@@ -244,7 +244,7 @@ class PermintaanKomplainModel extends Model
     public static function generatePermintaanId()
     {
         // Ambil ID terakhir
-        $sql = "SELECT permintaan_id FROM permintaan_komplain 
+        $sql = "SELECT permintaan_id FROM trx_permintaan_komplain 
                 ORDER BY permintaan_id DESC LIMIT 1";
         $last = DbModel::rawData('row_array', $sql);
         $lastId = isset($last['permintaan_id']) ? $last['permintaan_id'] : '000000000000';

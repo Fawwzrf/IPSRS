@@ -30,7 +30,7 @@ class TeknisiModel extends Model
     {
         try {
             $sql = "SELECT COUNT(*) as total 
-                    FROM penugasan_teknisi 
+                    FROM trx_penugasan_teknisi 
                     WHERE pegawai_id = ? AND status = ? AND deleted_st = 0";
 
             $result = DbModel::rawData('row_array', $sql, [$teknisi_id, $status]);
@@ -48,9 +48,9 @@ class TeknisiModel extends Model
             $sql = "SELECT pt.penugasan_id, pt.catatan_penolakan, ok.order_kerja_id, a.asset_id, a.asset_nm, l.lokasi_nm, ok.jenis, ok.prioritas, ok.permintaan_id,
             ok.jadwal_pm_id, ok.tgl_dibuat,
                         COALESCE(pk.deskripsi, 'Pemeliharaan Rutin') as deskripsi
-                    FROM penugasan_teknisi pt
+                    FROM trx_penugasan_teknisi pt
                     JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
-                    LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+                    LEFT JOIN trx_permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                     LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                     LEFT JOIN mst_asset a ON pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id
                     LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
@@ -86,9 +86,9 @@ class TeknisiModel extends Model
                     jp.jenis as jenis_pemeliharaan,
                     jp.tgl_berikutnya as tgl_pemeliharaan,
                     jp.deskripsi as deskripsi_pemeliharaan
-                FROM penugasan_teknisi pt
+                FROM trx_penugasan_teknisi pt
                 JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
-                LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+                LEFT JOIN trx_permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                 LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                 LEFT JOIN mst_asset a ON pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id
                 LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
@@ -108,9 +108,9 @@ class TeknisiModel extends Model
                 'updated_at' => now(),
                 'updated_by' => session('user_name')
             ];
-            DbModel::updateData('penugasan_teknisi', $update_data, ['penugasan_id' => $penugasan_id]);
+            DbModel::updateData('trx_penugasan_teknisi', $update_data, ['penugasan_id' => $penugasan_id]);
 
-            $penugasan = DbModel::getData('penugasan_teknisi', ['penugasan_id' => $penugasan_id]);
+            $penugasan = DbModel::getData('trx_penugasan_teknisi', ['penugasan_id' => $penugasan_id]);
             $order_kerja_id = $penugasan['order_kerja_id'] ?? null;
 
             if ($order_kerja_id && $status === 'sedang_dikerjakan') {
@@ -124,7 +124,7 @@ class TeknisiModel extends Model
             if ($order_kerja_id) {
                 $count_aktif = DbModel::rawData(
                     'row_array',
-                    "SELECT COUNT(*) as total FROM penugasan_teknisi WHERE order_kerja_id = ? AND status != 'dibatalkan' AND deleted_st = 0",
+                    "SELECT COUNT(*) as total FROM trx_penugasan_teknisi WHERE order_kerja_id = ? AND status != 'dibatalkan' AND deleted_st = 0",
                     [$order_kerja_id]
                 )['total'] ?? 0;
 
@@ -138,13 +138,13 @@ class TeknisiModel extends Model
                 } else {
                     $count_ditugaskan = DbModel::rawData(
                         'row_array',
-                        "SELECT COUNT(*) as total FROM penugasan_teknisi WHERE order_kerja_id = ? AND status = 'ditugaskan' AND deleted_st = 0",
+                        "SELECT COUNT(*) as total FROM trx_penugasan_teknisi WHERE order_kerja_id = ? AND status = 'ditugaskan' AND deleted_st = 0",
                         [$order_kerja_id]
                     )['total'] ?? 0;
 
                     $count_total = DbModel::rawData(
                         'row_array',
-                        "SELECT COUNT(*) as total FROM penugasan_teknisi WHERE order_kerja_id = ? AND deleted_st = 0",
+                        "SELECT COUNT(*) as total FROM trx_penugasan_teknisi WHERE order_kerja_id = ? AND deleted_st = 0",
                         [$order_kerja_id]
                     )['total'] ?? 0;
 
@@ -171,7 +171,7 @@ class TeknisiModel extends Model
         $end_date = date('Y-m-t 23:59:59');
 
         $sql = "SELECT COUNT(*) as total 
-                FROM penugasan_teknisi 
+                FROM trx_penugasan_teknisi 
                 WHERE pegawai_id = ? AND status = 'selesai' 
                 AND (
                     (tgl_selesai BETWEEN ? AND ?) 
@@ -194,7 +194,7 @@ class TeknisiModel extends Model
     public function getCountUrgentTasks($teknisi_id)
     {
         $sql = "SELECT COUNT(*) as total 
-                FROM penugasan_teknisi pt
+                FROM trx_penugasan_teknisi pt
                 JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                 WHERE pt.pegawai_id = ? 
                 AND pt.status IN ('ditugaskan', 'sedang_dikerjakan') 
@@ -219,9 +219,9 @@ class TeknisiModel extends Model
                 AND jp.status = 'aktif'
                 AND a.lokasi_id IN (
                     SELECT DISTINCT a2.lokasi_id 
-                    FROM penugasan_teknisi pt
+                    FROM trx_penugasan_teknisi pt
                     JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
-                    LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+                    LEFT JOIN trx_permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                     LEFT JOIN trx_jadwal_pm jp2 ON ok.jadwal_pm_id = jp2.jadwal_pm_id
                     LEFT JOIN mst_asset a2 ON pk.asset_id = a2.asset_id OR jp2.asset_id = a2.asset_id
                     WHERE pt.pegawai_id = ? AND pt.deleted_st = 0
@@ -247,7 +247,7 @@ class TeknisiModel extends Model
             $week_end = date('Y-m-d', strtotime("-" . ($i - 1) . " week -1 day", strtotime($today)));
 
             $sql_selesai = "SELECT COUNT(*) as total 
-                    FROM penugasan_teknisi 
+                    FROM trx_penugasan_teknisi 
                     WHERE pegawai_id = ? AND status = 'selesai' 
                     AND tgl_selesai BETWEEN ? AND ?
                     AND deleted_st = 0";
@@ -255,7 +255,7 @@ class TeknisiModel extends Model
             $result['selesai'][] = $data_selesai['total'] ?? 0;
 
             $sql_baru = "SELECT COUNT(*) as total 
-                    FROM penugasan_teknisi 
+                    FROM trx_penugasan_teknisi 
                     WHERE pegawai_id = ? AND status = 'ditugaskan' 
                     AND tgl_penugasan BETWEEN ? AND ?
                     AND deleted_st = 0";
@@ -276,7 +276,7 @@ class TeknisiModel extends Model
         $sql = "SELECT s.sparepart_id, s.sparepart_nm, s.stok, s.stok_min, 
                 COUNT(ps.penggunaan_id) as jumlah_pakai, SUM(ps.jumlah) as total_jumlah
                 FROM mst_sparepart s
-                JOIN penggunaan_sparepart ps ON s.sparepart_id = ps.sparepart_id
+                JOIN trx_penggunaan_sparepart ps ON s.sparepart_id = ps.sparepart_id
                 JOIN trx_log_kerja lk ON ps.log_kerja_id = lk.log_kerja_id
                 WHERE lk.teknisi_pegawai_id = ?
                 GROUP BY s.sparepart_id, s.sparepart_nm, s.stok, s.stok_min
@@ -293,16 +293,16 @@ class TeknisiModel extends Model
         try {
             $data = [];
 
-            $sql = "SELECT COUNT(*) as total FROM penugasan_teknisi 
+            $sql = "SELECT COUNT(*) as total FROM trx_penugasan_teknisi 
                     WHERE pegawai_id = ? AND status = 'ditugaskan' AND deleted_st = 0";
             $result = DbModel::rawData('row_array', $sql, [$teknisi_id]);
             $data['tugas_baru_count'] = $result['total'] ?? 0;
 
             $sql = "SELECT pt.penugasan_id, ok.order_kerja_id, a.asset_nm, l.lokasi_nm, ok.prioritas, 
                     ok.tgl_dibuat, COALESCE(pk.deskripsi, jp.deskripsi, 'Pemeliharaan Rutin') as deskripsi
-                    FROM penugasan_teknisi pt
+                    FROM trx_penugasan_teknisi pt
                     JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
-                    LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+                    LEFT JOIN trx_permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                     LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                     LEFT JOIN mst_asset a ON (pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id)
                     LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
@@ -312,7 +312,7 @@ class TeknisiModel extends Model
 
             $start_date = date('Y-m-01');
             $end_date = date('Y-m-t');
-            $sql = "SELECT COUNT(*) as total FROM penugasan_teknisi 
+            $sql = "SELECT COUNT(*) as total FROM trx_penugasan_teknisi 
                     WHERE pegawai_id = ? AND status = 'selesai' 
                     AND (
                         (tgl_selesai IS NOT NULL AND DATE(tgl_selesai) BETWEEN ? AND ?) 
@@ -323,14 +323,14 @@ class TeknisiModel extends Model
             $result = DbModel::rawData('row_array', $sql, [$teknisi_id, $start_date, $end_date, $start_date, $end_date]);
             $data['tugas_selesai_count'] = $result['total'] ?? 0;
 
-            $sql = "SELECT COUNT(*) as total FROM penugasan_teknisi pt
+            $sql = "SELECT COUNT(*) as total FROM trx_penugasan_teknisi pt
                     JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                     WHERE pt.pegawai_id = ? AND pt.status IN ('ditugaskan','sedang_dikerjakan') 
                     AND ok.prioritas IN ('tinggi','darurat') AND pt.deleted_st = 0";
             $result = DbModel::rawData('row_array', $sql, [$teknisi_id]);
             $data['tugas_mendesak_count'] = $result['total'] ?? 0;
 
-            $sql = "SELECT COUNT(*) as total FROM penugasan_teknisi 
+            $sql = "SELECT COUNT(*) as total FROM trx_penugasan_teknisi 
                     WHERE pegawai_id = ? AND status = 'dibatalkan' AND deleted_st = 0";
             $result = DbModel::rawData('row_array', $sql, [$teknisi_id]);
             $data['tugas_ditolak_count'] = $result['total'] ?? 0;
@@ -345,7 +345,7 @@ class TeknisiModel extends Model
                     WHERE jp.tgl_berikutnya BETWEEN ? AND ? AND jp.status = 'aktif'
                     AND jp.jadwal_pm_id IN (
                         SELECT pt.jadwal_pm_id
-                        FROM penugasan_teknisi pt
+                        FROM trx_penugasan_teknisi pt
                         WHERE pt.pegawai_id = ?
                     )
                     ))
@@ -357,12 +357,12 @@ class TeknisiModel extends Model
             $sql = "SELECT s.sparepart_id, s.sparepart_nm, s.stok, COALESCE(s.stok_min, 0) as stok_min,
                     COUNT(ps.penggunaan_id) as jumlah_pakai
                     FROM mst_sparepart s
-                    JOIN penggunaan_sparepart ps ON s.sparepart_id = ps.sparepart_id
+                    JOIN trx_penggunaan_sparepart ps ON s.sparepart_id = ps.sparepart_id
                     JOIN trx_log_kerja lk ON ps.log_kerja_id = lk.log_kerja_id
                     WHERE lk.teknisi_pegawai_id = ? OR lk.teknisi_pegawai_id IN (
-                        SELECT pegawai_id FROM penugasan_teknisi 
+                        SELECT pegawai_id FROM trx_penugasan_teknisi 
                         WHERE order_kerja_id IN (
-                            SELECT order_kerja_id FROM penugasan_teknisi WHERE pegawai_id = ?
+                            SELECT order_kerja_id FROM trx_penugasan_teknisi WHERE pegawai_id = ?
                         )
                     )
                     GROUP BY s.sparepart_id, s.sparepart_nm, s.stok, s.stok_min
@@ -401,7 +401,7 @@ class TeknisiModel extends Model
         $sql = "SELECT 
                     FLOOR(DATEDIFF(tgl_selesai, '$first_day_of_month') / 7) as week_idx,
                     COUNT(*) as total
-                FROM penugasan_teknisi
+                FROM trx_penugasan_teknisi
                 WHERE pegawai_id = ? 
                     AND status = 'selesai'
                     AND tgl_selesai IS NOT NULL
@@ -419,7 +419,7 @@ class TeknisiModel extends Model
         $sql = "SELECT 
                     FLOOR(DATEDIFF(tgl_mulai, '$first_day_of_month') / 7) as week_idx,
                     COUNT(*) as total
-                FROM penugasan_teknisi
+                FROM trx_penugasan_teknisi
                 WHERE pegawai_id = ?
                     AND MONTH(tgl_mulai) = MONTH(CURRENT_DATE()) 
                     AND YEAR(tgl_mulai) = YEAR(CURRENT_DATE())
@@ -441,9 +441,9 @@ class TeknisiModel extends Model
         try {
             $sql = "SELECT pt.*, ok.order_kerja_id, ok.jenis, ok.prioritas, ok.tgl_dibuat,
                       COALESCE(pk.deskripsi, jp.deskripsi, 'Pemeliharaan Rutin') as deskripsi
-                   FROM penugasan_teknisi pt
+                   FROM trx_penugasan_teknisi pt
                    JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
-                   LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+                   LEFT JOIN trx_permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                    LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                    WHERE pt.penugasan_id = ? AND pt.deleted_st = 0";
 
@@ -476,7 +476,7 @@ class TeknisiModel extends Model
         $order_kerja = DbModel::getData('trx_order_kerja', ['order_kerja_id' => $order_kerja_id]);
         if ($order_kerja) {
             if (!empty($order_kerja['permintaan_id'])) {
-                $permintaan = DbModel::getData('permintaan_komplain', ['permintaan_id' => $order_kerja['permintaan_id']]);
+                $permintaan = DbModel::getData('trx_permintaan_komplain', ['permintaan_id' => $order_kerja['permintaan_id']]);
                 return $permintaan['asset_id'] ?? null;
             } elseif (!empty($order_kerja['jadwal_pm_id'])) {
                 $jadwalPm = DbModel::getData('trx_jadwal_pm', ['jadwal_pm_id' => $order_kerja['jadwal_pm_id']]);
@@ -489,7 +489,7 @@ class TeknisiModel extends Model
     // Mengambil data permintaan komplain berdasarkan ID
     public function getPermintaanKomplain($permintaan_id)
     {
-        $sql = "SELECT * FROM permintaan_komplain WHERE permintaan_id = ? AND deleted_st = 0";
+        $sql = "SELECT * FROM trx_permintaan_komplain WHERE permintaan_id = ? AND deleted_st = 0";
         return DbModel::rawData('row_array', $sql, [$permintaan_id]);
     }
 
@@ -519,14 +519,14 @@ class TeknisiModel extends Model
     {
         $order = DbModel::getData('trx_order_kerja', ['order_kerja_id' => $order_kerja_id]);
         if ($order) {
-            $penugasan = DbModel::getData('penugasan_teknisi', [
+            $penugasan = DbModel::getData('trx_penugasan_teknisi', [
                 'order_kerja_id' => $order_kerja_id,
                 'status' => 'sedang_dikerjakan'
             ]);
             if ($penugasan) {
                 $this->updateStatusPenugasan($penugasan['penugasan_id'], 'selesai');
                 // Update tgl_selesai dan pegawai_id
-                DbModel::updateData('penugasan_teknisi', [
+                DbModel::updateData('trx_penugasan_teknisi', [
                     'status' => 'selesai',
                     'tgl_selesai' => now(),
                     'updated_at' => now(),
@@ -572,7 +572,7 @@ class TeknisiModel extends Model
     // Mengambil daftar order kerja berdasarkan asset
     public function getOrderKerjaListByAsset($asset_id)
     {
-        $sql = "SELECT * FROM trx_order_kerja WHERE (permintaan_id IN (SELECT permintaan_id FROM permintaan_komplain WHERE asset_id = ?) OR jadwal_pm_id IN (SELECT jadwal_pm_id FROM trx_jadwal_pm WHERE asset_id = ?)) AND deleted_st = 0";
+        $sql = "SELECT * FROM trx_order_kerja WHERE (permintaan_id IN (SELECT permintaan_id FROM trx_permintaan_komplain WHERE asset_id = ?) OR jadwal_pm_id IN (SELECT jadwal_pm_id FROM trx_jadwal_pm WHERE asset_id = ?)) AND deleted_st = 0";
         return DbModel::rawData('result_array', $sql, [$asset_id, $asset_id]);
     }
 
@@ -584,9 +584,9 @@ class TeknisiModel extends Model
         $sql = "SELECT ok.*, p.pegawai_nm as teknisi_nama, 
                    COALESCE(pk.deskripsi, j.deskripsi) as deskripsi
             FROM trx_order_kerja ok
-            LEFT JOIN penugasan_teknisi pt ON ok.order_kerja_id = pt.order_kerja_id
+            LEFT JOIN trx_penugasan_teknisi pt ON ok.order_kerja_id = pt.order_kerja_id
             LEFT JOIN mst_pegawai p ON pt.pegawai_id = p.pegawai_id
-            LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+            LEFT JOIN trx_permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
             LEFT JOIN trx_jadwal_pm j ON ok.jadwal_pm_id = j.jadwal_pm_id
             WHERE ok.deleted_st = 0
               AND ( (pk.asset_id = ? AND (pk.deleted_st = 0 OR pk.deleted_st IS NULL)) 
@@ -607,7 +607,7 @@ class TeknisiModel extends Model
     // Mengambil data penugasan berdasarkan order kerja
     public function getPenugasanByOrderKerja($order_kerja_id)
     {
-        $sql = "SELECT * FROM penugasan_teknisi WHERE order_kerja_id = ? AND deleted_st = 0";
+        $sql = "SELECT * FROM trx_penugasan_teknisi WHERE order_kerja_id = ? AND deleted_st = 0";
         return DbModel::rawData('row_array', $sql, [$order_kerja_id]);
     }
 
@@ -615,7 +615,7 @@ class TeknisiModel extends Model
     public function getSparepartByLogKerjaId($log_kerja_id)
     {
         $sql = "SELECT ps.*, s.sparepart_nm 
-            FROM penggunaan_sparepart ps
+            FROM trx_penggunaan_sparepart ps
             JOIN mst_sparepart s ON ps.sparepart_id = s.sparepart_id
             WHERE ps.log_kerja_id = ?";
         return \App\Modules\App\Models\DbModel::rawData('result_array', $sql, [$log_kerja_id]);

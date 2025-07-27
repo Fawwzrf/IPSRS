@@ -72,13 +72,13 @@ class LogKerjaModel extends Model
                     }
 
                     $penggunaanData = [
-                        'penggunaan_id' => DbModel::getId('penggunaan_sparepart', 2, 12),
+                        'penggunaan_id' => DbModel::getId('trx_penggunaan_sparepart', 2, 12),
                         'log_kerja_id' => $log_kerja_id, // ID dari log kerja yang baru dibuat
                         'sparepart_id' => $sp['sparepart_id'],
                         'jumlah' => $sp['jumlah'],
                         'harga_satuan' => $sparepart['harga'] ?? 0
                     ];
-                    DbModel::insertData('penggunaan_sparepart', $penggunaanData);
+                    DbModel::insertData('trx_penggunaan_sparepart', $penggunaanData);
 
                     \DB::table('mst_sparepart')->where('sparepart_id', $sp['sparepart_id'])->decrement('stok', $sp['jumlah']);
                 }
@@ -122,7 +122,7 @@ class LogKerjaModel extends Model
             if ($status_baru == 'selesai') {
                 if (!empty($order_current['permintaan_id'])) {
                     DbModel::updateData(
-                        'permintaan_komplain',
+                        'trx_permintaan_komplain',
                         ['status' => 'selesai'],
                         ['permintaan_id' => $order_current['permintaan_id']]
                     );
@@ -141,7 +141,7 @@ class LogKerjaModel extends Model
             // Dapatkan asset_id dari permintaan atau jadwal
             $asset_id = null;
             if (!empty($order_current['permintaan_id'])) {
-                $permintaan = DbModel::getData('permintaan_komplain', ['permintaan_id' => $order_current['permintaan_id']]);
+                $permintaan = DbModel::getData('trx_permintaan_komplain', ['permintaan_id' => $order_current['permintaan_id']]);
                 $asset_id = $permintaan['asset_id'] ?? null;
             } elseif (!empty($order_current['jadwal_pm_id'])) {
                 $jadwal = DbModel::getData('trx_jadwal_pm', ['jadwal_pm_id' => $order_current['jadwal_pm_id']]);
@@ -155,7 +155,7 @@ class LogKerjaModel extends Model
                 } elseif ($status_baru == 'selesai') {
                     // Cek apakah masih ada order kerja lain yang aktif untuk aset ini
                     $active_orders_query = "SELECT COUNT(*) as jumlah FROM trx_order_kerja 
-                                          WHERE (permintaan_id IN (SELECT permintaan_id FROM permintaan_komplain WHERE asset_id = ?) 
+                                          WHERE (permintaan_id IN (SELECT permintaan_id FROM trx_permintaan_komplain WHERE asset_id = ?) 
                                           OR jadwal_pm_id IN (SELECT jadwal_pm_id FROM trx_jadwal_pm WHERE asset_id = ?))
                                           AND status NOT IN ('selesai', 'dibatalkan')
                                           AND order_kerja_id != ?";
@@ -231,8 +231,8 @@ class LogKerjaModel extends Model
                 lk.log_kerja_id,
                 lk.order_kerja_id,
                 -- Ambil tgl_mulai dan tgl_selesai dari penugasan_teknisi
-                (SELECT pt.tgl_mulai FROM penugasan_teknisi pt WHERE pt.order_kerja_id = lk.order_kerja_id AND pt.pegawai_id = lk.teknisi_pegawai_id LIMIT 1) as tgl_mulai,
-                (SELECT pt.tgl_selesai FROM penugasan_teknisi pt WHERE pt.order_kerja_id = lk.order_kerja_id AND pt.pegawai_id = lk.teknisi_pegawai_id LIMIT 1) as tgl_selesai,
+                (SELECT pt.tgl_mulai FROM trx_penugasan_teknisi pt WHERE pt.order_kerja_id = lk.order_kerja_id AND pt.pegawai_id = lk.teknisi_pegawai_id LIMIT 1) as tgl_mulai,
+                (SELECT pt.tgl_selesai FROM trx_penugasan_teknisi pt WHERE pt.order_kerja_id = lk.order_kerja_id AND pt.pegawai_id = lk.teknisi_pegawai_id LIMIT 1) as tgl_selesai,
                 lk.hasil,
                 lk.diagnosa,
                 lk.tindakan,
@@ -248,7 +248,7 @@ class LogKerjaModel extends Model
                 trx_log_kerja lk
                 LEFT JOIN mst_pegawai p ON lk.teknisi_pegawai_id = p.pegawai_id
                 LEFT JOIN trx_order_kerja ok ON lk.order_kerja_id = ok.order_kerja_id
-                LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+                LEFT JOIN trx_permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                 LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                 LEFT JOIN mst_asset a ON a.asset_id = COALESCE(pk.asset_id, jp.asset_id)
             WHERE $where AND lk.deleted_st = 0
@@ -269,7 +269,7 @@ class LogKerjaModel extends Model
                     ELSE 'Perbaikan' 
                 END as jenis
             FROM trx_order_kerja ok
-            LEFT JOIN permintaan_komplain p ON p.permintaan_id = ok.permintaan_id
+            LEFT JOIN trx_permintaan_komplain p ON p.permintaan_id = ok.permintaan_id
             LEFT JOIN trx_jadwal_pm jp ON jp.jadwal_pm_id = ok.jadwal_pm_id
             LEFT JOIN mst_asset a ON a.asset_id = COALESCE(p.asset_id, jp.asset_id)
             WHERE ok.deleted_st = 0 AND ok.status != 'selesai'
@@ -305,7 +305,7 @@ class LogKerjaModel extends Model
 
     public function getPenugasanByOrderKerja($order_kerja_id)
     {
-        return DbModel::rawData('result_array', "SELECT * FROM penugasan_teknisi WHERE order_kerja_id = ?", [$order_kerja_id]) ?: [];
+        return DbModel::rawData('result_array', "SELECT * FROM trx_penugasan_teknisi WHERE order_kerja_id = ?", [$order_kerja_id]) ?: [];
     }
 
     public function getLogByOrderKerja($order_kerja_id)
@@ -315,6 +315,6 @@ class LogKerjaModel extends Model
 
     public function getSparepartByLogKerja($log_kerja_id)
     {
-        return DbModel::rawData('result_array', "SELECT s.sparepart_nm, ps.jumlah FROM penggunaan_sparepart ps JOIN mst_sparepart s ON ps.sparepart_id = s.sparepart_id WHERE ps.log_kerja_id = ?", [$log_kerja_id]) ?: [];
+        return DbModel::rawData('result_array', "SELECT s.sparepart_nm, ps.jumlah FROM trx_penggunaan_sparepart ps JOIN mst_sparepart s ON ps.sparepart_id = s.sparepart_id WHERE ps.log_kerja_id = ?", [$log_kerja_id]) ?: [];
     }
 }

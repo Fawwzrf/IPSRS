@@ -26,7 +26,7 @@ class DashboardModel extends Model
     public function getCountKomplainBaru()
     {
         try {
-            $sql = "SELECT COUNT(*) as total FROM permintaan_komplain WHERE status = 'baru' AND deleted_st = 0";
+            $sql = "SELECT COUNT(*) as total FROM trx_permintaan_komplain WHERE status = 'baru' AND deleted_st = 0";
             $result = DbModel::rawData('row_array', $sql);
             return $result['total'] ?? 0;
         } catch (\Exception $e) {
@@ -98,7 +98,7 @@ class DashboardModel extends Model
             // Menggunakan subquery untuk konsistensi format
             $sql = "SELECT * FROM (
                     SELECT DATE(tgl) as tanggal, count(*) as jumlah 
-                    FROM permintaan_komplain
+                    FROM trx_permintaan_komplain
                     WHERE tgl >= DATE_SUB(NOW(), INTERVAL 7 DAY)
                     GROUP BY DATE(tgl)
                     ORDER BY DATE(tgl) ASC
@@ -120,7 +120,7 @@ class DashboardModel extends Model
                         COALESCE(pk.deskripsi, 'Pemeliharaan Rutin') as deskripsi, 
                         a.asset_nm 
                     FROM trx_order_kerja ok
-                    LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+                    LEFT JOIN trx_permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                     LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                     LEFT JOIN mst_asset a ON (pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id)
                     WHERE ok.status IN ('baru', 'ditugaskan') 
@@ -145,9 +145,9 @@ class DashboardModel extends Model
                         pt.tgl_selesai
                     )
                 ) as avg_total_penyelesaian
-                FROM penugasan_teknisi pt
+                FROM trx_penugasan_teknisi pt
                 JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
-                LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+                LEFT JOIN trx_permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                 LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                 WHERE pt.deleted_st = 0 AND ok.deleted_st = 0";
             $result = DbModel::rawData('row_array', $sql);

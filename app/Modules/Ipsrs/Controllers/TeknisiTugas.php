@@ -526,7 +526,7 @@ class TeknisiTugas extends MyController
 
             if ($success) {
                 try {
-                    $penugasan = DbModel::getData('penugasan_teknisi', [
+                    $penugasan = DbModel::getData('trx_penugasan_teknisi', [
                         'order_kerja_id' => $order_kerja_id,
                         'status' => 'sedang_dikerjakan'
                     ]);
@@ -645,7 +645,7 @@ class TeknisiTugas extends MyController
                     $item = $order;
 
                     // Ambil penugasan teknisi terkait order kerja ini
-                    $penugasan = DbModel::getData('penugasan_teknisi', [
+                    $penugasan = DbModel::getData('trx_penugasan_teknisi', [
                         'order_kerja_id' => $order['order_kerja_id'],
                         'deleted_st' => 0
                     ]);

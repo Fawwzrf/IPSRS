@@ -61,7 +61,7 @@ class OrderKerjaModel extends Model
                       COALESCE(pk.deskripsi, jp.jenis) as deskripsi_sumber
                     FROM 
                       trx_order_kerja ok
-                      LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+                      LEFT JOIN trx_permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                       LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                       LEFT JOIN mst_asset a1 ON pk.asset_id = a1.asset_id
                       LEFT JOIN mst_asset a2 ON jp.asset_id = a2.asset_id
@@ -81,7 +81,7 @@ class OrderKerjaModel extends Model
 
                 // Query terpisah untuk mengambil nama teknisi
                 $teknisiQuery = "SELECT GROUP_CONCAT(p.pegawai_nm SEPARATOR ', ') as tim_teknisi 
-                                FROM penugasan_teknisi pt 
+                                FROM trx_penugasan_teknisi pt 
                                 JOIN mst_pegawai p ON pt.pegawai_id = p.pegawai_id 
                                 WHERE pt.order_kerja_id = ? AND pt.deleted_st = 0";
 
@@ -227,7 +227,7 @@ class OrderKerjaModel extends Model
                         ];
 
                         \Log::info('OrderKerjaModel: Inserting penugasan', ['pegawai_id' => $pegawai_id]);
-                        $insertPenugasan = DbModel::insertData('penugasan_teknisi', $penugasan);
+                        $insertPenugasan = DbModel::insertData('trx_penugasan_teknisi', $penugasan);
 
                         if (!$insertPenugasan) {
                             throw new \Exception("Gagal menyimpan penugasan teknisi");
@@ -297,7 +297,7 @@ class OrderKerjaModel extends Model
                 // Jika ada teknisi yang dipilih, update penugasan_teknisi
                 if (isset($d['teknisi']) && is_array($d['teknisi'])) {
                     // Soft delete penugasan lama
-                    DbModel::updateData('penugasan_teknisi', [
+                    DbModel::updateData('trx_penugasan_teknisi', [
                         'deleted_st' => 1,
                         'updated_at' => date('Y-m-d H:i:s'),
                         'updated_by' => session('nama_user') ?? session('nama_pegawai') ?? 'system'
@@ -316,7 +316,7 @@ class OrderKerjaModel extends Model
                             'created_at' => date('Y-m-d H:i:s'),
                             'created_by' => session('nama_user') ?? session('nama_pegawai') ?? 'system'
                         ];
-                        $insertPenugasan = DbModel::insertData('penugasan_teknisi', $penugasan);
+                        $insertPenugasan = DbModel::insertData('trx_penugasan_teknisi', $penugasan);
                         if (!$insertPenugasan) {
                             throw new \Exception("Gagal menyimpan penugasan teknisi");
                         }
@@ -356,7 +356,7 @@ class OrderKerjaModel extends Model
             DB::beginTransaction();
 
             // Soft delete penugasan teknisi
-            DB::table('penugasan_teknisi')
+            DB::table('trx_penugasan_teknisi')
                 ->where('order_kerja_id', $id)
                 ->update(['deleted_st' => 1, 'updated_by' => session('user_name'), 'updated_at' => now()]);
 
@@ -449,7 +449,7 @@ class OrderKerjaModel extends Model
     {
         try {
             // Get the last penugasan_id from database
-            $lastId = DB::table('penugasan_teknisi')
+            $lastId = DB::table('trx_penugasan_teknisi')
                 ->orderBy('penugasan_id', 'desc')
                 ->value('penugasan_id');
 

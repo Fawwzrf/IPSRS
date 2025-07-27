@@ -56,7 +56,7 @@ class Sparepart extends MyController
                 return response()->json(_response('20', $this->uri, ['message' => 'ID Sparepart sudah ada!']));
             }
         }
-        
+
         if (!empty($d['no_seri'])) {
             $sql = "SELECT sparepart_id FROM mst_sparepart WHERE no_seri = ? AND sparepart_id != ? AND deleted_st = 0";
             $params = [$d['no_seri'], (string)$id];
@@ -77,10 +77,10 @@ class Sparepart extends MyController
     // Menghapus data sparepart
     public function delete($id)
     {
-        if (DbModel::getData('penggunaan_sparepart', ['sparepart_id' => $id, 'deleted_st' => 0])) {
+        if (DbModel::getData('trx_penggunaan_sparepart', ['sparepart_id' => $id, 'deleted_st' => 0])) {
             return response()->json(_response('13', $this->uri, ['message' => 'Sparepart ini telah digunakan dan tidak dapat dihapus.']));
         }
-        
+
         if (DbModel::getData('trx_penerimaan_sparepart', ['sparepart_id' => $id, 'deleted_st' => 0])) {
             return response()->json(_response('13', $this->uri, ['message' => 'Sparepart ini memiliki riwayat penerimaan dan tidak dapat dihapus.']));
         }
@@ -95,4 +95,3 @@ class Sparepart extends MyController
         return SparepartModel::loadDatatables();
     }
 }
-

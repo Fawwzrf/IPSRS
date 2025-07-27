@@ -65,7 +65,7 @@ class AdminOrderKerja extends MyController
 
             // Ambil permintaan komplain yang belum dibuatkan order kerja
             $sql = "SELECT pk.*, a.asset_nm 
-                    FROM permintaan_komplain pk 
+                    FROM trx_permintaan_komplain pk 
                     JOIN mst_asset a ON pk.asset_id = a.asset_id 
                     WHERE pk.deleted_st = 0 
                     AND pk.status IN ('diverifikasi', 'baru', 'dikirim', 'diterima')
@@ -96,7 +96,7 @@ class AdminOrderKerja extends MyController
             // Data permintaan jika ada
             if (!empty($d['main']['permintaan_id'])) {
                 $sql = "SELECT pk.*, a.asset_nm 
-                        FROM permintaan_komplain pk 
+                        FROM trx_permintaan_komplain pk 
                         JOIN mst_asset a ON pk.asset_id = a.asset_id 
                         WHERE pk.permintaan_id = ?";
                 $d['all_komplain'] = DbModel::rawData('result_array', $sql, [$d['main']['permintaan_id']]);
@@ -106,7 +106,7 @@ class AdminOrderKerja extends MyController
 
             // Data teknisi yang ditugaskan
             $d['assigned_teknisi'] = array_column(
-                DbModel::allData('penugasan_teknisi', ['order_kerja_id' => $id, 'deleted_st' => 0]),
+                DbModel::allData('trx_penugasan_teknisi', ['order_kerja_id' => $id, 'deleted_st' => 0]),
                 'pegawai_id'
             );
         }
@@ -183,7 +183,7 @@ class AdminOrderKerja extends MyController
                             $d['jenis'] = 'pemeliharaan';
                         }
                     } else if (!empty($d['permintaan_id'])) {
-                        $permintaan = DbModel::getData('permintaan_komplain', ['permintaan_id' => $d['permintaan_id']]);
+                        $permintaan = DbModel::getData('trx_permintaan_komplain', ['permintaan_id' => $d['permintaan_id']]);
                         if ($permintaan) {
                             // PERBAIKAN: Gunakan catatan, bukan deskripsi
                             $d['catatan'] = $permintaan['deskripsi'] ?? '';
@@ -328,7 +328,7 @@ class AdminOrderKerja extends MyController
         $penugasan = DbModel::rawData(
             'result_array',
             "SELECT pt.*, p.pegawai_nm
-             FROM penugasan_teknisi pt
+             FROM trx_penugasan_teknisi pt
              LEFT JOIN mst_pegawai p ON pt.pegawai_id = p.pegawai_id
              WHERE pt.order_kerja_id = ? AND pt.deleted_st = 0",
             [$order_kerja_id]
@@ -357,7 +357,7 @@ class AdminOrderKerja extends MyController
             $log['sparepart'] = DbModel::rawData(
                 'result_array',
                 "SELECT ps.jumlah, ms.sparepart_nm
-                 FROM penggunaan_sparepart ps
+                 FROM trx_penggunaan_sparepart ps
                  LEFT JOIN mst_sparepart ms ON ps.sparepart_id = ms.sparepart_id
                  WHERE ps.log_kerja_id = ? AND ps.deleted_st = 0",
                 [$log['log_kerja_id']]

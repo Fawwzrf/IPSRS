@@ -36,7 +36,7 @@ class PelaporModel extends Model
                     pk.status,
                     a.asset_nm,
                     l.lokasi_nm
-                FROM permintaan_komplain pk
+                FROM trx_permintaan_komplain pk
                 LEFT JOIN mst_asset a ON pk.asset_id = a.asset_id
                 LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
                 WHERE pk.pegawai_id = ? AND pk.deleted_st = 0
@@ -52,7 +52,7 @@ class PelaporModel extends Model
     public function countHistoryByPegawai($pegawai_id)
     {
         $sql = "SELECT COUNT(*) as total
-                FROM permintaan_komplain
+                FROM trx_permintaan_komplain
                 WHERE pegawai_id = ? AND deleted_st = 0";
 
         $result = DbModel::rawData('row_array', $sql, [$pegawai_id]);

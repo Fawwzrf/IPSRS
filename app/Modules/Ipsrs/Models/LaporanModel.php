@@ -67,7 +67,7 @@ class LaporanModel extends Model
             SUM(CASE WHEN ok.jenis = 'pemeliharaan' THEN 1 ELSE 0 END) as jumlah_pemeliharaan,
             MAX(ok.tgl_dibuat) as terakhir_ditangani
         FROM mst_asset a
-        LEFT JOIN permintaan_komplain pk ON a.asset_id = pk.asset_id
+        LEFT JOIN trx_permintaan_komplain pk ON a.asset_id = pk.asset_id
         LEFT JOIN trx_jadwal_pm jp ON a.asset_id = jp.asset_id
         LEFT JOIN trx_order_kerja ok ON pk.permintaan_id = ok.permintaan_id OR jp.jadwal_pm_id = ok.jadwal_pm_id
         LEFT JOIN mst_kategori_asset ka ON a.kategori_asset_id = ka.kategori_asset_id
@@ -129,7 +129,7 @@ class LaporanModel extends Model
                     SUM(CASE WHEN ok.status = 'selesai' THEN 1 ELSE 0 END) as tugas_selesai,
                     AVG(lk.durasi_menit) as rata_rata_durasi
                 FROM mst_pegawai p
-                LEFT JOIN penugasan_teknisi pt ON p.pegawai_id = pt.pegawai_id
+                LEFT JOIN trx_penugasan_teknisi pt ON p.pegawai_id = pt.pegawai_id
                 LEFT JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                 LEFT JOIN trx_log_kerja lk ON ok.order_kerja_id = lk.order_kerja_id
                 WHERE {$whereClause}
@@ -201,12 +201,12 @@ class LaporanModel extends Model
             ok.tgl_dibuat,
             COALESCE(a1.asset_nm, a2.asset_nm) as asset_nm,
             ok.jenis,
-            (SELECT SUM(ps.jumlah * ps.harga_satuan) FROM penggunaan_sparepart ps WHERE ps.log_kerja_id = lk.log_kerja_id) as total_biaya_sparepart,
+            (SELECT SUM(ps.jumlah * ps.harga_satuan) FROM trx_penggunaan_sparepart ps WHERE ps.log_kerja_id = lk.log_kerja_id) as total_biaya_sparepart,
             lk.total_biaya as biaya_lain,
-            COALESCE((SELECT SUM(ps.jumlah * ps.harga_satuan) FROM penggunaan_sparepart ps WHERE ps.log_kerja_id = lk.log_kerja_id), 0) + COALESCE(lk.total_biaya, 0) as total_biaya_ok
+            COALESCE((SELECT SUM(ps.jumlah * ps.harga_satuan) FROM trx_penggunaan_sparepart ps WHERE ps.log_kerja_id = lk.log_kerja_id), 0) + COALESCE(lk.total_biaya, 0) as total_biaya_ok
         FROM trx_order_kerja ok
         LEFT JOIN trx_log_kerja lk ON ok.order_kerja_id = lk.order_kerja_id
-        LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+        LEFT JOIN trx_permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
         LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
         LEFT JOIN mst_asset a1 ON pk.asset_id = a1.asset_id
         LEFT JOIN mst_asset a2 ON jp.asset_id = a2.asset_id
@@ -262,7 +262,7 @@ class LaporanModel extends Model
             }
         }
 
-        $sqlCount = "SELECT COUNT(*) as total FROM penugasan_teknisi pt JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id WHERE pt.deleted_st = 0 AND ok.deleted_st = 0";
+        $sqlCount = "SELECT COUNT(*) as total FROM trx_penugasan_teknisi pt JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id WHERE pt.deleted_st = 0 AND ok.deleted_st = 0";
         $total = DbModel::rawData('row_array', $sqlCount)['total'] ?? 0;
 
         $sql = "SELECT 
@@ -278,10 +278,10 @@ class LaporanModel extends Model
             TIMESTAMPDIFF(MINUTE, ok.created_at, pt.tgl_mulai) as durasi_penerimaan_teknisi,
             TIMESTAMPDIFF(MINUTE, pt.tgl_mulai, pt.tgl_selesai) as durasi_pengerjaan,
             TIMESTAMPDIFF(MINUTE, IF(ok.jenis = 'Pemeliharaan', jp.tgl_terakhir, pk.created_at), pt.tgl_selesai) as durasi_total
-        FROM penugasan_teknisi pt
+        FROM trx_penugasan_teknisi pt
         JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
         JOIN mst_pegawai p ON pt.pegawai_id = p.pegawai_id
-        LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+        LEFT JOIN trx_permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
         LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
         LEFT JOIN mst_asset a1 ON pk.asset_id = a1.asset_id
         LEFT JOIN mst_asset a2 ON jp.asset_id = a2.asset_id
@@ -333,12 +333,12 @@ class LaporanModel extends Model
 
         $sql = "SELECT 
         SUM(
-            COALESCE((SELECT SUM(ps.jumlah * ps.harga_satuan) FROM penggunaan_sparepart ps WHERE ps.log_kerja_id = lk.log_kerja_id), 0) 
+            COALESCE((SELECT SUM(ps.jumlah * ps.harga_satuan) FROM trx_penggunaan_sparepart ps WHERE ps.log_kerja_id = lk.log_kerja_id), 0) 
             + COALESCE(lk.total_biaya, 0)
         ) as total_biaya
         FROM trx_order_kerja ok
         LEFT JOIN trx_log_kerja lk ON ok.order_kerja_id = lk.order_kerja_id
-        LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+        LEFT JOIN trx_permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
         LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
         LEFT JOIN mst_asset a1 ON pk.asset_id = a1.asset_id
         LEFT JOIN mst_asset a2 ON jp.asset_id = a2.asset_id
@@ -379,10 +379,10 @@ class LaporanModel extends Model
         $sql = "SELECT AVG(TIMESTAMPDIFF(MINUTE, 
                 IF(ok.jenis = 'Pemeliharaan', jp.tgl_terakhir, pk.created_at), pt.tgl_selesai)
             ) as rata_rata_penyelesaian
-        FROM penugasan_teknisi pt
+        FROM trx_penugasan_teknisi pt
         JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
         JOIN mst_pegawai p ON pt.pegawai_id = p.pegawai_id
-        LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
+        LEFT JOIN trx_permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
         LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
         LEFT JOIN mst_asset a1 ON pk.asset_id = a1.asset_id
         LEFT JOIN mst_asset a2 ON jp.asset_id = a2.asset_id
