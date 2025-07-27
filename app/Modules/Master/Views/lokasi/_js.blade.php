@@ -1,7 +1,6 @@
 <script type="text/javascript">
     var tabel = null;
     $(document).ready(function() {
-        // Inisialisasi Select2 untuk filter
         $('.accordion-body .chosen-select').select2({
             theme: "bootstrap-5",
             dropdownParent: $('.accordion-body')
@@ -81,18 +80,14 @@
     $('body').on('change', '#denah_url', function(event) {
         var modalBody = $(this).closest('.modal-body');
         var denahPreview = modalBody.find('#denah-preview');
-        var denahLink = modalBody.find('#denah-link'); // Ambil elemen link
+        var denahLink = modalBody.find('#denah-link');
 
         if (event.target.files && event.target.files[0]) {
             var reader = new FileReader();
 
             reader.onload = function(e) {
                 var imageSrc = e.target.result;
-
-                // Update sumber gambar untuk preview
                 denahPreview.attr('src', imageSrc);
-
-                // Update link agar saat diklik membuka gambar yang baru
                 denahLink.attr('href', imageSrc);
             };
 
@@ -103,9 +98,6 @@
     $(document).on('shown.bs.modal', '#my-modal-1', function(e) {
         var modalContent = $(this).find('.modal-body');
         
-
-        
-
         modalContent.find('.chosen-select').select2({
             theme: "bootstrap-5",
             dropdownParent: $('#my-modal-1')

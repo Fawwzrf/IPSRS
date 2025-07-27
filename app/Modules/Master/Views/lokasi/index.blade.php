@@ -1,4 +1,4 @@
-<!-- Tambahkan di layout utama atau sebelum _js.blade.php -->
+
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.js"></script>
 @include('master::lokasi._js')
@@ -22,7 +22,6 @@
                     </div>
                 </div>
             </div>
-            {{-- Bagian Filter Pencarian (Ditambahkan sesuai pola Pegawai) --}}
             <div class="row mt-2">
                 <div class="col">
                     <div class="card mb-1">
@@ -81,7 +80,6 @@
                     </div>
                 </div>
             </div>
-            {{-- End Bagian Filter Pencarian --}}
         </div>
     </div>
     <div class="page-wrapper">

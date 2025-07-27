@@ -1,4 +1,4 @@
-{{-- Memanggil file JavaScript terpisah --}}
+
 @include('master::asset._js')
 <div class="page-wrapper">
   <div class="page-header d-print-none mt-2">

@@ -19,7 +19,6 @@
                     </div>
                 </div>
             </div>
-            {{-- Bagian Filter Pencarian --}}
             <div class="row mt-2">
                 <div class="col">
                     <div class="card mb-1">
@@ -60,7 +59,6 @@
             </div>
         </div>
     </div>
-    {{-- Body untuk tabel tetap sama --}}
     <div class="page-wrapper">
         <div class="page-body mt-1">
             <div class="container-xl">

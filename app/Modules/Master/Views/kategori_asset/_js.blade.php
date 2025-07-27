@@ -1,7 +1,6 @@
 <script type="text/javascript">
     var tabel = null;
     $(document).ready(function() {
-        // Inisialisasi Select2 untuk filter
         $('.accordion-body .chosen-select').select2({
             theme: "bootstrap-5",
             dropdownParent: $('.accordion-body')
@@ -82,12 +81,10 @@
         });
     });
 
-    // Modal initialization untuk form
     $(document).on('shown.bs.modal', '#my-modal-1', function (e) { 
         var formModalId = $(this).attr('id'); 
         var modalContent = $('#' + formModalId + ' .modal-body');
 
-        // Inisialisasi Select2 untuk dropdown di dalam modal
         modalContent.find('.chosen-select').select2({
             theme: "bootstrap-5",
             dropdownParent: $('#' + formModalId)
