@@ -82,7 +82,7 @@ class AdminPermintaanKomplain extends MyController
     public function delete($id)
     {
         // Validasi relasi sebelum hapus
-        if (DbModel::getData('order_kerja', ['permintaan_id' => $id, 'deleted_st' => 0])) {
+        if (DbModel::getData('trx_order_kerja', ['permintaan_id' => $id, 'deleted_st' => 0])) {
             return response()->json(_response('13', $this->uri, ['message' => 'Permintaan komplain ini sudah dibuatkan Order Kerja dan tidak dapat dihapus.']));
         }
 

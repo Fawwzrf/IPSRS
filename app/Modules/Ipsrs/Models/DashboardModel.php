@@ -38,7 +38,7 @@ class DashboardModel extends Model
     public function getCountOrderKerjaAktif()
     {
         try {
-            $sql = "SELECT COUNT(*) as total FROM order_kerja WHERE status IN ('ditugaskan', 'diproses', 'menunggu_sparepart') AND deleted_st = 0";
+            $sql = "SELECT COUNT(*) as total FROM trx_order_kerja WHERE status IN ('ditugaskan', 'diproses', 'menunggu_sparepart') AND deleted_st = 0";
             $result = DbModel::rawData('row_array', $sql);
             return $result['total'] ?? 0;
         } catch (\Exception $e) {
@@ -80,7 +80,7 @@ class DashboardModel extends Model
                     FROM trx_jadwal_pm jp
                     WHERE jp.deleted_st = 0 
                     AND jp.jadwal_pm_id NOT IN (
-                        SELECT jadwal_pm_id FROM order_kerja 
+                        SELECT jadwal_pm_id FROM trx_order_kerja 
                         WHERE jadwal_pm_id IS NOT NULL AND deleted_st = 0
                     )
                 ) x";
@@ -119,7 +119,7 @@ class DashboardModel extends Model
                         ok.order_kerja_id, 
                         COALESCE(pk.deskripsi, 'Pemeliharaan Rutin') as deskripsi, 
                         a.asset_nm 
-                    FROM order_kerja ok
+                    FROM trx_order_kerja ok
                     LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                     LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                     LEFT JOIN mst_asset a ON (pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id)
@@ -146,7 +146,7 @@ class DashboardModel extends Model
                     )
                 ) as avg_total_penyelesaian
                 FROM penugasan_teknisi pt
-                JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
+                JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                 LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                 LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                 WHERE pt.deleted_st = 0 AND ok.deleted_st = 0";

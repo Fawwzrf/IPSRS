@@ -209,7 +209,7 @@ class TeknisiTugas extends MyController
         $order_kerja = $this->model->getOrderKerja($order_kerja_id);
         if (!$order_kerja) return '<h5>Error: Data Order Kerja tidak ditemukan.</h5>';
 
-        $d['order_kerja'] = $order_kerja;
+        $d['trx_order_kerja'] = $order_kerja;
 
         // Ambil asset_id untuk keperluan redirect
         $asset_id = null;
@@ -370,7 +370,7 @@ class TeknisiTugas extends MyController
             // Persiapkan data untuk form
             $d = [
                 'order_kerja_id' => $order_kerja_id,
-                'order_kerja' => $order_kerja,
+                'trx_order_kerja' => $order_kerja,
                 'asset_id' => $order_kerja['asset_id'] ?? null,
                 'n_param' => request('n'),
                 'form_act' => url('ipsrs/teknisitugas/save_log_kerja/' . $order_kerja_id)
@@ -536,7 +536,7 @@ class TeknisiTugas extends MyController
                     }
 
                     DbModel::updateData(
-                        'order_kerja',
+                        'trx_order_kerja',
                         ['status' => 'selesai', 'updated_at' => date('Y-m-d H:i:s')],
                         ['order_kerja_id' => $order_kerja_id]
                     );
@@ -590,7 +590,7 @@ class TeknisiTugas extends MyController
             // Persiapkan data untuk view
             $d = [];
             $d['mst_asset'] = $asset;
-            $d['order_kerja'] = $order_kerja_list;
+            $d['trx_order_kerja'] = $order_kerja_list;
             $d['trx_log_kerja'] = $log_kerja;
             $d['n_param'] = request('n');
 

@@ -15,7 +15,7 @@ class LogKerjaModel extends Model
     {
         // Gunakan teknisi_pegawai_id dari input jika ada (admin), jika tidak pakai Auth::id()
         $pegawai_id = $data['teknisi_pegawai_id'] ?? (\Illuminate\Support\Facades\Auth::id() ?: null);
-        $order_kerja = DbModel::getData('order_kerja', ['order_kerja_id' => $order_kerja_id]);
+        $order_kerja = DbModel::getData('trx_order_kerja', ['order_kerja_id' => $order_kerja_id]);
         if (!$order_kerja) return ['status' => false, 'message' => 'Order Kerja tidak ditemukan.'];
 
         $logKerjaData = [
@@ -51,11 +51,11 @@ class LogKerjaModel extends Model
                         $base64Content = base64_encode($fileContent);
                         $mimeType = mime_content_type($tmp_name);
                         $fotoData = [
-                            'log_foto_id' => DbModel::getId('log_kerja_foto', 2, 12),
+                            'log_foto_id' => DbModel::getId('trx_log_kerja_foto', 2, 12),
                             'log_kerja_id' => $log_kerja_id,
                             'foto_url' => 'data:' . $mimeType . ';base64,' . $base64Content,
                         ];
-                        DbModel::insertData('log_kerja_foto', $fotoData);
+                        DbModel::insertData('trx_log_kerja_foto', $fotoData);
                     }
                 }
             }
@@ -97,11 +97,11 @@ class LogKerjaModel extends Model
             }
 
             // Dapatkan status saat ini sebelum diupdate
-            $order_current = DbModel::getData('order_kerja', ['order_kerja_id' => $order_kerja_id]);
+            $order_current = DbModel::getData('trx_order_kerja', ['order_kerja_id' => $order_kerja_id]);
             $status_sebelumnya = $order_current['status'] ?? null;
 
             // Update status order_kerja
-            DbModel::updateData('order_kerja', [
+            DbModel::updateData('trx_order_kerja', [
                 'status' => $status_baru,
                 'updated_at' => now(),
                 'updated_by' => $pegawai_id
@@ -109,14 +109,14 @@ class LogKerjaModel extends Model
 
             // Catat perubahan status
             $log_status_data = [
-                'log_status_id' => DbModel::getId('log_status_order_kerja', 2, 12),
+                'log_status_id' => DbModel::getId('trx_log_status_order_kerja', 2, 12),
                 'order_kerja_id' => $order_kerja_id,
                 'status_lama' => $status_sebelumnya,
                 'status_baru' => $status_baru,
                 'oleh_pegawai_id' => $pegawai_id,
                 'catatan' => 'Update dari log kerja: ' . $data['hasil']
             ];
-            DbModel::insertData('log_status_order_kerja', $log_status_data);
+            DbModel::insertData('trx_log_status_order_kerja', $log_status_data);
 
             // Update sumber asli (jika pekerjaan selesai)
             if ($status_baru == 'selesai') {
@@ -154,7 +154,7 @@ class LogKerjaModel extends Model
                     DbModel::updateData('mst_asset', ['status' => 'perbaikan'], ['asset_id' => $asset_id]);
                 } elseif ($status_baru == 'selesai') {
                     // Cek apakah masih ada order kerja lain yang aktif untuk aset ini
-                    $active_orders_query = "SELECT COUNT(*) as jumlah FROM order_kerja 
+                    $active_orders_query = "SELECT COUNT(*) as jumlah FROM trx_order_kerja 
                                           WHERE (permintaan_id IN (SELECT permintaan_id FROM permintaan_komplain WHERE asset_id = ?) 
                                           OR jadwal_pm_id IN (SELECT jadwal_pm_id FROM trx_jadwal_pm WHERE asset_id = ?))
                                           AND status NOT IN ('selesai', 'dibatalkan')
@@ -190,7 +190,7 @@ class LogKerjaModel extends Model
      */
     public function getPhotosByLogId($log_kerja_id)
     {
-        return DbModel::allData('log_kerja_foto', ['log_kerja_id' => $log_kerja_id]);
+        return DbModel::allData('trx_log_kerja_foto', ['log_kerja_id' => $log_kerja_id]);
     }
 
     /**
@@ -247,7 +247,7 @@ class LogKerjaModel extends Model
             FROM 
                 trx_log_kerja lk
                 LEFT JOIN mst_pegawai p ON lk.teknisi_pegawai_id = p.pegawai_id
-                LEFT JOIN order_kerja ok ON lk.order_kerja_id = ok.order_kerja_id
+                LEFT JOIN trx_order_kerja ok ON lk.order_kerja_id = ok.order_kerja_id
                 LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                 LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                 LEFT JOIN mst_asset a ON a.asset_id = COALESCE(pk.asset_id, jp.asset_id)
@@ -268,7 +268,7 @@ class LogKerjaModel extends Model
                     WHEN ok.jadwal_pm_id IS NOT NULL THEN 'Jadwal PM' 
                     ELSE 'Perbaikan' 
                 END as jenis
-            FROM order_kerja ok
+            FROM trx_order_kerja ok
             LEFT JOIN permintaan_komplain p ON p.permintaan_id = ok.permintaan_id
             LEFT JOIN trx_jadwal_pm jp ON jp.jadwal_pm_id = ok.jadwal_pm_id
             LEFT JOIN mst_asset a ON a.asset_id = COALESCE(p.asset_id, jp.asset_id)

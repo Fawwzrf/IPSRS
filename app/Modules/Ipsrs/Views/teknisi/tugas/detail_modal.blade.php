@@ -33,7 +33,7 @@
             @endif
             @if (!empty($tugas['order_kerja_id']))
                 @php
-                    $orderKerja = \App\Modules\App\Models\DbModel::getData('order_kerja', ['order_kerja_id' => $tugas['order_kerja_id']]);
+                    $orderKerja = \App\Modules\App\Models\DbModel::getData('trx_order_kerja', ['order_kerja_id' => $tugas['order_kerja_id']]);
                 @endphp
                 @if (!empty($orderKerja['catatan']))
                     <div class="alert alert-info mt-3">

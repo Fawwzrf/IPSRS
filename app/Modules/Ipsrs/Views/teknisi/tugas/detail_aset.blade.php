@@ -157,7 +157,7 @@
                                                         </td>
                                                         <td>
                                                             @if (isset($item['jenis']))
-                                                                {{ $item['jenis'] == 'trx_jadwal_pm' ? 'Jadwal PM' : ($item['jenis'] == 'order_kerja' ? 'Perbaikan' : ucfirst($item['jenis'])) }}
+                                                                {{ $item['jenis'] == 'trx_jadwal_pm' ? 'Jadwal PM' : ($item['jenis'] == 'trx_order_kerja' ? 'Perbaikan' : ucfirst($item['jenis'])) }}
                                                             @else
                                                                 -
                                                             @endif

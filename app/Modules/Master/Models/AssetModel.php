@@ -119,7 +119,7 @@ class AssetModel extends Model
                      WHERE pt.order_kerja_id = ok.order_kerja_id AND pt.deleted_st = 0) as tim_teknisi,
                     (SELECT MIN(tgl_mulai) FROM penugasan_teknisi WHERE order_kerja_id = ok.order_kerja_id) as tgl_mulai,
                     (SELECT MAX(tgl_selesai) FROM penugasan_teknisi WHERE order_kerja_id = ok.order_kerja_id) as tgl_selesai
-                  FROM order_kerja ok
+                  FROM trx_order_kerja ok
                   LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                   LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                   WHERE (pk.asset_id = ? OR jp.asset_id = ?) AND ok.deleted_st = 0

@@ -28,7 +28,7 @@ class AdminOrderKerja extends MyController
         $d = [];
         $this->save_session_search($d);
         $d['all_teknisi'] = DbModel::allData('mst_pegawai', ['deleted_st' => '0', 'active_st' => '1', 'jabatan_id' => '90']);
-        $data = DbModel::allData('order_kerja');
+        $data = DbModel::allData('trx_order_kerja');
 
         // Refactor: gunakan helper untuk format tanggal/angka
         foreach ($data as &$row) {
@@ -56,7 +56,7 @@ class AdminOrderKerja extends MyController
                     AND jp.active_st = 1
                     AND jp.status != 'dibatalkan'
                     AND jp.jadwal_pm_id NOT IN (
-                        SELECT DISTINCT jadwal_pm_id FROM order_kerja 
+                        SELECT DISTINCT jadwal_pm_id FROM trx_order_kerja 
                         WHERE jadwal_pm_id IS NOT NULL 
                         AND deleted_st = 0
                         AND status NOT IN ('selesai', 'dibatalkan')
@@ -70,7 +70,7 @@ class AdminOrderKerja extends MyController
                     WHERE pk.deleted_st = 0 
                     AND pk.status IN ('diverifikasi', 'baru', 'dikirim', 'diterima')
                     AND pk.permintaan_id NOT IN (
-                        SELECT DISTINCT permintaan_id FROM order_kerja 
+                        SELECT DISTINCT permintaan_id FROM trx_order_kerja 
                         WHERE permintaan_id IS NOT NULL 
                         AND deleted_st = 0
                         AND status NOT IN ('selesai', 'dibatalkan')
@@ -258,7 +258,7 @@ class AdminOrderKerja extends MyController
             DB::beginTransaction();
 
             // Ambil status lama
-            $query = "SELECT status FROM order_kerja WHERE order_kerja_id = ?";
+            $query = "SELECT status FROM trx_order_kerja WHERE order_kerja_id = ?";
             $result = DB::select($query, [$order_kerja_id]);
 
             if (empty($result)) {
@@ -269,7 +269,7 @@ class AdminOrderKerja extends MyController
             $pegawai_id = session('pegawai_id');
 
             // Update status order kerja
-            $updateQuery = "UPDATE order_kerja SET 
+            $updateQuery = "UPDATE trx_order_kerja SET 
                             status = ?,
                             updated_at = ?,
                             updated_by = ?
@@ -313,9 +313,9 @@ class AdminOrderKerja extends MyController
      */
     public function update_status_form($order_kerja_id)
     {
-        $d['order_kerja'] = DbModel::getData('order_kerja', ['order_kerja_id' => $order_kerja_id]);
+        $d['trx_order_kerja'] = DbModel::getData('trx_order_kerja', ['order_kerja_id' => $order_kerja_id]);
 
-        if (!$d['order_kerja']) {
+        if (!$d['trx_order_kerja']) {
             return '<div class="alert alert-danger">Data Order Kerja tidak ditemukan.</div>';
         }
 

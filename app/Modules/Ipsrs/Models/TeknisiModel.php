@@ -49,7 +49,7 @@ class TeknisiModel extends Model
             ok.jadwal_pm_id, ok.tgl_dibuat,
                         COALESCE(pk.deskripsi, 'Pemeliharaan Rutin') as deskripsi
                     FROM penugasan_teknisi pt
-                    JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
+                    JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                     LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                     LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                     LEFT JOIN mst_asset a ON pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id
@@ -87,7 +87,7 @@ class TeknisiModel extends Model
                     jp.tgl_berikutnya as tgl_pemeliharaan,
                     jp.deskripsi as deskripsi_pemeliharaan
                 FROM penugasan_teknisi pt
-                JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
+                JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                 LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                 LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                 LEFT JOIN mst_asset a ON pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id
@@ -114,7 +114,7 @@ class TeknisiModel extends Model
             $order_kerja_id = $penugasan['order_kerja_id'] ?? null;
 
             if ($order_kerja_id && $status === 'sedang_dikerjakan') {
-                DbModel::updateData('order_kerja', [
+                DbModel::updateData('trx_order_kerja', [
                     'status' => 'diproses',
                     'updated_at' => now(),
                     'updated_by' => session('user_name')
@@ -129,7 +129,7 @@ class TeknisiModel extends Model
                 )['total'] ?? 0;
 
                 if ($count_aktif == 0) {
-                    DbModel::updateData('order_kerja', [
+                    DbModel::updateData('trx_order_kerja', [
                         'status' => 'dibatalkan',
                         'catatan' => $alasan,
                         'updated_at' => now(),
@@ -149,7 +149,7 @@ class TeknisiModel extends Model
                     )['total'] ?? 0;
 
                     if ($count_ditugaskan == $count_total) {
-                        DbModel::updateData('order_kerja', [
+                        DbModel::updateData('trx_order_kerja', [
                             'status' => 'ditugaskan',
                             'updated_at' => now(),
                             'updated_by' => session('user_name')
@@ -195,7 +195,7 @@ class TeknisiModel extends Model
     {
         $sql = "SELECT COUNT(*) as total 
                 FROM penugasan_teknisi pt
-                JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
+                JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                 WHERE pt.pegawai_id = ? 
                 AND pt.status IN ('ditugaskan', 'sedang_dikerjakan') 
                 AND ok.prioritas IN ('tinggi', 'darurat')
@@ -220,7 +220,7 @@ class TeknisiModel extends Model
                 AND a.lokasi_id IN (
                     SELECT DISTINCT a2.lokasi_id 
                     FROM penugasan_teknisi pt
-                    JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
+                    JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                     LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                     LEFT JOIN trx_jadwal_pm jp2 ON ok.jadwal_pm_id = jp2.jadwal_pm_id
                     LEFT JOIN mst_asset a2 ON pk.asset_id = a2.asset_id OR jp2.asset_id = a2.asset_id
@@ -301,7 +301,7 @@ class TeknisiModel extends Model
             $sql = "SELECT pt.penugasan_id, ok.order_kerja_id, a.asset_nm, l.lokasi_nm, ok.prioritas, 
                     ok.tgl_dibuat, COALESCE(pk.deskripsi, jp.deskripsi, 'Pemeliharaan Rutin') as deskripsi
                     FROM penugasan_teknisi pt
-                    JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
+                    JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                     LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                     LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                     LEFT JOIN mst_asset a ON (pk.asset_id = a.asset_id OR jp.asset_id = a.asset_id)
@@ -324,7 +324,7 @@ class TeknisiModel extends Model
             $data['tugas_selesai_count'] = $result['total'] ?? 0;
 
             $sql = "SELECT COUNT(*) as total FROM penugasan_teknisi pt
-                    JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
+                    JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                     WHERE pt.pegawai_id = ? AND pt.status IN ('ditugaskan','sedang_dikerjakan') 
                     AND ok.prioritas IN ('tinggi','darurat') AND pt.deleted_st = 0";
             $result = DbModel::rawData('row_array', $sql, [$teknisi_id]);
@@ -442,7 +442,7 @@ class TeknisiModel extends Model
             $sql = "SELECT pt.*, ok.order_kerja_id, ok.jenis, ok.prioritas, ok.tgl_dibuat,
                       COALESCE(pk.deskripsi, jp.deskripsi, 'Pemeliharaan Rutin') as deskripsi
                    FROM penugasan_teknisi pt
-                   JOIN order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
+                   JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
                    LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                    LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                    WHERE pt.penugasan_id = ? AND pt.deleted_st = 0";
@@ -457,7 +457,7 @@ class TeknisiModel extends Model
     // Mengambil data order kerja berdasarkan ID
     public function getOrderKerja($order_kerja_id)
     {
-        $sql = "SELECT * FROM order_kerja WHERE order_kerja_id = ? AND deleted_st = 0";
+        $sql = "SELECT * FROM trx_order_kerja WHERE order_kerja_id = ? AND deleted_st = 0";
         return DbModel::rawData('row_array', $sql, [$order_kerja_id]);
     }
 
@@ -473,7 +473,7 @@ class TeknisiModel extends Model
         }
 
         // Alternatif: Cari dari order_kerja
-        $order_kerja = DbModel::getData('order_kerja', ['order_kerja_id' => $order_kerja_id]);
+        $order_kerja = DbModel::getData('trx_order_kerja', ['order_kerja_id' => $order_kerja_id]);
         if ($order_kerja) {
             if (!empty($order_kerja['permintaan_id'])) {
                 $permintaan = DbModel::getData('permintaan_komplain', ['permintaan_id' => $order_kerja['permintaan_id']]);
@@ -517,7 +517,7 @@ class TeknisiModel extends Model
     // Menyelesaikan order kerja
     public function selesaiPenugasanByOrderKerja($order_kerja_id, $pegawai_id)
     {
-        $order = DbModel::getData('order_kerja', ['order_kerja_id' => $order_kerja_id]);
+        $order = DbModel::getData('trx_order_kerja', ['order_kerja_id' => $order_kerja_id]);
         if ($order) {
             $penugasan = DbModel::getData('penugasan_teknisi', [
                 'order_kerja_id' => $order_kerja_id,
@@ -541,12 +541,12 @@ class TeknisiModel extends Model
     }
 
     /**
-     * Update status order_kerja ke 'menunggu_sparepart'
+     * Update status trx_order_kerja ke 'menunggu_sparepart'
      */
     public function setOrderKerjaMenungguSparepart($order_kerja_id)
     {
         return DbModel::updateData(
-            'order_kerja',
+            'trx_order_kerja',
             [
                 'status' => 'menunggu_sparepart',
                 'updated_at' => date('Y-m-d H:i:s')
@@ -572,18 +572,18 @@ class TeknisiModel extends Model
     // Mengambil daftar order kerja berdasarkan asset
     public function getOrderKerjaListByAsset($asset_id)
     {
-        $sql = "SELECT * FROM order_kerja WHERE (permintaan_id IN (SELECT permintaan_id FROM permintaan_komplain WHERE asset_id = ?) OR jadwal_pm_id IN (SELECT jadwal_pm_id FROM trx_jadwal_pm WHERE asset_id = ?)) AND deleted_st = 0";
+        $sql = "SELECT * FROM trx_order_kerja WHERE (permintaan_id IN (SELECT permintaan_id FROM permintaan_komplain WHERE asset_id = ?) OR jadwal_pm_id IN (SELECT jadwal_pm_id FROM trx_jadwal_pm WHERE asset_id = ?)) AND deleted_st = 0";
         return DbModel::rawData('result_array', $sql, [$asset_id, $asset_id]);
     }
 
     /**
-     * Ambil daftar order_kerja beserta nama teknisi dan deskripsi berdasarkan asset_id
+     * Ambil daftar trx_order_kerja beserta nama teknisi dan deskripsi berdasarkan asset_id
      */
     public function getOrderKerjaByAssetId($asset_id)
     {
         $sql = "SELECT ok.*, p.pegawai_nm as teknisi_nama, 
                    COALESCE(pk.deskripsi, j.deskripsi) as deskripsi
-            FROM order_kerja ok
+            FROM trx_order_kerja ok
             LEFT JOIN penugasan_teknisi pt ON ok.order_kerja_id = pt.order_kerja_id
             LEFT JOIN mst_pegawai p ON pt.pegawai_id = p.pegawai_id
             LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id

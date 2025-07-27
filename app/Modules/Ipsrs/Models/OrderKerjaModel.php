@@ -60,7 +60,7 @@ class OrderKerjaModel extends Model
                       COALESCE(a1.asset_nm, a2.asset_nm) as asset_nm,
                       COALESCE(pk.deskripsi, jp.jenis) as deskripsi_sumber
                     FROM 
-                      order_kerja ok
+                      trx_order_kerja ok
                       LEFT JOIN permintaan_komplain pk ON ok.permintaan_id = pk.permintaan_id
                       LEFT JOIN trx_jadwal_pm jp ON ok.jadwal_pm_id = jp.jadwal_pm_id
                       LEFT JOIN mst_asset a1 ON pk.asset_id = a1.asset_id
@@ -98,7 +98,7 @@ class OrderKerjaModel extends Model
     public function getById($id)
     {
         if (!$id) return null;
-        return DbModel::getData('order_kerja', ['order_kerja_id' => $id]);
+        return DbModel::getData('trx_order_kerja', ['order_kerja_id' => $id]);
     }
 
     public static function saveData($id = null, $d = [])
@@ -122,7 +122,7 @@ class OrderKerjaModel extends Model
                 }
 
                 // PENTING: Cek apakah order sudah ada untuk mencegah double insert
-                $existingOrder = DB::table('order_kerja')
+                $existingOrder = DB::table('trx_order_kerja')
                     ->where('order_kerja_id', $d['order_kerja_id'])
                     ->first();
 
@@ -202,10 +202,10 @@ class OrderKerjaModel extends Model
                     }
                 }
 
-                // Insert ke tabel order_kerja - HANYA SEKALI
+                // Insert ke tabel trx_order_kerja - HANYA SEKALI
                 \Log::info('OrderKerjaModel: Inserting filtered data', ['data' => $dataToInsert]);
 
-                $insert = DbModel::insertData('order_kerja', $dataToInsert);
+                $insert = DbModel::insertData('trx_order_kerja', $dataToInsert);
                 if (!$insert) {
                     throw new \Exception("Gagal menyimpan order kerja");
                 }
@@ -236,7 +236,7 @@ class OrderKerjaModel extends Model
 
                     // Update status order kerja menjadi 'ditugaskan'
                     DbModel::updateData(
-                        'order_kerja',
+                        'trx_order_kerja',
                         ['status' => 'ditugaskan'],
                         ['order_kerja_id' => $order_kerja_id]
                     );
@@ -289,7 +289,7 @@ class OrderKerjaModel extends Model
                 $dataToUpdate['updated_at'] = date('Y-m-d H:i:s');
                 $dataToUpdate['updated_by'] = session('nama_user') ?? session('nama_pegawai') ?? 'system';
 
-                $update = DbModel::updateData('order_kerja', $dataToUpdate, ['order_kerja_id' => $id]);
+                $update = DbModel::updateData('trx_order_kerja', $dataToUpdate, ['order_kerja_id' => $id]);
                 if (!$update) {
                     throw new \Exception("Gagal mengupdate order kerja");
                 }
@@ -324,7 +324,7 @@ class OrderKerjaModel extends Model
 
                     // Update status order kerja menjadi 'ditugaskan'
                     DbModel::updateData(
-                        'order_kerja',
+                        'trx_order_kerja',
                         ['status' => 'ditugaskan'],
                         ['order_kerja_id' => $id]
                     );
@@ -361,7 +361,7 @@ class OrderKerjaModel extends Model
                 ->update(['deleted_st' => 1, 'updated_by' => session('user_name'), 'updated_at' => now()]);
 
             // Soft delete order kerja
-            DB::table('order_kerja')
+            DB::table('trx_order_kerja')
                 ->where('order_kerja_id', $id)
                 ->update(['deleted_st' => 1, 'updated_by' => session('user_name'), 'updated_at' => now()]);
 
@@ -392,7 +392,7 @@ class OrderKerjaModel extends Model
                     jp.deleted_st = 0 
                     AND jp.active_st = 1
                     AND jp.jadwal_pm_id NOT IN (
-                        SELECT DISTINCT jadwal_pm_id FROM order_kerja 
+                        SELECT DISTINCT jadwal_pm_id FROM trx_order_kerja 
                         WHERE jadwal_pm_id IS NOT NULL 
                         AND deleted_st = 0
                         AND status NOT IN ('selesai')
@@ -413,7 +413,7 @@ class OrderKerjaModel extends Model
     {
         try {
             // Ambil ID terakhir dari database
-            $lastId = DB::table('order_kerja')
+            $lastId = DB::table('trx_order_kerja')
                 ->orderBy('order_kerja_id', 'desc')
                 ->value('order_kerja_id');
 

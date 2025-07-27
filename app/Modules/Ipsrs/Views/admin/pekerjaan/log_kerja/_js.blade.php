@@ -71,7 +71,7 @@
                     "render": function(data, type, row) {
                         if (!data) return '-';
                         if (data === 'trx_jadwal_pm') return 'Jadwal PM';
-                        if (data === 'order_kerja') return 'Perbaikan';
+                        if (data === 'trx_order_kerja') return 'Perbaikan';
                         return data.charAt(0).toUpperCase() + data.slice(1);
                     }
                 },
