@@ -187,6 +187,7 @@ class LaporanModel extends Model
     {
         $where = [
             "ok.deleted_st = 0",
+            "ok.status = 'selesai'",
             "(lk.deleted_st IS NULL OR lk.deleted_st = 0)",
             "((a1.deleted_st IS NULL OR a1.deleted_st = 0) OR (a2.deleted_st IS NULL OR a2.deleted_st = 0))"
         ];
@@ -267,7 +268,7 @@ class LaporanModel extends Model
     // --- DATATABLES KINERJA TIM ---
     public function getDatatablesKinerjaTim($filter, $start, $length, $order, $search)
     {
-        $where = "pt.deleted_st = 0 AND ok.deleted_st = 0 AND (a1.deleted_st IS NULL OR a1.deleted_st = 0) AND (a2.deleted_st IS NULL OR a2.deleted_st = 0)";
+        $where = "pt.deleted_st = 0 AND ok.deleted_st = 0 AND ok.status = 'selesai' AND (a1.deleted_st IS NULL OR a1.deleted_st = 0) AND (a2.deleted_st IS NULL OR a2.deleted_st = 0)";
         $bindings = [];
 
         if (!empty($filter['tgl_start']) && !empty($filter['tgl_end'])) {
@@ -353,6 +354,7 @@ class LaporanModel extends Model
     {
         $where = [
             "ok.deleted_st = 0",
+            "ok.status = 'selesai'",
             "(lk.deleted_st IS NULL OR lk.deleted_st = 0)",
             "((a1.deleted_st IS NULL OR a1.deleted_st = 0) OR (a2.deleted_st IS NULL OR a2.deleted_st = 0))"
         ];
@@ -399,7 +401,7 @@ class LaporanModel extends Model
     // --- RATA-RATA PENYELESAIAN TIM ---
     public function getRataRataPenyelesaianTim($filter)
     {
-        $where = "pt.deleted_st = 0 AND ok.deleted_st = 0";
+        $where = "pt.deleted_st = 0 AND ok.deleted_st = 0 AND ok.status = 'selesai'";
         $bindings = [];
 
         $search = $filter['search'] ?? '';
