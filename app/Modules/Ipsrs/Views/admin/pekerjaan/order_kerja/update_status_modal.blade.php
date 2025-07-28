@@ -1,22 +1,21 @@
-{{-- filepath: c:\laragon\www\ipsrs\app\Modules\Ipsrs\Views\admin\pekerjaan\order_kerja\update_status_modal.blade.php --}}
-<form id="form-update-status" action="{{ url('ipsrs/admin_order_kerja/update_status') }}" method="post">
-    @csrf
-    <input type="hidden" name="order_kerja_id" value="{{ $order_kerja['order_kerja_id'] }}">
+<form id="form-update-status" action="<?= url('ipsrs/admin_order_kerja/update_status') ?>" method="post">
+    <?= csrf_field() ?>
+    <input type="hidden" name="order_kerja_id" value="<?= $order_kerja['order_kerja_id'] ?>">
     
     <div class="mb-3">
         <label class="form-label">Status Saat Ini</label>
-        <input type="text" class="form-control" value="{{ ucfirst($order_kerja['status']) }}" readonly>
+        <input type="text" class="form-control" value="<?= ucfirst($order_kerja['status']) ?>" readonly>
     </div>
     
     <div class="mb-3">
         <label class="form-label">Status Baru</label>
         <select name="status_baru" class="form-select" required>
             <option value="">- Pilih Status -</option>
-            <option value="menunggu" {{ $order_kerja['status'] == 'menunggu' ? 'selected' : '' }}>Menunggu</option>
-            <option value="diproses" {{ $order_kerja['status'] == 'diproses' ? 'selected' : '' }}>Diproses</option>
-            <option value="menunggu_sparepart" {{ $order_kerja['status'] == 'menunggu_sparepart' ? 'selected' : '' }}>Menunggu Sparepart</option>
-            <option value="selesai" {{ $order_kerja['status'] == 'selesai' ? 'selected' : '' }}>Selesai</option>
-            <option value="dibatalkan" {{ $order_kerja['status'] == 'dibatalkan' ? 'selected' : '' }}>Dibatalkan</option>
+            <option value="menunggu" <?= $order_kerja['status'] == 'menunggu' ? 'selected' : '' ?>>Menunggu</option>
+            <option value="diproses" <?= $order_kerja['status'] == 'diproses' ? 'selected' : '' ?>>Diproses</option>
+            <option value="menunggu_sparepart" <?= $order_kerja['status'] == 'menunggu_sparepart' ? 'selected' : '' ?>>Menunggu Sparepart</option>
+            <option value="selesai" <?= $order_kerja['status'] == 'selesai' ? 'selected' : '' ?>>Selesai</option>
+            <option value="dibatalkan" <?= $order_kerja['status'] == 'dibatalkan' ? 'selected' : '' ?>>Dibatalkan</option>
         </select>
     </div>
     

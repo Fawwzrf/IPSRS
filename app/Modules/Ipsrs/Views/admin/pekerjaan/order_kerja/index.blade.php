@@ -14,7 +14,7 @@
                 <div class="col-auto ms-auto d-print-none">
                     <div class="btn-list">
                         <a href="javascript:void(0)"
-                            onclick="_modal(event, {uri: '{{ url($uri . '/form_modal') }}', size: 'modal-lg', position: 'normal'})"
+                            onclick="_modal(event, {uri: '<?= url($uri . '/form_modal') ?>', size: 'modal-lg', position: 'normal'})"
                             class="btn btn-primary d-sm-inline-block">
                             <i class="fas fa-plus"></i> Tambah Order Kerja
                         </a>
@@ -31,7 +31,7 @@
                                     <div class="accordion-body bg-white p-2">
                                         <form class="mb-0" id="search" action="<?= $search_act ?>" method="post"
                                             autocomplete="off" onsubmit="_search(event)">
-                                            @csrf
+                                            <?php echo csrf_field(); ?>
                                             <input type="hidden" name="search_act" value="save">
                                             <div class="row">
                                                 <div class="col-lg-3">
@@ -40,10 +40,10 @@
                                                         id="jenis">
                                                         <option value="">-- Semua Jenis --</option>
                                                         <option value="pemeliharaan"
-                                                            @if (@$nav_sess['search']['data']['jenis'] == 'pemeliharaan') selected @endif>
+                                                            <?php if (@$nav_sess['search']['data']['jenis'] == 'pemeliharaan') echo 'selected'; ?>>
                                                             Pemeliharaan</option>
                                                         <option value="perbaikan"
-                                                            @if (@$nav_sess['search']['data']['jenis'] == 'perbaikan') selected @endif>Perbaikan
+                                                            <?php if (@$nav_sess['search']['data']['jenis'] == 'perbaikan') echo 'selected'; ?>>Perbaikan
                                                         </option>
                                                     </select>
                                                 </div>
@@ -53,19 +53,19 @@
                                                         id="status">
                                                         <option value="">-- Semua Status (Aktif) --</option>
                                                         <option value="baru"
-                                                            @if (@$nav_sess['search']['data']['status'] == 'baru') selected @endif>Baru
+                                                            <?php if (@$nav_sess['search']['data']['status'] == 'baru') echo 'selected'; ?>>Baru
                                                         </option>
                                                         <option value="ditugaskan"
-                                                            @if (@$nav_sess['search']['data']['status'] == 'ditugaskan') selected @endif>Ditugaskan
+                                                            <?php if (@$nav_sess['search']['data']['status'] == 'ditugaskan') echo 'selected'; ?>>Ditugaskan
                                                         </option>
                                                         <option value="diproses"
-                                                            @if (@$nav_sess['search']['data']['status'] == 'diproses') selected @endif>Diproses
+                                                            <?php if (@$nav_sess['search']['data']['status'] == 'diproses') echo 'selected'; ?>>Diproses
                                                         </option>
                                                         <option value="selesai"
-                                                            @if (@$nav_sess['search']['data']['status'] == 'selesai') selected @endif>Selesai
+                                                            <?php if (@$nav_sess['search']['data']['status'] == 'selesai') echo 'selected'; ?>>Selesai
                                                         </option>
                                                         <option value="dibatalkan"
-                                                            @if (@$nav_sess['search']['data']['status'] == 'dibatalkan') selected @endif>Dibatalkan
+                                                            <?php if (@$nav_sess['search']['data']['status'] == 'dibatalkan') echo 'selected'; ?>>Dibatalkan
                                                         </option>
                                                     </select>
                                                 </div>
@@ -73,7 +73,7 @@
                                                     <label class="form-label">Pencarian (Aset, Deskripsi, ID)</label>
                                                     <input class="form-control" type="text" name="term"
                                                         id="term"
-                                                        value="{{ @$nav_sess['search']['data']['term'] }}">
+                                                        value="<?= @$nav_sess['search']['data']['term'] ?>">
                                                 </div>
                                                 <div class="col-lg-2">
                                                     <div class="input-group mt-4">

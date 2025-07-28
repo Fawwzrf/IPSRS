@@ -10,12 +10,18 @@ class PermintaanKomplainModel extends Model
 {
     protected static $nav_sess;
 
+    /**
+     * Konstruktor: Inisialisasi session
+     */
     public function __construct()
     {
         parent::__construct();
         self::initSession();
     }
 
+    /**
+     * Inisialisasi session navigasi
+     */
     protected static function initSession()
     {
         if (is_null(self::$nav_sess)) {
@@ -23,35 +29,30 @@ class PermintaanKomplainModel extends Model
         }
     }
 
+    /**
+     * Load data untuk datatables dengan filter
+     */
     static function loadDatatables()
     {
         self::initSession();
 
         $where = "1 = 1 ";
 
-        // Filter berdasarkan aset
         if (@self::$nav_sess['search']['data']['asset_id'] != '') {
             $where .= " AND k.asset_id = '" . @self::$nav_sess['search']['data']['asset_id'] . "' ";
         }
-
-        // Filter berdasarkan pegawai
         if (@self::$nav_sess['search']['data']['pegawai_id'] != '') {
             $where .= " AND k.pegawai_id = '" . @self::$nav_sess['search']['data']['pegawai_id'] . "' ";
         }
-
-        // Filter berdasarkan status
         if (@self::$nav_sess['search']['data']['status'] != '') {
             $where .= " AND k.status = '" . @self::$nav_sess['search']['data']['status'] . "' ";
         }
-
-        // Filter berdasarkan pencarian
         if (@self::$nav_sess['search']['data']['term'] != '') {
             $where .= " AND (LOWER(a.asset_nm) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%' 
                       OR LOWER(p.pegawai_nm) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%'
                       OR LOWER(k.deskripsi) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%') ";
         }
 
-        // Gunakan subquery dengan alias seperti pada modul acuan
         $query = "SELECT * FROM (
                     SELECT 
                       k.permintaan_id, k.tgl, k.deskripsi, k.status, k.active_st,
@@ -73,21 +74,21 @@ class PermintaanKomplainModel extends Model
         return response()->json($result);
     }
 
+    /**
+     * Ambil data permintaan komplain berdasarkan ID
+     */
     public function getById($id)
     {
         if (!$id) return null;
         return DbModel::getData('trx_permintaan_komplain', ['permintaan_id' => $id]);
     }
 
+    /**
+     * Simpan data permintaan komplain (insert/update)
+     */
     public static function saveData($id = null, $d = [])
     {
         try {
-            // Log input data untuk debugging
-            \Log::info('PermintaanKomplainModel::saveData input', [
-                'id' => $id,
-                'data' => array_keys($d)
-            ]);
-
             $result = ['status' => false, 'message' => '', 'mode' => ''];
             $mode = !empty($id) ? 'update' : 'insert';
             $result['mode'] = $mode;
@@ -95,39 +96,21 @@ class PermintaanKomplainModel extends Model
             DB::beginTransaction();
 
             if ($mode == 'insert') {
-                // Generate ID jika tidak ada
                 if (empty($d['permintaan_id'])) {
                     $d['permintaan_id'] = self::generatePermintaanId();
                 }
-
-                // PENTING: Format tanggal tgl ke format MySQL (YYYY-MM-DD)
                 if (isset($d['tgl']) && !empty($d['tgl'])) {
                     $d['tgl'] = to_date($d['tgl'], '-', 'date');
                 } else {
                     $d['tgl'] = date('Y-m-d');
                 }
 
-                // Validasi dan persiapan data lain
-
-                // Daftar field yang valid untuk insert
                 $validFields = [
-                    'permintaan_id',
-                    'tgl',
-                    'asset_id',
-                    'pegawai_id',
-                    'deskripsi',
-                    'status',
-                    'foto_url',
-                    'anotasi_url',
-                    'created_at',
-                    'created_by',
-                    'updated_at',
-                    'updated_by',
-                    'deleted_st',
-                    'active_st'
+                    'permintaan_id', 'tgl', 'asset_id', 'pegawai_id', 'deskripsi', 'status',
+                    'foto_url', 'anotasi_url', 'created_at', 'created_by', 'updated_at',
+                    'updated_by', 'deleted_st', 'active_st'
                 ];
 
-                // Buat array data baru yang hanya berisi field valid
                 $dataToInsert = [];
                 foreach ($validFields as $field) {
                     if (isset($d[$field])) {
@@ -135,28 +118,20 @@ class PermintaanKomplainModel extends Model
                     }
                 }
 
-                // Set nilai default untuk kolom wajib
                 $dataToInsert['active_st'] = $dataToInsert['active_st'] ?? 1;
                 $dataToInsert['created_at'] = date('Y-m-d H:i:s');
                 $dataToInsert['created_by'] = session('nama_user') ?? session('nama_pegawai') ?? 'system';
-
-                // Untuk debugging, log data yang akan dimasukkan
-                \Log::info('PermintaanKomplainModel: Inserting filtered data', ['data' => $dataToInsert]);
 
                 $insert = DbModel::insertData('trx_permintaan_komplain', $dataToInsert);
                 if (!$insert) {
                     throw new \Exception("Gagal menyimpan permintaan");
                 }
 
-                // Commit jika berhasil
                 DB::commit();
-
-                // Set status hasil
                 $result['status'] = true;
                 $result['permintaan_id'] = $dataToInsert['permintaan_id'];
                 $result['message'] = 'Permintaan berhasil disimpan';
             } else {
-
                 if (isset($d['tgl']) && !empty($d['tgl'])) {
                     $d['tgl'] = to_date($d['tgl'], '-', 'date');
                 } else {
@@ -164,19 +139,10 @@ class PermintaanKomplainModel extends Model
                 }
 
                 $validFields = [
-                    'tgl',
-                    'asset_id',
-                    'pegawai_id',
-                    'deskripsi',
-                    'status',
-                    'foto_url',
-                    'anotasi_url',
-                    'updated_at',
-                    'updated_by',
-                    'active_st'
+                    'tgl', 'asset_id', 'pegawai_id', 'deskripsi', 'status',
+                    'foto_url', 'anotasi_url', 'updated_at', 'updated_by', 'active_st'
                 ];
 
-                // Buat array data baru yang hanya berisi field valid
                 $dataToUpdate = [];
                 foreach ($validFields as $field) {
                     if (isset($d[$field])) {
@@ -187,16 +153,12 @@ class PermintaanKomplainModel extends Model
                 $dataToUpdate['updated_at'] = date('Y-m-d H:i:s');
                 $dataToUpdate['updated_by'] = session('nama_user') ?? session('nama_pegawai') ?? 'system';
 
-                // Untuk debugging, log data yang akan diupdate
-                \Log::info('PermintaanKomplainModel: Updating filtered data', ['data' => $dataToUpdate]);
-
                 $update = DbModel::updateData('trx_permintaan_komplain', $dataToUpdate, ['permintaan_id' => $id]);
                 if (!$update) {
                     throw new \Exception("Gagal mengupdate permintaan");
                 }
 
                 DB::commit();
-
                 $result['status'] = true;
                 $result['permintaan_id'] = $id;
                 $result['message'] = 'Permintaan berhasil diupdate';
@@ -209,25 +171,24 @@ class PermintaanKomplainModel extends Model
                 'file' => $e->getFile(),
                 'line' => $e->getLine()
             ]);
-
             $result['status'] = false;
             $result['message'] = $e->getMessage();
             return $result;
         }
     }
 
+    /**
+     * Soft delete data permintaan komplain
+     */
     public function deleteData($id)
     {
         try {
             DB::beginTransaction();
-
-            // Soft delete
             $result = DbModel::updateData(
                 'trx_permintaan_komplain',
                 ['deleted_st' => 1, 'updated_by' => session('user_name'), 'updated_at' => now()],
                 ['permintaan_id' => $id]
             );
-
             DB::commit();
             return $result;
         } catch (\Exception $e) {
@@ -238,29 +199,49 @@ class PermintaanKomplainModel extends Model
     }
 
     /**
+     * Ambil semua data aset aktif
+     */
+    public function getAllActiveAsset()
+    {
+        return DbModel::allData('mst_asset', ['deleted_st' => 0, 'active_st' => 1]);
+    }
+
+    /**
+     * Ambil semua data pegawai aktif
+     */
+    public function getAllActivePegawai()
+    {
+        return DbModel::allData('mst_pegawai', ['deleted_st' => '0', 'active_st' => '1']);
+    }
+
+    /**
+     * Ambil semua data lokasi aktif
+     */
+    public function getAllActiveLokasi()
+    {
+        return DbModel::allData('mst_lokasi', ['deleted_st' => 0, 'active_st' => 1]);
+    }
+
+    /**
+     * Cek apakah order kerja sudah ada berdasarkan permintaan_id
+     */
+    public function isOrderKerjaExistByPermintaanId($permintaan_id)
+    {
+        return DbModel::getData('trx_order_kerja', ['permintaan_id' => $permintaan_id, 'deleted_st' => 0]) ? true : false;
+    }
+
+    /**
      * Generate ID unik untuk permintaan komplain baru
      * @return string Format: 12-digit numeric (000000000001)
      */
     public static function generatePermintaanId()
     {
-        // Ambil ID terakhir
         $sql = "SELECT permintaan_id FROM trx_permintaan_komplain 
                 ORDER BY permintaan_id DESC LIMIT 1";
         $last = DbModel::rawData('row_array', $sql);
         $lastId = isset($last['permintaan_id']) ? $last['permintaan_id'] : '000000000000';
-
-        // Log untuk debugging
-        \Log::info('Last permintaan_id', ['id' => $lastId]);
-
-        // Konversi string ID ke integer dan tambahkan 1
         $nextIdInt = (int)$lastId + 1;
-
-        // Format kembali ke string dengan leading zeros (12 digit)
         $nextId = str_pad($nextIdInt, 12, '0', STR_PAD_LEFT);
-
-        // Log ID baru yang dihasilkan
-        \Log::info('Generated new permintaan_id', ['id' => $nextId]);
-
         return $nextId;
     }
 }

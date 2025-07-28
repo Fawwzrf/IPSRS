@@ -21,30 +21,23 @@ class AdminPermintaanKomplain extends MyController
     public function index()
     {
         $d = [];
-        // Penting: Gunakan save_session_search untuk mengelola session pencarian
         $this->save_session_search($d);
 
-        // Hapus $d['nav_sess'] = session(request('n')); karena redundan (sudah ada di parent)
-
-        // Data untuk dropdown filter di halaman utama
-        $d['all_asset'] = DbModel::allData('mst_asset', ['deleted_st' => 0, 'active_st' => 1]);
-        $d['all_pegawai'] = DbModel::allData('mst_pegawai', ['deleted_st' => '0', 'active_st' => '1']);
-        $d['all_lokasi'] = DbModel::allData('mst_lokasi', ['deleted_st' => 0, 'active_st' => 1]);
+        $d['all_asset']   = $this->model->getAllActiveAsset();
+        $d['all_pegawai'] = $this->model->getAllActivePegawai();
+        $d['all_lokasi']  = $this->model->getAllActiveLokasi();
 
         return $this->renderView($this->template . 'index', $d);
     }
 
     public function form_modal($id = null)
     {
-        $d['main'] = $id ? $this->model->getById($id) : null;
+        $d['main']        = $id ? $this->model->getById($id) : null;
+        $d['all_lokasi']  = $this->model->getAllActiveLokasi();
+        $d['all_asset']   = $this->model->getAllActiveAsset();
+        $d['all_pegawai'] = $this->model->getAllActivePegawai();
+        $d['form_act']    = $this->uri . '/save/' . $id;
 
-        // Mengirim semua data yang dibutuhkan untuk logika JavaScript di sisi klien
-        $d['all_lokasi'] = DbModel::allData('mst_lokasi', ['deleted_st' => 0, 'active_st' => 1]);
-        $d['all_asset'] = DbModel::allData('mst_asset', ['deleted_st' => 0, 'active_st' => 1]);
-        $d['all_pegawai'] = DbModel::allData('mst_pegawai', ['deleted_st' => '0', 'active_st' => '1']);
-
-        // Standardisasi format URI untuk konsistensi
-        $d['form_act'] = $this->uri . '/save/' . $id;
         return $this->renderView($this->template . 'form_modal', $d);
     }
 
@@ -52,7 +45,7 @@ class AdminPermintaanKomplain extends MyController
     {
         $d = _post();
 
-        // Validasi dasar
+        // Validasi
         if (empty($d['asset_id'])) {
             return response()->json(_response('11', $this->uri, ['message' => 'Aset wajib dipilih!']));
         }
@@ -61,15 +54,11 @@ class AdminPermintaanKomplain extends MyController
         }
 
         try {
-            // Alihkan logika save ke model untuk konsistensi
             $result = $this->model->saveData($id, $d);
 
             if ($result['status']) {
-                if ($result['mode'] === 'insert') {
-                    return response()->json(_response('01', $this->uri, $d));
-                } else {
-                    return response()->json(_response('02', $this->uri, $d));
-                }
+                $code = $result['mode'] === 'insert' ? '01' : '02';
+                return response()->json(_response($code, $this->uri, $d));
             } else {
                 throw new \Exception("Gagal menyimpan data ke database.");
             }
@@ -82,8 +71,10 @@ class AdminPermintaanKomplain extends MyController
     public function delete($id)
     {
         // Validasi relasi sebelum hapus
-        if (DbModel::getData('trx_order_kerja', ['permintaan_id' => $id, 'deleted_st' => 0])) {
-            return response()->json(_response('13', $this->uri, ['message' => 'Permintaan komplain ini sudah dibuatkan Order Kerja dan tidak dapat dihapus.']));
+        if ($this->model->isOrderKerjaExistByPermintaanId($id)) {
+            return response()->json(_response('13', $this->uri, [
+                'message' => 'Permintaan komplain ini sudah dibuatkan Order Kerja dan tidak dapat dihapus.'
+            ]));
         }
 
         $result = $this->model->deleteData($id);

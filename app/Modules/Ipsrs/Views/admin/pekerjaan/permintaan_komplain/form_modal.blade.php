@@ -1,4 +1,4 @@
-<form id="form" action="{{ $form_act }}" method="post" autocomplete="off">
+<form id="form" action="<?= $form_act ?>" method="post" autocomplete="off">
     @csrf
     <div class="card-body">
         <fieldset class="border p-2 rounded mb-3">
@@ -8,39 +8,34 @@
                 <label class="col-lg-3 col-form-label required">Tanggal</label>
                 <div class="col-lg-9">
                     <input type="text" name="tgl" class="form-control datepicker-notauto"
-                        value="{{ @to_date(@$main['tgl'], '-', 'date') ?: date('d-m-Y') }}" required>
+                        value="<?= @to_date(@$main['tgl'], '-', 'date') ?: date('d-m-Y') ?>" required>
                 </div>
             </div>
 
-            {{-- LANGKAH 1: PILIH LOKASI --}}
             <div class="mb-3 row">
                 <label class="col-lg-3 col-form-label required">Lokasi Komplain</label>
                 <div class="col-lg-9">
                     <select class="form-select chosen-select" name="lokasi_id" id="lokasi-select" required>
                         <option value="">- Pilih Lokasi Terlebih Dahulu -</option>
-                        @php
-                            // Blok ini untuk menentukan lokasi yang terpilih saat mode edit
+                        <?php
                             $selected_lokasi_id = '';
                             if (@$main['asset_id']) {
-                                // Ambil data asset untuk mendapatkan lokasi_id-nya
                                 $asset = \App\Modules\App\Models\DbModel::getData('mst_asset', [
                                     'asset_id' => $main['asset_id'],
                                 ]);
                                 $selected_lokasi_id = @$asset['lokasi_id'];
                             }
-                        @endphp
-                        @foreach ($all_lokasi as $lokasi)
-                            {{-- Simpan URL denah di data-attribute untuk diakses oleh JavaScript --}}
-                            <option value="{{ $lokasi['lokasi_id'] }}" data-denah-url="{{ $lokasi['denah_url'] ?? '' }}"
-                                @if ($selected_lokasi_id == $lokasi['lokasi_id']) selected @endif>
-                                {{ $lokasi['lokasi_nm'] }}
+                        ?>
+                        <?php foreach ($all_lokasi as $lokasi): ?>
+                            <option value="<?= $lokasi['lokasi_id'] ?>" data-denah-url="<?= $lokasi['denah_url'] ?? '' ?>"
+                                <?php if ($selected_lokasi_id == $lokasi['lokasi_id']): ?>selected<?php endif; ?>>
+                                <?= $lokasi['lokasi_nm'] ?>
                             </option>
-                        @endforeach
+                        <?php endforeach; ?>
                     </select>
                 </div>
             </div>
 
-            {{-- LANGKAH 2: PILIH ASET (Kontennya akan diisi oleh JavaScript) --}}
             <div class="mb-3 row">
                 <label class="col-lg-3 col-form-label required">Aset yang Dikomplain</label>
                 <div class="col-lg-9">
@@ -55,12 +50,12 @@
                 <div class="col-lg-9">
                     <select class="form-select chosen-select" name="pegawai_id" required>
                         <option value="">- Pilih Pegawai -</option>
-                        @foreach ($all_pegawai as $pegawai)
-                            <option value="{{ $pegawai['pegawai_id'] }}"
-                                @if (@$main['pegawai_id'] == $pegawai['pegawai_id']) selected @endif>
-                                {{ $pegawai['pegawai_nm'] }}
+                        <?php foreach ($all_pegawai as $pegawai): ?>
+                            <option value="<?= $pegawai['pegawai_id'] ?>"
+                                <?php if (@$main['pegawai_id'] == $pegawai['pegawai_id']): ?>selected<?php endif; ?>>
+                                <?= $pegawai['pegawai_nm'] ?>
                             </option>
-                        @endforeach
+                        <?php endforeach; ?>
                     </select>
                 </div>
             </div>
@@ -68,7 +63,7 @@
             <div class="mb-3 row">
                 <label class="col-lg-3 col-form-label required">Deskripsi Komplain</label>
                 <div class="col-lg-9">
-                    <textarea name="deskripsi" class="form-control" rows="4" required>{{ @$main['deskripsi'] }}</textarea>
+                    <textarea name="deskripsi" class="form-control" rows="4" required><?= @$main['deskripsi'] ?></textarea>
                 </div>
             </div>
 
@@ -76,9 +71,9 @@
                 <label class="col-lg-3 col-form-label required">Status</label>
                 <div class="col-lg-9">
                     <select class="form-select chosen-select" name="status">
-                        <option value="baru" @if (@$main == '' || @$main['status'] == 'baru') selected @endif>Baru</option>
-                        <option value="diproses" @if (@$main['status'] == 'diproses') selected @endif>Diproses</option>
-                        <option value="selesai" @if (@$main['status'] == 'selesai') selected @endif>Selesai</option>
+                        <option value="baru" <?php if (@$main == '' || @$main['status'] == 'baru'): ?>selected<?php endif; ?>>Baru</option>
+                        <option value="diproses" <?php if (@$main['status'] == 'diproses'): ?>selected<?php endif; ?>>Diproses</option>
+                        <option value="selesai" <?php if (@$main['status'] == 'selesai'): ?>selected<?php endif; ?>>Selesai</option>
                     </select>
                 </div>
             </div>
@@ -98,7 +93,7 @@
                 <canvas id="denah-canvas" style="display: none; max-width: 100%;"></canvas>
                 <span id="canvas-placeholder">Pilih lokasi untuk menampilkan denah</span>
             </div>
-            <input type="hidden" name="anotasi_url" id="anotasi_url" value="{{ @$main['anotasi_url'] }}">
+            <input type="hidden" name="anotasi_url" id="anotasi_url" value="<?= @$main['anotasi_url'] ?>">
         </fieldset>
 
         <div class="row mt-3">
@@ -111,8 +106,7 @@
     </div>
 </form>
 
-{{-- Simpan semua data aset ke dalam variabel JavaScript global untuk diakses oleh _js.blade.php --}}
 <script>
-    window.allAssets = @json($all_asset);
-    window.selectedAsset = '{{ @$main['asset_id'] }}';
+    window.allAssets = <?= json_encode($all_asset) ?>;
+    window.selectedAsset = '<?= @$main['asset_id'] ?>';
 </script>

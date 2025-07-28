@@ -134,7 +134,6 @@
                                 badgeText = data.charAt(0).toUpperCase() + data.slice(1);
                         }
 
-                        // Pastikan HTML dirender dengan benar
                         return '<span class="badge ' + badgeClass + '"><i class="' + badgeIcon +
                             ' me-1"></i> ' + badgeText + '</span>';
                     }
@@ -178,7 +177,6 @@
                 }
             ],
             "createdRow": function(row, data, dataIndex) {
-                // Beri highlight pada baris dengan prioritas darurat
                 if (data.prioritas == 'darurat') {
                     $(row).addClass('bg-danger-subtle');
                 }
@@ -186,7 +184,6 @@
         });
     });
 
-    // Inisialisasi plugin di dalam modal
     $(document).on('shown.bs.modal', '#my-modal-1', function(e) {
         var modal = $(this);
         modal.find('.chosen-select').select2({
@@ -204,18 +201,17 @@
         var jadwalSelect = modal.find('#jadwal_pm_id');
         var komplainSelect = modal.find('#permintaan_id');
 
-        // Fungsi untuk menonaktifkan dropdown lain
         function toggleSource(select1, select2) {
             if (select1.val()) {
-                // Nonaktifkan select2 dan perbarui tampilannya
+
                 select2.val('').prop('disabled', true).trigger('change.select2');
             } else {
-                // Aktifkan kembali select2
+
                 select2.prop('disabled', false).trigger('change.select2');
             }
         }
 
-        // Pasang event handler
+
         jadwalSelect.on('change', function() {
             toggleSource($(this), komplainSelect);
         });
@@ -223,8 +219,6 @@
             toggleSource($(this), jadwalSelect);
         });
 
-        // Panggil fungsi toggle saat modal dibuka
-        // untuk menangani state saat mode edit
         toggleSource(jadwalSelect, komplainSelect);
         toggleSource(komplainSelect, jadwalSelect);
     });

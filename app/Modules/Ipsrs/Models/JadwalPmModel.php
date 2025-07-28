@@ -30,24 +30,20 @@ class JadwalPmModel extends Model
 
         $where = "1 = 1 ";
 
-        // Filter berdasarkan aset
         if (@self::$nav_sess['search']['data']['asset_id'] != '') {
             $where .= " AND jp.asset_id = '" . @self::$nav_sess['search']['data']['asset_id'] . "' ";
         }
 
-        // Filter berdasarkan status
         if (@self::$nav_sess['search']['data']['status'] != '') {
             $where .= " AND jp.status = '" . @self::$nav_sess['search']['data']['status'] . "' ";
         }
 
-        // Filter berdasarkan pencarian
         if (@self::$nav_sess['search']['data']['term'] != '') {
             $where .= " AND (LOWER(a.asset_nm) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%' 
                       OR LOWER(jp.jenis) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%'
                       OR LOWER(jp.frekuensi) LIKE '%" . @strtolower(self::$nav_sess['search']['data']['term']) . "%') ";
         }
 
-        // Gunakan subquery dengan alias seperti pada modul acuan
         $query = "SELECT * FROM (
                     SELECT 
                       jp.jadwal_pm_id,
@@ -73,14 +69,12 @@ class JadwalPmModel extends Model
 
     public static function saveData($post, $id = null)
     {
-        // Memulai transaksi database untuk memastikan integritas data
         DB::beginTransaction();
 
         try {
-            // 1. Siapkan array untuk menampung data yang akan disimpan
             $dataToSave = [
                 'asset_id'      => $post['asset_id'],
-                'frekuensi'     => $post['frekuensi'] ?? 'Bulanan', // Berikan nilai default
+                'frekuensi'     => $post['frekuensi'] ?? 'Bulanan',
                 'jenis'         => $post['jenis'],
                 'status'        => $post['status'],
                 'deskripsi'     => $post['deskripsi'] ?? null,
@@ -88,10 +82,7 @@ class JadwalPmModel extends Model
                 'active_st'     => $post['active_st'] ?? 1,
             ];
 
-            // 2. Konversi tanggal ke format database
             $dataToSave['tgl_terakhir'] = to_date($post['tgl_terakhir'], '-', 'date');
-
-            // 3. Kalkulasi tanggal berikutnya
             $tglTerakhir = Carbon::createFromFormat('Y-m-d', $dataToSave['tgl_terakhir']);
             $tglBerikutnya = clone $tglTerakhir;
 
@@ -118,9 +109,7 @@ class JadwalPmModel extends Model
 
             $dataToSave['tgl_berikutnya'] = $tglBerikutnya ? $tglBerikutnya->format('Y-m-d') : null;
 
-            // 4. Proses simpan data
             if ($id == null) {
-                // Insert mode
                 if (empty($post['jadwal_pm_id'])) {
                     $dataToSave['jadwal_pm_id'] = DbModel::getId('trx_jadwal_pm', 2, 12);
                 } else {
@@ -132,7 +121,7 @@ class JadwalPmModel extends Model
 
                 $result = DB::table('trx_jadwal_pm')->insert($dataToSave);
             } else {
-                // Update mode
+              
                 $dataToSave['updated_by'] = session('user_name');
                 $dataToSave['updated_at'] = now();
 
@@ -141,20 +130,24 @@ class JadwalPmModel extends Model
                     ->update($dataToSave);
             }
 
-            // Commit transaksi jika berhasil
             DB::commit();
 
             return true;
         } catch (\Exception $e) {
-            // Rollback transaksi jika terjadi error
+
             DB::rollBack();
 
-            // Log error untuk debugging
             \Log::error('Error saving jadwal_pm: ' . $e->getMessage());
 
             return false;
         }
     }
+    public static function getAllActiveAsset()
+    {
+        return DbModel::allData('mst_asset', [
+            'deleted_st' => 0,
+            'active_st'  => 1
+        ]);
+    }
 
-    // Method lainnya tetap dipertahankan...
 }
