@@ -4,7 +4,6 @@ namespace App\Modules\Ipsrs\Models;
 
 use App\Modules\App\Models\DbModel;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class LogKerjaModel extends Model

@@ -1,7 +1,7 @@
-<form id="form-log-kerja" action="{{ $form_act }}" method="post" autocomplete="off" enctype="multipart/form-data">
-    @csrf
+<form id="form-log-kerja" action="<?= $form_act ?>" method="post" autocomplete="off" enctype="multipart/form-data">
+    <?php echo csrf_field(); ?>
     <input type="hidden" name="action" value="save_log_kerja">
-    <input type="hidden" name="n" value="{{ request('n') }}">
+    <input type="hidden" name="n" value="<?= request('n') ?>">
 
     <div class="card-body">
         <fieldset class="border p-2 rounded mb-3">
@@ -11,12 +11,12 @@
                 <div class="col-lg-9">
                     <select class="form-select" name="order_kerja_id" required>
                         <option value="">- Pilih Order Kerja -</option>
-                        @foreach ($all_order_kerja as $ok)
-                            <option value="{{ $ok['order_kerja_id'] }}"
-                                @if (@$main['order_kerja_id'] == $ok['order_kerja_id']) selected @endif>
-                                {{ $ok['order_kerja_id'] }} - {{ $ok['asset_nm'] ?? '-' }} ({{ $ok['jenis'] ?? '-' }})
+                        <?php foreach ($all_order_kerja as $ok): ?>
+                            <option value="<?= $ok['order_kerja_id'] ?>"
+                                <?php if (@$main['order_kerja_id'] == $ok['order_kerja_id']): ?> selected <?php endif; ?>>
+                                <?= $ok['order_kerja_id'] ?> - <?= $ok['asset_nm'] ?? '-' ?> (<?= $ok['jenis'] ?? '-' ?>)
                             </option>
-                        @endforeach
+                        <?php endforeach; ?>
                     </select>
                 </div>
             </div>
@@ -25,12 +25,12 @@
                 <div class="col-lg-9">
                     <select class="form-select" name="teknisi_pegawai_id" required>
                         <option value="">- Pilih Teknisi -</option>
-                        @foreach ($all_teknisi as $teknisi)
-                            <option value="{{ $teknisi['pegawai_id'] }}"
-                                @if (@$main['teknisi_pegawai_id'] == $teknisi['pegawai_id']) selected @endif>
-                                {{ $teknisi['pegawai_nm'] }}
+                        <?php foreach ($all_teknisi as $teknisi): ?>
+                            <option value="<?= $teknisi['pegawai_id'] ?>"
+                                <?php if (@$main['teknisi_pegawai_id'] == $teknisi['pegawai_id']): ?> selected <?php endif; ?>>
+                                <?= $teknisi['pegawai_nm'] ?>
                             </option>
-                        @endforeach
+                        <?php endforeach; ?>
                     </select>
                 </div>
             </div>
@@ -40,11 +40,11 @@
             <legend class="float-none w-auto px-2 fs-6 fw-bold">Detail Laporan</legend>
             <div class="mb-3">
                 <label class="form-label required">Diagnosa Masalah</label>
-                <textarea name="diagnosa" class="form-control" rows="3" required>{{ @$main['diagnosa'] }}</textarea>
+                <textarea name="diagnosa" class="form-control" rows="3" required><?= @$main['diagnosa'] ?></textarea>
             </div>
             <div class="mb-3">
                 <label class="form-label required">Tindakan yang Dilakukan</label>
-                <textarea name="tindakan" class="form-control" rows="4" required>{{ @$main['tindakan'] }}</textarea>
+                <textarea name="tindakan" class="form-control" rows="4" required><?= @$main['tindakan'] ?></textarea>
             </div>
             <div class="mb-3">
                 <label class="form-label required">Hasil Pekerjaan</label>
@@ -65,9 +65,9 @@
                     <div class="col-md-6">
                         <select name="sparepart_id[]" class="form-select">
                             <option value="">-- Pilih Sparepart --</option>
-                            @foreach ($all_sparepart as $sp)
-                                <option value="{{ $sp['sparepart_id'] }}">{{ $sp['sparepart_nm'] }}</option>
-                            @endforeach
+                            <?php foreach ($all_sparepart as $sp): ?>
+                                <option value="<?= $sp['sparepart_id'] ?>"><?= $sp['sparepart_nm'] ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="col-md-4">
@@ -93,12 +93,12 @@
                 <div class="col-lg-6 mb-3">
                     <label class="form-label">Durasi (Menit)</label>
                     <input type="number" name="durasi_menit" class="form-control"
-                        value="{{ @$main['durasi_menit'] ?? 0 }}">
+                        value="<?= @$main['durasi_menit'] ?? 0 ?>">
                 </div>
                 <div class="col-lg-6 mb-3">
                     <label class="form-label">Biaya Lain-lain (Rp)</label>
                     <input type="text" name="total_biaya" class="form-control autonumeric"
-                        value="{{ @$main['total_biaya'] ?? 0 }}">
+                        value="<?= @$main['total_biaya'] ?? 0 ?>">
                 </div>
             </div>
             <div class="mb-3">
@@ -106,22 +106,21 @@
                 <input class="form-control" type="file" name="fotos[]" id="foto-input" multiple>
                 <div id="foto-preview" class="d-flex flex-wrap mt-2"></div>
             </div>
-            {{-- Tampilkan foto-foto yang sudah ada --}}
-            @if (!empty($log_fotos))
+            <?php if (!empty($log_fotos)): ?>
                 <div class="row mt-3">
                     <div class="col-12">
                         <p><strong>Foto Bukti yang Sudah Diunggah:</strong></p>
                         <div class="d-flex flex-wrap">
-                            @foreach ($log_fotos as $foto)
+                            <?php foreach ($log_fotos as $foto): ?>
                                 <div class="me-2 mb-2">
-                                    <img src="{{ $foto['foto_url'] }}" alt="Foto Bukti" class="img-thumbnail"
+                                    <img src="<?= $foto['foto_url'] ?>" alt="Foto Bukti" class="img-thumbnail"
                                         style="height: 100px;">
                                 </div>
-                            @endforeach
+                            <?php endforeach; ?>
                         </div>
                     </div>
                 </div>
-            @endif
+            <?php endif; ?>
         </fieldset>
 
         <div class="row mt-3">

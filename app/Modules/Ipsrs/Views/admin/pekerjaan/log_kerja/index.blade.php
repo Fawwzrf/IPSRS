@@ -15,7 +15,7 @@
                 <div class="col-auto ms-auto d-print-none">
                     <div class="btn-list">
                         <a href="javascript:void(0)"
-                            onclick="_modal(event, {uri: '{{ url($uri . '/form_modal') }}', size: 'modal-lg', position: 'normal'})"
+                            onclick="_modal(event, {uri: '<?= url($uri . '/form_modal') ?>', size: 'modal-lg', position: 'normal'})"
                             class="btn btn-primary d-sm-inline-block">
                             <i class="fas fa-plus"></i> Tambah Log Kerja
                         </a>
@@ -30,28 +30,28 @@
                                 <div id="filter" class="accordion-collapse collapse show" data-bs-parent="#accordion-logkerja">
                                     <div class="accordion-body bg-white p-2">
                                         <form class="mb-0" id="search" action="<?= $search_act ?>" method="post" autocomplete="off" onsubmit="_search(event)">
-                                            @csrf
+                                            <?= csrf_field() ?>
                                             <input type="hidden" name="search_act" value="save">
                                             <div class="row">
                                                 <div class="col-lg-4">
                                                     <label class="form-label">Filter Teknisi</label>
                                                     <select class="form-select chosen-select" id="teknisi_id" name="teknisi_id">
                                                         <option value="">-- Semua Teknisi --</option>
-                                                        @foreach($all_teknisi as $teknisi)
-                                                            <option value="{{ $teknisi['pegawai_id'] }}" @if(@$nav_sess['search']['data']['teknisi_id'] == $teknisi['pegawai_id']) selected @endif>
-                                                                {{ $teknisi['pegawai_nm'] }}
+                                                        <?php foreach($all_teknisi as $teknisi): ?>
+                                                            <option value="<?= $teknisi['pegawai_id'] ?>" <?= (@$nav_sess['search']['data']['teknisi_id'] == $teknisi['pegawai_id']) ? 'selected' : '' ?>>
+                                                                <?= $teknisi['pegawai_nm'] ?>
                                                             </option>
-                                                        @endforeach
+                                                        <?php endforeach; ?>
                                                     </select>
                                                 </div>
                                                 <div class="col-lg-3">
                                                     <label class="form-label">Filter Hasil</label>
                                                     <select class="form-select chosen-select" id="hasil" name="hasil">
                                                         <option value="">-- Semua Hasil --</option>
-                                                        <option value="berhasil" @if(@$nav_sess['search']['data']['hasil'] == 'berhasil') selected @endif>Berhasil</option>
-                                                        <option value="menunggu_sparepart" @if(@$nav_sess['search']['data']['hasil'] == 'menunggu_sparepart') selected @endif>Menunggu Sparepart</option>
-                                                        <option value="perlu_tindak_lanjut" @if(@$nav_sess['search']['data']['hasil'] == 'perlu_tindak_lanjut') selected @endif>Perlu Tindak Lanjut</option>
-                                                        <option value="tidak_berhasil" @if(@$nav_sess['search']['data']['hasil'] == 'tidak_berhasil') selected @endif>Tidak Berhasil</option>
+                                                        <option value="berhasil" <?= (@$nav_sess['search']['data']['hasil'] == 'berhasil') ? 'selected' : '' ?>>Berhasil</option>
+                                                        <option value="menunggu_sparepart" <?= (@$nav_sess['search']['data']['hasil'] == 'menunggu_sparepart') ? 'selected' : '' ?>>Menunggu Sparepart</option>
+                                                        <option value="perlu_tindak_lanjut" <?= (@$nav_sess['search']['data']['hasil'] == 'perlu_tindak_lanjut') ? 'selected' : '' ?>>Perlu Tindak Lanjut</option>
+                                                        <option value="tidak_berhasil" <?= (@$nav_sess['search']['data']['hasil'] == 'tidak_berhasil') ? 'selected' : '' ?>>Tidak Berhasil</option>
                                                     </select>
                                                 </div>
                                                 <div class="col-lg-3">
@@ -97,7 +97,6 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {{-- Data akan di-load oleh DataTables AJAX --}}
                                 </tbody>
                             </table>
                         </div>

@@ -27,12 +27,12 @@
                                 <div id="filter-body" class="accordion-collapse collapse show" data-bs-parent="#accordion-filter">
                                     <div class="accordion-body bg-white p-2">
                                         <form class="mb-0" id="search" action="<?= $search_act ?>" method="post" autocomplete="off" onsubmit="_search(event)">
-                                            @csrf
+                                            <?php echo csrf_field(); ?>
                                             <input type="hidden" name="search_act" value="save">
                                             <div class="row">
                                                 <div class="col-lg-8">
                                                     <label class="form-label">Pencarian (ID, Nama Sparepart, Vendor, No Faktur)</label>
-                                                    <input class="form-control" type="text" name="term" id="term" value="{{ @$nav_sess['search']['data']['term'] }}">
+                                                    <input class="form-control" type="text" name="term" id="term" value="<?= @$nav_sess['search']['data']['term'] ?>">
                                                 </div>
                                                 <div class="col-lg-4">
                                                     <div class="input-group mt-4">

@@ -10,13 +10,6 @@ class LogStatusOrderKerjaModel
 {
     /**
      * Mencatat perubahan status order kerja
-     * 
-     * @param string $order_kerja_id ID order kerja
-     * @param string $status_lama Status sebelumnya
-     * @param string $status_baru Status baru
-     * @param string $oleh_pegawai_id ID pegawai yang melakukan perubahan
-     * @param string $keterangan Keterangan perubahan status (opsional)
-     * @return array Status operasi
      */
     public function logPerubahanStatus($order_kerja_id, $status_lama, $status_baru, $oleh_pegawai_id, $keterangan = '')
     {
@@ -61,9 +54,6 @@ class LogStatusOrderKerjaModel
 
     /**
      * Mengambil riwayat perubahan status order kerja
-     * 
-     * @param string $order_kerja_id ID order kerja
-     * @return array Riwayat status
      */
     public function getRiwayatStatus($order_kerja_id)
     {

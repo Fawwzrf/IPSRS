@@ -1,5 +1,5 @@
 {{-- filepath: c:\laragon\www\ipsrs\app\Modules\Ipsrs\Views\admin\pekerjaan\log_status\index.blade.php --}}
-@include('ipsrs::admin.pekerjaan.log_status._js')
+<?php include(view_path('ipsrs::admin.pekerjaan.log_status._js')); ?>
 
 <div class="page-header d-print-none">
     <div class="container-fluid">
@@ -17,9 +17,9 @@
     <div class="container-fluid">
         <div class="card">
             <div class="card-body">
-                @if (isset($order_kerja))
+                <?php if (isset($order_kerja)): ?>
                     <div class="alert alert-info">
-                        Menampilkan riwayat status untuk Order Kerja: <strong>{{ $order_kerja['order_kerja_id'] }}</strong>
+                        Menampilkan riwayat status untuk Order Kerja: <strong><?= $order_kerja['order_kerja_id'] ?></strong>
                     </div>
                     
                     <div class="table-responsive">
@@ -35,16 +35,16 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @if (isset($riwayat) && count($riwayat) > 0)
-                                    @foreach ($riwayat as $key => $item)
+                                <?php if (isset($riwayat) && count($riwayat) > 0): ?>
+                                    <?php foreach ($riwayat as $key => $item): ?>
                                         <tr>
-                                            <td class="text-center">{{ $key + 1 }}</td>
-                                            <td>{{ to_date($item['tgl_perubahan'], '-', 'full_date') }}</td>
+                                            <td class="text-center"><?= $key + 1 ?></td>
+                                            <td><?= to_date($item['tgl_perubahan'], '-', 'full_date') ?></td>
                                             <td>
-                                                <span class="badge bg-secondary">{{ ucfirst($item['status_sebelumnya']) }}</span>
+                                                <span class="badge bg-secondary"><?= ucfirst($item['status_sebelumnya']) ?></span>
                                             </td>
                                             <td>
-                                                @php
+                                                <?php
                                                     $badgeClass = 'bg-secondary';
                                                     switch ($item['status_baru']) {
                                                         case 'menunggu':
@@ -63,32 +63,32 @@
                                                             $badgeClass = 'bg-primary';
                                                             break;
                                                     }
-                                                @endphp
-                                                <span class="badge {{ $badgeClass }}">{{ ucfirst($item['status_baru']) }}</span>
+                                                ?>
+                                                <span class="badge <?= $badgeClass ?>"><?= ucfirst($item['status_baru']) ?></span>
                                             </td>
-                                            <td>{{ $item['pegawai_nm'] ?? '-' }}</td>
-                                            <td>{{ $item['catatan'] ?? '-' }}</td>
+                                            <td><?= $item['pegawai_nm'] ?? '-' ?></td>
+                                            <td><?= $item['catatan'] ?? '-' ?></td>
                                         </tr>
-                                    @endforeach
-                                @else
+                                    <?php endforeach; ?>
+                                <?php else: ?>
                                     <tr>
                                         <td colspan="6" class="text-center">Tidak ada data riwayat status</td>
                                     </tr>
-                                @endif
+                                <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
-                @else
+                <?php else: ?>
                     <div class="alert alert-warning">
                         Silahkan pilih Order Kerja untuk melihat riwayat statusnya.
                     </div>
                     
-                    <form action="{{ $search_act }}" method="post" id="form-search">
-                        @csrf
+                    <form action="<?= $search_act ?>" method="post" id="form-search">
+                        <?= csrf_field() ?>
                         <input type="hidden" name="search_act" value="save">
                         <div class="row mb-3">
                             <div class="col-md-10">
-                                <input type="text" name="search[term]" class="form-control" placeholder="Cari berdasarkan ID Order Kerja, Status, atau Catatan..." value="{{ @$nav_sess['search']['data']['term'] }}">
+                                <input type="text" name="search[term]" class="form-control" placeholder="Cari berdasarkan ID Order Kerja, Status, atau Catatan..." value="<?= @$nav_sess['search']['data']['term'] ?>">
                             </div>
                             <div class="col-md-2">
                                 <button type="submit" class="btn btn-primary w-100" onclick="_search(event)">
@@ -116,7 +116,7 @@
                             </tbody>
                         </table>
                     </div>
-                @endif
+                <?php endif; ?>
             </div>
         </div>
     </div>
