@@ -35,17 +35,19 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @forelse($urgent_jobs as $job)
-                                    <tr>
-                                        <td><span class="text-muted">{{ $job['order_kerja_id'] }}</span></td>
-                                        <td>{{ $job['asset_nm'] }}</td>
-                                        <td>{{ $job['deskripsi'] }}</td>
-                                    </tr>
-                                    @empty
-                                    <tr>
-                                        <td colspan="3" class="text-center text-muted">Tidak ada pekerjaan darurat saat ini.</td>
-                                    </tr>
-                                    @endforelse
+                                    <?php if(!empty($urgent_jobs)): ?>
+                                        <?php foreach($urgent_jobs as $job): ?>
+                                        <tr>
+                                            <td><span class="text-muted"><?= $job['order_kerja_id'] ?></span></td>
+                                            <td><?= $job['asset_nm'] ?></td>
+                                            <td><?= $job['deskripsi'] ?></td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted">Tidak ada pekerjaan darurat saat ini.</td>
+                                        </tr>
+                                    <?php endif; ?>
                                 </tbody>
                             </table>
                         </div>
@@ -65,7 +67,7 @@
                                         </div>
                                         <div class="col">
                                             <div class="font-weight-medium">
-                                                {{ $count_komplain_baru }} Komplain Baru
+                                                <?= $count_komplain_baru ?> Komplain Baru
                                             </div>
                                             <div class="text-muted">
                                                 Menunggu untuk dibuatkan Order Kerja
@@ -86,7 +88,7 @@
                                         </div>
                                         <div class="col">
                                             <div class="font-weight-medium">
-                                                {{ $count_jadwal_belum_ok }} Jadwal PM
+                                                <?= $count_jadwal_belum_ok ?> Jadwal PM
                                             </div>
                                             <div class="text-muted">
                                                 Menunggu dibuatkan Order Kerja
@@ -107,7 +109,7 @@
                                         </div>
                                         <div class="col">
                                             <div class="font-weight-medium">
-                                                {{ $count_order_kerja_aktif }} Order Kerja Aktif
+                                                <?= $count_order_kerja_aktif ?> Order Kerja Aktif
                                             </div>
                                             <div class="text-muted">
                                                 Dalam proses pengerjaan
@@ -128,7 +130,7 @@
                                         </div>
                                         <div class="col">
                                             <div class="font-weight-medium">
-                                                {{ $count_aset_perbaikan }} Aset Dalam Perbaikan
+                                                <?= $count_aset_perbaikan ?> Aset Dalam Perbaikan
                                             </div>
                                             <div class="text-muted">
                                                 Status aset sedang perbaikan
@@ -149,7 +151,7 @@
                                         </div>
                                         <div class="col">
                                             <div class="font-weight-medium">
-                                                {{ $count_sparepart_kritis }} Sparepart Kritis
+                                                <?= $count_sparepart_kritis ?> Sparepart Kritis
                                             </div>
                                             <div class="text-muted">
                                                 Stok di bawah 20%
@@ -170,7 +172,7 @@
                                         </div>
                                         <div class="col">
                                             <div class="font-weight-medium">
-                                                {{ numId($avg_total_penyelesaian) }} menit
+                                                <?= numId($avg_total_penyelesaian) ?> menit
                                             </div>
                                             <div class="text-muted">
                                                 Rata-rata Total Penyelesaian
@@ -188,7 +190,7 @@
 </div>
 
 {{-- Script chart tetap --}}
-@section('scripts')
+<?php $__env->startSection('scripts'); ?>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     // Pastikan ApexCharts tersedia sebelum menggunakannya
@@ -200,7 +202,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (document.getElementById('chart-komplain-harian')) {
         try {
             // Data untuk chart
-            var chartData = @json($chart_komplain_harian ?? []);
+            var chartData = <?= json_encode($chart_komplain_harian ?? []); ?>;
             
             // Cek apakah data chart valid
             if (!chartData || !Array.isArray(chartData) || chartData.length === 0) {
@@ -267,4 +269,4 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 });
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
