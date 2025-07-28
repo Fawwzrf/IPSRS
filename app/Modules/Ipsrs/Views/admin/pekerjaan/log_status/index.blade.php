@@ -1,5 +1,4 @@
-{{-- filepath: c:\laragon\www\ipsrs\app\Modules\Ipsrs\Views\admin\pekerjaan\log_status\index.blade.php --}}
-<?php include(view_path('ipsrs::admin.pekerjaan.log_status._js')); ?>
+@include('ipsrs::admin.pekerjaan.log_status._js')
 
 <div class="page-header d-print-none">
     <div class="container-fluid">

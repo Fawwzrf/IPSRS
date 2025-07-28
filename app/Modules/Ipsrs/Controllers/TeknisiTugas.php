@@ -626,7 +626,7 @@ class TeknisiTugas extends MyController
             }
 
             $d = [];
-            $d['mst_asset'] = $asset;
+            $d['asset'] = $asset;
             $d['order_kerja_id'] = request('order_kerja_id');
             $d['n_param'] = request('n');
 

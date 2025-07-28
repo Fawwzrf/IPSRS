@@ -1,4 +1,4 @@
-<?php include(view_path('ipsrs::admin.pekerjaan.jadwal_pm._js')); ?>
+@include('ipsrs::admin.pekerjaan.jadwal_pm._js')
 <div class="page-wrapper">
   <div class="page-header d-print-none mt-2">
     <div class="container-xl">

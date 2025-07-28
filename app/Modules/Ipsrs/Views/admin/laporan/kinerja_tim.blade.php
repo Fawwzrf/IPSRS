@@ -17,7 +17,7 @@
         </table>
     </div>
 <?php endif; ?>
-<?php include(view('ipsrs::admin.laporan._js')); ?>
+@include('ipsrs::admin.laporan._js')
 <div class="page-wrapper laporan-kinerja-tim">
     <div class="page-header d-print-none mt-2">
         <div class="container-xl">

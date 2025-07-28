@@ -124,7 +124,6 @@ class TeknisiModel extends Model
         try {
             $update_data = [
                 'status' => $status,
-                'catatan_penolakan' => $alasan,
                 'updated_at' => now(),
                 'updated_by' => session('user_name')
             ];
@@ -151,7 +150,6 @@ class TeknisiModel extends Model
                 if ($count_aktif == 0) {
                     DbModel::updateData('trx_order_kerja', [
                         'status' => 'dibatalkan',
-                        'catatan' => $alasan,
                         'updated_at' => now(),
                         'updated_by' => session('user_name')
                     ], ['order_kerja_id' => $order_kerja_id]);
@@ -633,7 +631,12 @@ class TeknisiModel extends Model
     // Mengambil detail asset berdasarkan ID
     public function getAssetDetail($asset_id)
     {
-        $sql = "SELECT a.*, l.lokasi_nm FROM mst_asset a LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id WHERE a.asset_id = ? AND a.deleted_st = 0";
+        $sql = "SELECT a.*, l.lokasi_nm, k.kategori_asset_nm
+        FROM mst_asset a
+        LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
+        LEFT JOIN mst_kategori_asset k ON a.kategori_asset_id = k.kategori_asset_id
+        WHERE a.asset_id = ? AND a.deleted_st = 0";
+
         return DbModel::rawData('row_array', $sql, [$asset_id]);
     }
 
