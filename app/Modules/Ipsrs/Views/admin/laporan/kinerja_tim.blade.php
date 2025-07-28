@@ -1,31 +1,30 @@
-{{-- filepath: c:\laragon\www\ipsrs\app\Modules\Ipsrs\Views\admin\laporan\kinerja_tim.blade.php --}}
-@if(request('print') == '1')
+<?php if(request('print') == '1'): ?>
     <div class="print-header">
-        <h2 class="text-center">{{ $judul ?? 'Laporan Kinerja Tim' }}</h2>
+        <h2 class="text-center"><?= $judul ?? 'Laporan Kinerja Tim' ?></h2>
         <table class="mb-2" style="width:100%;font-size:14px;">
             <tr>
                 <td style="width:120px;">Periode</td>
-                <td>: {{ $periode_label ?? '-' }}</td>
+                <td>: <?= $periode_label ?? '-' ?></td>
             </tr>
             <tr>
                 <td>Teknisi</td>
-                <td>: {{ $teknisi_label ?? '-' }}</td>
+                <td>: <?= $teknisi_label ?? '-' ?></td>
             </tr>
             <tr>
                 <td>Pencarian</td>
-                <td>: {{ $pencarian_label ?? '-' }}</td>
+                <td>: <?= $pencarian_label ?? '-' ?></td>
             </tr>
         </table>
     </div>
-@endif
-@include('ipsrs::admin.laporan._js')
+<?php endif; ?>
+<?php include(view('ipsrs::admin.laporan._js')); ?>
 <div class="page-wrapper laporan-kinerja-tim">
     <div class="page-header d-print-none mt-2">
         <div class="container-xl">
             <div class="row align-items-center">
                 <div class="col">
                     <div class="page-pretitle">
-                        {{ $nav['nav_nm'] ?? '' }}
+                        <?= $nav['nav_nm'] ?? '' ?>
                     </div>
                     <h2 class="page-title">
                         Laporan Kinerja Tim
@@ -48,18 +47,18 @@
         <div class="container-xl">
             <div class="card">
                 <div class="card-body">
-                    @php
+                    <?php
                         $dataFilter = @$nav_sess['search']['data'];
                         if (!is_array($dataFilter)) $dataFilter = [];
-                    @endphp
+                    ?>
 
-                    <form action="{{ url($uri . '?n=' . request('n')) }}" method="POST" class="mb-0 filter-form"
+                    <form action="<?= url($uri . '?n=' . request('n')) ?>" method="POST" class="mb-0 filter-form"
                         id="search" autocomplete="off" onsubmit="_search(event)">
-                        @csrf
+                        <?= csrf_field() ?>
                         <input type="hidden" name="search_act" value="save">
                         <input type="hidden" name="tgl_start" value="">
                         <input type="hidden" name="tgl_end" value="">
-                        <input type="hidden" name="n" value="{{ request('n') }}">
+                        <input type="hidden" name="n" value="<?= request('n') ?>">
                         <div class="row g-2 align-items-end">
                             <div class="col-md-3">
                                 <label class="form-label">Periode</label>
@@ -73,12 +72,12 @@
                             <div class="col-md-3 filter-tgl-mulai">
                                 <label class="form-label">Tanggal Mulai</label>
                                 <input type="text" name="tgl_start" class="form-control datepicker-notauto"
-                                    value="{{ @$nav_sess['search']['data']['tgl_start'] ?? date('01-m-Y') }}">
+                                    value="<?= @$nav_sess['search']['data']['tgl_start'] ?? date('01-m-Y') ?>">
                             </div>
                             <div class="col-md-3 filter-tgl-akhir">
                                 <label class="form-label">Tanggal Selesai</label>
                                 <input type="text" name="tgl_end" class="form-control datepicker-notauto"
-                                    value="{{ @$nav_sess['search']['data']['tgl_end'] ?? date('t-m-Y') }}">
+                                    value="<?= @$nav_sess['search']['data']['tgl_end'] ?? date('t-m-Y') ?>">
                             </div>
                             <div class="col-md-3 filter-tgl-single" style="display:none;">
                                 <label class="form-label">Tanggal</label>
@@ -90,16 +89,16 @@
                                 <div class="d-flex gap-2">
                                     <select name="bulan" class="form-select" style="width: 60%;">
                                         <option value="">Bulan</option>
-                                        @for ($i = 1; $i <= 12; $i++)
-                                            <option value="{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}">
-                                                {{ DateTime::createFromFormat('!m', $i)->format('F') }}</option>
-                                        @endfor
+                                        <?php for ($i = 1; $i <= 12; $i++): ?>
+                                            <option value="<?= str_pad($i, 2, '0', STR_PAD_LEFT) ?>">
+                                                <?= DateTime::createFromFormat('!m', $i)->format('F') ?></option>
+                                        <?php endfor; ?>
                                     </select>
                                     <select name="tahun_bulan" class="form-select" style="width: 40%;">
                                         <option value="">Tahun</option>
-                                        @for ($y = date('Y'); $y >= date('Y') - 10; $y--)
-                                            <option value="{{ $y }}">{{ $y }}</option>
-                                        @endfor
+                                        <?php for ($y = date('Y'); $y >= date('Y') - 10; $y--): ?>
+                                            <option value="<?= $y ?>"><?= $y ?></option>
+                                        <?php endfor; ?>
                                     </select>
                                 </div>
                             </div>
@@ -107,21 +106,21 @@
                                 <label class="form-label">Tahun</label>
                                 <select name="tahun" class="form-select">
                                     <option value="">Pilih Tahun</option>
-                                    @for ($y = date('Y'); $y >= date('Y') - 10; $y--)
-                                        <option value="{{ $y }}">{{ $y }}</option>
-                                    @endfor
+                                    <?php for ($y = date('Y'); $y >= date('Y') - 10; $y--): ?>
+                                        <option value="<?= $y ?>"><?= $y ?></option>
+                                    <?php endfor; ?>
                                 </select>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Teknisi</label>
                                 <select name="pegawai_id" class="form-select chosen-select">
                                     <option value="">-- Semua Teknisi --</option>
-                                    @foreach($all_teknisi as $t)
-                                        <option value="{{ $t['pegawai_id'] }}"
-                                            @if(($dataFilter['pegawai_id'] ?? '') == $t['pegawai_id']) selected @endif>
-                                            {{ $t['pegawai_nm'] }}
+                                    <?php foreach($all_teknisi as $t): ?>
+                                        <option value="<?= $t['pegawai_id'] ?>"
+                                            <?php if(($dataFilter['pegawai_id'] ?? '') == $t['pegawai_id']) echo 'selected'; ?>>
+                                            <?= $t['pegawai_nm'] ?>
                                         </option>
-                                    @endforeach
+                                    <?php endforeach; ?>
                                 </select>
                             </div>
                             <div class="col-md-3">

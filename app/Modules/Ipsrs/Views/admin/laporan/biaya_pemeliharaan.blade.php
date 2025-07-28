@@ -1,20 +1,20 @@
 @include('ipsrs::admin.laporan._js')
 
-@if(request('print') == '1')
+<?php if(request('print') == '1'): ?>
     <div class="print-header">
-        <h2 class="text-center">{{ $judul ?? 'Laporan Biaya Pemeliharaan & Perbaikan' }}</h2>
+        <h2 class="text-center"><?= $judul ?? 'Laporan Biaya Pemeliharaan & Perbaikan' ?></h2>
         <table class="mb-2" style="width:100%;font-size:14px;">
             <tr>
                 <td style="width:120px;">Periode</td>
-                <td>: {{ $periode_label ?? '-' }}</td>
+                <td>: <?= $periode_label ?? '-' ?></td>
             </tr>
             <tr>
                 <td>Pencarian</td>
-                <td>: {{ $pencarian_label ?? '-' }}</td>
+                <td>: <?= $pencarian_label ?? '-' ?></td>
             </tr>
         </table>
     </div>
-@endif
+<?php endif; ?>
 <div class="page-wrapper laporan-biaya-pemeliharaan">
     <div class="page-header d-print-none mt-2">
         <div class="container-xl">
@@ -44,13 +44,13 @@
         <div class="container-xl">
             <div class="card">
                 <div class="card-body">
-                    <form action="{{ url($uri . '?n=' . request('n')) }}" method="POST" class="mb-0 filter-form"
+                    <form action="<?= url($uri . '?n=' . request('n')) ?>" method="POST" class="mb-0 filter-form"
                         id="search" autocomplete="off" onsubmit="_search(event)">
-                        @csrf
+                        <?= csrf_field() ?>
                         <input type="hidden" name="search_act" value="save">
                         <input type="hidden" name="tgl_start" value="">
                         <input type="hidden" name="tgl_end" value="">
-                        <input type="hidden" name="n" value="{{ request('n') }}">
+                        <input type="hidden" name="n" value="<?= request('n') ?>">
                         <div class="row g-2 align-items-end">
                             <div class="col-md-3">
                                 <label class="form-label">Periode</label>
@@ -64,12 +64,12 @@
                             <div class="col-md-3 filter-tgl-mulai">
                                 <label class="form-label">Tanggal Mulai</label>
                                 <input type="text" name="tgl_start" class="form-control datepicker-notauto"
-                                    value="{{ @$nav_sess['search']['data']['tgl_start'] ?? date('01-m-Y') }}">
+                                    value="<?= @$nav_sess['search']['data']['tgl_start'] ?? date('01-m-Y') ?>">
                             </div>
                             <div class="col-md-3 filter-tgl-akhir">
                                 <label class="form-label">Tanggal Selesai</label>
                                 <input type="text" name="tgl_end" class="form-control datepicker-notauto"
-                                    value="{{ @$nav_sess['search']['data']['tgl_end'] ?? date('t-m-Y') }}">
+                                    value="<?= @$nav_sess['search']['data']['tgl_end'] ?? date('t-m-Y') ?>">
                             </div>
                             <div class="col-md-3 filter-tgl-single" style="display:none;">
                                 <label class="form-label">Tanggal</label>
@@ -80,15 +80,15 @@
                                 <div class="d-flex gap-2">
                                     <select name="bulan" class="form-select" style="width: 60%;">
                                         <option value="">Bulan</option>
-                                        @for($i=1;$i<=12;$i++)
-                                            <option value="{{ str_pad($i,2,'0',STR_PAD_LEFT) }}">{{ DateTime::createFromFormat('!m', $i)->format('F') }}</option>
-                                        @endfor
+                                        <?php for($i=1;$i<=12;$i++): ?>
+                                            <option value="<?= str_pad($i,2,'0',STR_PAD_LEFT) ?>"><?= DateTime::createFromFormat('!m', $i)->format('F') ?></option>
+                                        <?php endfor; ?>
                                     </select>
                                     <select name="tahun_bulan" class="form-select" style="width: 40%;">
                                         <option value="">Tahun</option>
-                                        @for($y = date('Y'); $y >= date('Y')-10; $y--)
-                                            <option value="{{ $y }}">{{ $y }}</option>
-                                        @endfor
+                                        <?php for($y = date('Y'); $y >= date('Y')-10; $y--): ?>
+                                            <option value="<?= $y ?>"><?= $y ?></option>
+                                        <?php endfor; ?>
                                     </select>
                                 </div>
                             </div>
@@ -96,9 +96,9 @@
                                 <label class="form-label">Tahun</label>
                                 <select name="tahun" class="form-select">
                                     <option value="">Pilih Tahun</option>
-                                    @for($y = date('Y'); $y >= date('Y')-10; $y--)
-                                        <option value="{{ $y }}">{{ $y }}</option>
-                                    @endfor
+                                    <?php for($y = date('Y'); $y >= date('Y')-10; $y--): ?>
+                                        <option value="<?= $y ?>"><?= $y ?></option>
+                                    <?php endfor; ?>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -134,7 +134,7 @@
                         <tfoot>
                             <tr>
                                 <th colspan="7" class="text-end">Total Keseluruhan</th>
-                                <th class="text-end h3">{{ numId($total_biaya) }}</th>
+                                <th class="text-end h3"><?= numId($total_biaya) ?></th>
                             </tr>
                         </tfoot>
                     </table>
@@ -193,18 +193,7 @@
 }
 </style>
 
-{{-- Script untuk inisialisasi datepicker --}}
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        $('.datepicker-notauto').daterangepicker({
-            singleDatePicker: true,
-            showDropdowns: true,
-            locale: {
-                format: 'DD-MM-YYYY'
-            }
-        });
-    });
-</script>
+
 <script>
     $(document).ready(function() {
         if (typeof tabel !== 'undefined' && tabel) {
@@ -218,4 +207,3 @@
         }
     });
 </script>
-

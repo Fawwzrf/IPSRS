@@ -1,23 +1,23 @@
 @include('ipsrs::admin.laporan._js')
-@if (request('print') == '1')
+<?php if (request('print') == '1'): ?>
     <div class="print-header">
-        <h2 class="text-center">{{ $judul ?? 'Laporan Kinerja Teknisi' }}</h2>
+        <h2 class="text-center"><?= $judul ?? 'Laporan Kinerja Teknisi' ?></h2>
         <table class="mb-2" style="width:100%;font-size:14px;">
             <tr>
                 <td style="width:120px;">Periode</td>
-                <td>: {{ $periode_label ?? '-' }}</td>
+                <td>: <?= $periode_label ?? '-' ?></td>
             </tr>
             <tr>
                 <td>Teknisi</td>
-                <td>: {{ $teknisi_label ?? '-' }}</td>
+                <td>: <?= $teknisi_label ?? '-' ?></td>
             </tr>
             <tr>
                 <td>Pencarian</td>
-                <td>: {{ $pencarian_label ?? '-' }}</td>
+                <td>: <?= $pencarian_label ?? '-' ?></td>
             </tr>
         </table>
     </div>
-@endif
+<?php endif; ?>
 
 <div class="page-wrapper laporan-kinerja-teknisi">
     <div class="page-header d-print-none mt-2">
@@ -48,27 +48,28 @@
         <div class="container-xl">
             <div class="card">
                 <div class="card-body">
-                    <form action="{{ url($uri . '?n=' . request('n')) }}" method="POST" class="mb-0 filter-form"
+                    <form action="<?= url($uri . '?n=' . request('n')) ?>" method="POST" class="mb-0 filter-form"
                         id="search" autocomplete="off" onsubmit="_search(event)">
-                        @csrf
+                        <?= csrf_field() ?>
                         <input type="hidden" name="search_act" value="save">
-                        <input type="hidden" name="n" value="{{ request('n') }}">
+                        <input type="hidden" name="n" value="<?= request('n') ?>">
                         <div class="row g-2">
                             <div class="col-md-4">
                                 <label class="form-label">Filter Berdasarkan Teknisi</label>
-                                @php
+                                <?php
                                     $dataFilter = @$nav_sess['search']['data'];
                                     if (!is_array($dataFilter)) {
                                         $dataFilter = [];
                                     }
-                                @endphp
+                                ?>
                                 <select name="pegawai_id" id="pegawai_id" class="form-select chosen-select">
                                     <option value="">-- Semua Teknisi --</option>
-                                    @foreach ($all_teknisi as $t)
-                                        <option value="{{ $t['pegawai_id'] }}"
-                                            @if (($dataFilter['pegawai_id'] ?? '')== $t['pegawai_id']) selected @endif>{{ $t['pegawai_nm'] }}
+                                    <?php foreach ($all_teknisi as $t): ?>
+                                        <option value="<?= $t['pegawai_id'] ?>"
+                                            <?php if (($dataFilter['pegawai_id'] ?? '') == $t['pegawai_id']) echo 'selected'; ?>>
+                                            <?= $t['pegawai_nm'] ?>
                                         </option>
-                                    @endforeach
+                                    <?php endforeach; ?>
                                 </select>
                             </div>
                             <div class="col-md-4">

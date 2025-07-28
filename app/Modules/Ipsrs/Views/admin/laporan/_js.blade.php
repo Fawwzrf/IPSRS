@@ -1,5 +1,6 @@
 <script type="text/javascript">
 var tabel = null;
+
 $(document).ready(function() {
     // Inisialisasi select2 dan datepicker
     $('.chosen-select').select2({ theme: "bootstrap-5" });
@@ -13,6 +14,7 @@ $(document).ready(function() {
     var ajaxUrl = '';
     var columns = [];
     var $wrapper = $('.page-wrapper');
+
     if ($('#datatable-main').length) {
         if ($wrapper.hasClass('laporan-kinerja-aset')) {
             ajaxUrl = _base_url + 'ipsrs/adminlaporan/kinerjaaset';

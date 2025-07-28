@@ -1,28 +1,28 @@
 @include('ipsrs::admin.laporan._js')
 {{-- filepath: c:\laragon\www\ipsrs\app\Modules\Ipsrs\Views\admin\laporan\kinerja_aset.blade.php --}}
-@if (request('print') == '1')
+<?php if (request('print') == '1'): ?>
     <div class="print-header">
-        <h2 class="text-center">{{ $judul ?? 'Laporan Kinerja Aset' }}</h2>
+        <h2 class="text-center"><?= $judul ?? 'Laporan Kinerja Aset' ?></h2>
         <table class="mb-2" style="width:100%;font-size:14px;">
             <tr>
                 <td style="width:120px;">Periode</td>
-                <td>: {{ $periode_label ?? '-' }}</td>
+                <td>: <?= $periode_label ?? '-' ?></td>
             </tr>
             <tr>
                 <td>Kategori Aset</td>
-                <td>: {{ $kategori_asset_label ?? '-' }}</td>
+                <td>: <?= $kategori_asset_label ?? '-' ?></td>
             </tr>
             <tr>
                 <td>Lokasi</td>
-                <td>: {{ $lokasi_label ?? '-' }}</td>
+                <td>: <?= $lokasi_label ?? '-' ?></td>
             </tr>
             <tr>
                 <td>Pencarian</td>
-                <td>: {{ $pencarian_label ?? '-' }}</td>
+                <td>: <?= $pencarian_label ?? '-' ?></td>
             </tr>
         </table>
     </div>
-@endif
+<?php endif; ?>
 <div class="page-wrapper laporan-kinerja-aset">
     <div class="page-header d-print-none mt-2">
         <div class="container-xl">
@@ -52,39 +52,39 @@
         <div class="container-xl">
             <div class="card">
                 <div class="card-body">
-                    <form action="{{ url($uri . '?n=' . request('n')) }}" method="POST" class="mb-0 filter-form"
+                    <form action="<?= url($uri . '?n=' . request('n')) ?>" method="POST" class="mb-0 filter-form"
                         id="search" autocomplete="off" onsubmit="_search(event)">
-                        @csrf
+                        <?= csrf_field() ?>
                         <input type="hidden" name="search_act" value="save">
-                        <input type="hidden" name="n" value="{{ request('n') }}">
+                        <input type="hidden" name="n" value="<?= request('n') ?>">
                         <div class="row g-2">
                             <div class="col-md-4">
                                 <label class="form-label">Kategori Aset</label>
-                                @php
+                                <?php
                                     $dataFilter = @$nav_sess['search']['data'];
                                     if (!is_array($dataFilter)) $dataFilter = [];
-                                @endphp
+                                ?>
                                 <select name="kategori_asset_id" id="kategori_asset_id"
                                     class="form-select chosen-select">
                                     <option value="">-- Semua Kategori --</option>
-                                    @foreach ($all_kategori_asset as $k)
-                                        <option value="{{ $k['kategori_asset_id'] }}"
-                                            @if (($dataFilter['kategori_asset_id'] ??'') == $k['kategori_asset_id']) selected @endif>
-                                            {{ $k['kategori_asset_nm'] }}
+                                    <?php foreach ($all_kategori_asset as $k): ?>
+                                        <option value="<?= $k['kategori_asset_id'] ?>"
+                                            <?php if (($dataFilter['kategori_asset_id'] ??'') == $k['kategori_asset_id']) echo 'selected'; ?>>
+                                            <?= $k['kategori_asset_nm'] ?>
                                         </option>
-                                    @endforeach
+                                    <?php endforeach; ?>
                                 </select>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Lokasi</label>
                                 <select name="lokasi_id" id="lokasi_id" class="form-select chosen-select">
                                     <option value="">-- Semua Lokasi --</option>
-                                    @foreach ($all_lokasi as $l)
-                                        <option value="{{ $l['lokasi_id'] }}"
-                                            @if (($dataFilter['lokasi_id'] ?? '') == $l['lokasi_id']) selected @endif>
-                                            {{ $l['lokasi_nm'] }}
+                                    <?php foreach ($all_lokasi as $l): ?>
+                                        <option value="<?= $l['lokasi_id'] ?>"
+                                            <?php if (($dataFilter['lokasi_id'] ?? '') == $l['lokasi_id']) echo 'selected'; ?>>
+                                            <?= $l['lokasi_nm'] ?>
                                         </option>
-                                    @endforeach
+                                    <?php endforeach; ?>
                                 </select>
                             </div>
                             <div class="col-md-4">
