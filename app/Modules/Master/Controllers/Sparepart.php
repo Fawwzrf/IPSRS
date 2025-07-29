@@ -47,17 +47,8 @@ class Sparepart extends MyController
 
         unset($d['stok']);
 
-        // Validasi dan normalisasi harga
-        if (isset($d['harga'])) {
-            $harga = trim($d['harga']);
-            if ($harga === '' || !is_numeric(str_replace(['.', ','], ['', '.'], $harga))) {
-                $d['harga'] = null;
-            } else {
-                // Pastikan harga berupa angka desimal dengan titik sebagai pemisah
-                $harga = str_replace('.', '', $harga); // hilangkan ribuan
-                $harga = str_replace(',', '.', $harga); // ubah koma ke titik
-                $d['harga'] = is_numeric($harga) ? $harga : null;
-            }
+        if (isset($d['harga']) && !empty($d['harga'])) {
+            $d['harga'] = str_replace(['.', ','], ['', '.'], $d['harga']);
         }
 
         if ($id == null) {

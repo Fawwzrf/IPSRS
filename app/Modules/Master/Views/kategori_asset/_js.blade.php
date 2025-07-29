@@ -44,7 +44,7 @@
                     "render": function(data, type, row, meta) {
                         var uri_edit = '<?= $uri . '/form_modal/' ?>' + data;
                         var uri_delete = '<?= $uri . '/delete/' ?>' + data;
-                        
+
                         return '' +
                             '<div class="btn-list btn-sm flex-nowrap">' +
                             '   <div class="dropdown"> ' +
@@ -52,10 +52,12 @@
                             '          Aksi' +
                             '      </button>' +
                             '      <div class="dropdown-menu">' +
-                            '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick="_modal(event, {uri: \'' + uri_edit + '\', size: \'modal-md\', position: \'normal\'})">' +
+                            '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick="_modal(event, {uri: \'' +
+                            uri_edit + '\', size: \'modal-md\', position: \'normal\'})">' +
                             '             <i class="fas fa-pencil-alt text-warning me-2"></i> Ubah Data' +
                             '         </a>' +
-                            '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick="_delete(\'' + uri_delete + '\')">' +
+                            '         <a class="dropdown-item p-1" href="javascript:void(0)" onclick="_delete(\'' +
+                            uri_delete + '\')">' +
                             '             <i class="fas fa-trash text-danger me-2"></i> Hapus Data' +
                             '         </a>' +
                             '      </div>' +
@@ -63,9 +65,21 @@
                             '</div>';
                     }
                 },
-                { "data": "kategori_asset_id", "className": "text-left" },
-                { "data": "kategori_asset_nm", "className": "text-left" },
-                { "data": "deskripsi", "className": "text-left", "render": function(data) { return ifNull(data); } },
+                {
+                    "data": "kategori_asset_id",
+                    "className": "text-left"
+                },
+                {
+                    "data": "kategori_asset_nm",
+                    "className": "text-left"
+                },
+                {
+                    "data": "deskripsi",
+                    "className": "text-left",
+                    "render": function(data) {
+                        return ifNull(data);
+                    }
+                },
                 {
                     "data": "active_st",
                     "className": "text-center",
@@ -81,8 +95,8 @@
         });
     });
 
-    $(document).on('shown.bs.modal', '#my-modal-1', function (e) { 
-        var formModalId = $(this).attr('id'); 
+    $(document).on('shown.bs.modal', '#my-modal-1', function(e) {
+        var formModalId = $(this).attr('id');
         var modalContent = $('#' + formModalId + ' .modal-body');
 
         modalContent.find('.chosen-select').select2({

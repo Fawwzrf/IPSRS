@@ -17,81 +17,70 @@ class KategoriAsset extends MyController
     // Menampilkan halaman utama kategori aset
     function index()
     {
-        $data = [];
-        $this->save_session_search($data);
-        return $this->renderView($this->template . 'index', $data);
+        $d = [];
+        $this->save_session_search($d);
+        return $this->renderView($this->template . 'index', $d);
     }
 
     // Menampilkan form modal untuk tambah/edit kategori aset
     function form_modal($id = null)
     {
-        $data['main'] = DbModel::getData('mst_kategori_asset', ['kategori_asset_id' => $id]);
-        $data['form_act'] = $this->uri . '/save/' . $id;
-        return $this->renderView($this->template . 'form_modal', $data);
-    }
-
-    // Validasi data kategori aset
-    private function validate($data, $id = null)
-    {
-        // Validasi ID
-        if ($id === null) {
-            if (empty($data['kategori_asset_id'])) {
-                return ['status' => false, 'code' => '11', 'message' => 'ID Kategori Aset wajib diisi!'];
-            }
-            if (DbModel::validId('mst_kategori_asset', 'kategori_asset_id', $data['kategori_asset_id'])) {
-                return ['status' => false, 'code' => '20', 'message' => 'ID Kategori Aset sudah ada!'];
-            }
-        }
-
-        // Validasi Nama
-        if (empty($data['kategori_asset_nm'])) {
-            return ['status' => false, 'code' => '11', 'message' => 'Nama Kategori Aset wajib diisi!'];
-        }
-
-        $params = [$data['kategori_asset_nm']];
-        $query = "SELECT 1 FROM mst_kategori_asset WHERE kategori_asset_nm = ? AND deleted_st = 0";
-        if ($id !== null) {
-            $query .= " AND kategori_asset_id != ?";
-            $params[] = $id;
-        }
-        if (DbModel::rawData('row_array', $query, $params)) {
-            return ['status' => false, 'code' => '20', 'message' => 'Nama Kategori Aset sudah digunakan!'];
-        }
-
-        return ['status' => true];
+        $d['main'] = DbModel::getData('mst_kategori_asset', ['kategori_asset_id' => $id]);
+        $d['form_act'] = $this->uri . '/save/' . $id;
+        return $this->renderView($this->template . 'form_modal', $d);
     }
 
     // Menyimpan data kategori aset (tambah/edit)
     function save($id = null)
     {
-        $data = _post();
-        $validation = $this->validate($data, $id);
+        $d = _post();
 
-        if (!$validation['status']) {
-            return response()->json(_response($validation['code'], $this->uri, ['message' => $validation['message']]));
+        if ($id == null) {
+            if (empty($d['kategori_asset_id'])) {
+                return response()->json(_response('11', $this->uri, ['message' => 'ID Kategori Aset wajib diisi!']));
+            }
+            if (DbModel::validId('mst_kategori_asset', 'kategori_asset_id', $d['kategori_asset_id'])) {
+                return response()->json(_response('20', $this->uri, ['message' => 'ID Kategori Aset sudah ada!']));
+            }
         }
 
-        if ($id === null) {
-            $result = DbModel::insertData('mst_kategori_asset', $data);
-            $code = $result ? '01' : '11';
+        if (empty($d['kategori_asset_nm'])) {
+            return response()->json(_response('11', $this->uri, ['message' => 'Nama Kategori Aset wajib diisi!']));
+        }
+
+        $queryCheckUniqueName = "SELECT * FROM mst_kategori_asset WHERE kategori_asset_nm = ? AND deleted_st = 0";
+        $params = [$d['kategori_asset_nm']];
+        if ($id != null) {
+            $queryCheckUniqueName .= " AND kategori_asset_id != ?";
+            $params[] = $id;
+        }
+        if (DbModel::rawData('row_array', $queryCheckUniqueName, $params)) {
+            return response()->json(_response('20', $this->uri, ['message' => 'Nama Kategori Aset sudah digunakan!']));
+        }
+
+        if ($id == null) {
+            $result = DbModel::insertData('mst_kategori_asset', $d);
+            return response()->json(_response($result ? '01' : '11', $this->uri, $d));
         } else {
-            $result = DbModel::updateData('mst_kategori_asset', $data, ['kategori_asset_id' => $id]);
-            $code = $result ? '02' : '12';
+            $result = DbModel::updateData('mst_kategori_asset', $d, ['kategori_asset_id' => $id]);
+            return response()->json(_response($result ? '02' : '12', $this->uri, $d));
         }
-        return response()->json(_response($code, $this->uri, $data));
     }
 
     // Menghapus kategori aset
     public function delete($id)
     {
-        $relatedAssets = DbModel::getData('mst_asset', ['kategori_asset_id' => $id, 'deleted_st' => 0]);
-        if ($relatedAssets) {
+        $hasAssets = DbModel::getData('mst_asset', ['kategori_asset_id' => $id, 'deleted_st' => 0]);
+        if ($hasAssets) {
             return response()->json(_response('13', $this->uri, ['message' => 'Kategori ini masih terhubung dengan aset dan tidak dapat dihapus.']));
         }
 
         $result = DbModel::deleteData('mst_kategori_asset', ['kategori_asset_id' => $id]);
-        $code = $result ? '03' : '13';
-        return response()->json(_response($code, $this->uri));
+        if ($result) {
+            return response()->json(_response('03', $this->uri));
+        } else {
+            return response()->json(_response('13', $this->uri));
+        }
     }
 
     // Mengambil data kategori aset untuk datatables (AJAX)
