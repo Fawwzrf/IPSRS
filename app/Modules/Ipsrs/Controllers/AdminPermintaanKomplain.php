@@ -36,7 +36,7 @@ class AdminPermintaanKomplain extends MyController
         $d['all_lokasi']  = $this->model->getAllActiveLokasi();
         $d['all_asset']   = $this->model->getAllActiveAsset();
         $d['all_pegawai'] = $this->model->getAllActivePegawai();
-        $d['form_act']    = $this->uri . '/save/' . $id;
+        $d['form_act']    = $this->uri . '/save' . $id;
 
         return $this->renderView($this->template . 'form_modal', $d);
     }

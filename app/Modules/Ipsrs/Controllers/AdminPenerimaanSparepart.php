@@ -43,7 +43,7 @@ class AdminPenerimaanSparepart extends MyController
         $d['all_sparepart'] = DbModel::allData('mst_sparepart', ['deleted_st' => 0, 'active_st' => 1]);
         
         // Standardisasi format URI untuk konsistensi
-        $d['form_act'] = $this->uri . '/save/' . $id;
+        $d['form_act'] = $this->uri . '/save' . $id;
         
         return $this->renderView($this->template . 'form_modal', $d);
     }

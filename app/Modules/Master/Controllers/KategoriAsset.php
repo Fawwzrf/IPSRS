@@ -26,7 +26,7 @@ class KategoriAsset extends MyController
     function form_modal($id = null)
     {
         $d['main'] = DbModel::getData('mst_kategori_asset', ['kategori_asset_id' => $id]);
-        $d['form_act'] = $this->uri . '/save/' . $id;
+        $d['form_act'] = $this->uri . '/save' . $id;
         return $this->renderView($this->template . 'form_modal', $d);
     }
 

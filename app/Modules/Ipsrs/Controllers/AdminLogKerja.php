@@ -59,7 +59,7 @@ class AdminLogKerja extends MyController
         if ($log_kerja_id) {
             $d['main'] = $this->model->getLogById($log_kerja_id);
             $d['log_fotos'] = $this->model->getPhotosByLogId($log_kerja_id);
-            $d['form_act'] = $this->uri . '/save/' . $log_kerja_id;
+            $d['form_act'] = $this->uri . '/save' . $log_kerja_id;
         }
 
         return $this->renderView($this->template . 'form_modal', $d);

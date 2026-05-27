@@ -34,7 +34,7 @@
         </fieldset>
 
         <fieldset class="border p-2 rounded mb-3">
-            <legend class="float-none w-auto px-2 fs-6 fw-bold">Denah Lokasi & Bukti Foto</legend>
+            <legend class="float-none w-auto px-2 fs-6 fw-bold">Denah Lokasi</legend>
             <div id="denah-container" class="mb-3" style="display: none;">
                 <label class="form-label">Tandai Lokasi di Denah (Opsional)</label>
                 <div class="d-flex justify-content-center align-items-center bg-light" style="min-height: 250px; border: 1px dashed #ccc;">

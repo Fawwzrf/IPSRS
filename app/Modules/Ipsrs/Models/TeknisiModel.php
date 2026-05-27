@@ -242,9 +242,10 @@ class TeknisiModel extends Model
                 WHERE jp.tgl_berikutnya BETWEEN ? AND ?
                   AND jp.status = 'aktif'
                   AND jp.jadwal_pm_id IN (
-                      SELECT pt.jadwal_pm_id
+                      SELECT ok.jadwal_pm_id
                       FROM trx_penugasan_teknisi pt
-                      WHERE pt.pegawai_id = ?
+                      JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
+                      WHERE pt.pegawai_id = ? AND ok.jadwal_pm_id IS NOT NULL
                   )
                 ORDER BY jp.tgl_berikutnya ASC
                 LIMIT ?";
@@ -379,9 +380,10 @@ class TeknisiModel extends Model
                     LEFT JOIN mst_lokasi l ON a.lokasi_id = l.lokasi_id
                     WHERE jp.tgl_berikutnya BETWEEN ? AND ? AND jp.status = 'aktif'
                     AND jp.jadwal_pm_id IN (
-                        SELECT pt.jadwal_pm_id
+                        SELECT ok.jadwal_pm_id
                         FROM trx_penugasan_teknisi pt
-                        WHERE pt.pegawai_id = ?
+                        JOIN trx_order_kerja ok ON pt.order_kerja_id = ok.order_kerja_id
+                        WHERE pt.pegawai_id = ? AND ok.jadwal_pm_id IS NOT NULL
                     )
                     ORDER BY jp.tgl_berikutnya ASC LIMIT 5";
             $data['jadwal_mendatang'] = DbModel::rawData('result_array', $sql, [$today, $next_month, $teknisi_id]) ?: [];

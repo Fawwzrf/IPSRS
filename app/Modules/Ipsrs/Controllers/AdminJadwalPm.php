@@ -32,7 +32,7 @@ class AdminJadwalPm extends MyController
     {
         $d['main']      = DbModel::getData('trx_jadwal_pm', ['jadwal_pm_id' => $id]);
         $d['all_asset'] = JadwalPmModel::getAllActiveAsset();
-        $d['form_act']  = $this->uri . '/save/' . $id;
+        $d['form_act']  = $this->uri . '/save' . $id;
 
         return $this->renderView($this->template . 'form_modal', $d);
     }

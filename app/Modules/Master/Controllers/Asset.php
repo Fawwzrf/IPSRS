@@ -37,7 +37,7 @@ class Asset extends MyController
                 $d['all_lokasi'] = DbModel::allData('mst_lokasi', ['deleted_st' => '0', 'active_st' => '1', 'tipe_lokasi' => 'Ruangan']);
                 $d['all_kategori_asset'] = DbModel::allData('mst_kategori_asset', ['deleted_st' => '0', 'active_st' => '1']);
                 $d['main'] = DbModel::getData('mst_asset', ['asset_id' => $id]);
-                $d['form_act'] = $this->uri . '/save/' . $id;
+                $d['form_act'] = $this->uri . '/save' . $id;
                 return $this->renderView($this->template . 'form_modal', $d);
         }
 

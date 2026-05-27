@@ -51,9 +51,9 @@ class LogStatusOrderKerja extends MyController
             return '<div class="alert alert-danger">ID Order Kerja tidak valid.</div>';
         }
 
-        $d['trx_order_kerja'] = DbModel::getData('trx_order_kerja', ['order_kerja_id' => $order_kerja_id]);
+        $d['order_kerja'] = DbModel::getData('trx_order_kerja', ['order_kerja_id' => $order_kerja_id]);
 
-        if (!$d['trx_order_kerja']) {
+        if (!$d['order_kerja']) {
             return '<div class="alert alert-danger">Data Order Kerja tidak ditemukan.</div>';
         }
 

@@ -54,7 +54,7 @@ class AdminOrderKerja extends MyController
         }
 
         $d['all_teknisi'] = $this->model->getAllActiveTeknisi();
-        $d['form_act'] = $this->uri . '/save/' . $id;
+        $d['form_act'] = $this->uri . '/save' . $id;
 
         return $this->renderView($this->template . 'form_modal', $d);
     }
@@ -218,9 +218,9 @@ class AdminOrderKerja extends MyController
      */
     public function update_status_form($order_kerja_id)
     {
-        $d['trx_order_kerja'] = $this->model->getOrderKerjaById($order_kerja_id);
+        $d['order_kerja'] = $this->model->getOrderKerjaById($order_kerja_id);
 
-        if (!$d['trx_order_kerja']) {
+        if (!$d['order_kerja']) {
             return '<div class="alert alert-danger">Data Order Kerja tidak ditemukan.</div>';
         }
 
