@@ -13,7 +13,7 @@ IPSRS adalah sistem informasi manajemen pemeliharaan dan perbaikan aset rumah sa
 - **Dashboard & Laporan**: Visualisasi analitik kinerja teknisi dan status aset.
 
 ## Cara Menjalankan (Local Development)
-1. Clone repositori ini.
+1. Silahkan clone repositori ini.
 2. Salin file `.env.example` menjadi `.env`.
 3. Sesuaikan konfigurasi database pada file `.env`.
 4. Jalankan perintah berikut:
